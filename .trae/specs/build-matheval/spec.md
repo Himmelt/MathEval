@@ -24,6 +24,7 @@
 - 实现伪常量：注册 `Func<bool/number/string>` 作为常量名使用 → **已合并到符号系统，统一为延迟值符号**
 - 实现动态上下文操作：运行时动态增删改变量/常量
 - 实现多线程安全：上下文读写和求值过程的线程安全保障
+- 实现 Lambda 编译：将 AST 编译为 `Func<ExpressionContext, object>` 委托，提升重复求值性能
 
 ## Impact
 
@@ -899,3 +900,113 @@ public interface IExpressionVisitor<out T>
 #### Scenario: 缓存命中
 - **WHEN** 同一表达式字符串被多次解析
 - **THEN** 第二次及后续直接从缓存获取 AST，不重新解析
+
+---
+
+### Requirement: Lambda 编译
+
+系统 SHALL 支持将 AST 编译为 .NET 委托（`System.Linq.Expressions` → `Func<ExpressionContext, object>`），以大幅提升重复求值的执行性能。
+
+#### 设计原理
+
+默认的 `EvaluationVisitor` 模式通过虚方法分发遍历 AST，每次求值都需要遍历整棵树，存在以下性能瓶颈：
+- 虚方法调用的间接分支预测失败
+- 大量小对象的堆分配（AST 节点）
+- 类型判断和模式匹配的开销
+
+Lambda 编译将 AST 一次性转换为 `Expression<TDelegate>` 并编译为原生机器码，后续求值直接执行编译后的委托，性能接近手写 C# 代码。
+
+#### 编译策略
+
+1. **编译时机**：在 `Build()` 或首次 `Evaluate()` 时触发编译，编译结果缓存在 `ICalculator` 实例中
+2. **编译目标**：`Func<ExpressionContext, object>` — 接收上下文，返回求值结果
+3. **符号访问**：编译后的委托通过 `ExpressionContext` 参数在运行时查找符号值（支持直接值和延迟值）
+4. **函数调用**：编译后的委托通过 `ExpressionContext` 参数在运行时查找并调用注册的函数
+5. **短路求值**：`and`/`or` 编译为 `if-else` 条件分支，保留短路语义
+6. **错误处理**：编译时无法检测的运行时错误（如除以零、类型不匹配）在委托执行时抛出对应异常
+
+#### API 设计
+
+```csharp
+// 默认使用 Lambda 编译模式
+var calc = Expression.Builder
+    .With("x", 10.0)
+    .Build("x * 2 + 1");
+var result = calc.Evaluate();  // 21 — 内部使用编译后的委托
+
+// 禁用 Lambda 编译，回退到 Visitor 模式
+var calcVisitor = Expression.Builder
+    .With("x", 10.0)
+    .WithOptions(ExpressionOptions.NoLambdaCompilation)
+    .Build("x * 2 + 1");
+var result = calcVisitor.Evaluate();  // 21 — 内部使用 EvaluationVisitor
+
+// 编译为强类型委托
+var func = Expression.Compile<Func<ExpressionContext, double>>("x * 2 + 1");
+var ctx = new ExpressionContext();
+ctx.Set("x", 10.0);
+var result = func(ctx);  // 21.0
+```
+
+#### 性能预期
+
+| 模式 | 首次求值 | 后续求值 | 适用场景 |
+|------|----------|----------|----------|
+| Visitor 模式 | 快（仅解析） | 慢（遍历 AST） | 一次性计算、调试 |
+| Lambda 编译 | 慢（编译开销） | 快（原生代码） | 重复求值、高性能场景 |
+
+预期 Lambda 编译后的重复求值性能比 Visitor 模式提升 **10~50 倍**（参考 NCalc.LambdaCompilation 基准测试数据）。
+
+#### Scenario: Lambda 编译基本求值
+- **WHEN** 使用 Builder.Build 构建计算器并调用 Evaluate
+- **THEN** 内部自动编译为委托，结果正确
+
+#### Scenario: Lambda 编译短路求值
+- **WHEN** 表达式为 `false and (1 / 0 = 0)`，使用 Lambda 编译模式
+- **THEN** 短路求值正确工作，不计算右侧，结果为 `false`
+
+#### Scenario: Lambda 编译符号访问
+- **WHEN** 表达式引用上下文中的符号 `x`，使用 Lambda 编译模式
+- **THEN** 编译后的委托通过 ExpressionContext 参数正确查找符号值
+
+#### Scenario: Lambda 编译延迟值符号
+- **WHEN** 符号 `now` 注册为延迟值 `() => DateTime.Now.ToString()`，使用 Lambda 编译模式
+- **THEN** 每次求值调用委托获取最新值
+
+#### Scenario: Lambda 编译函数调用
+- **WHEN** 表达式调用注册的函数 `sqrt(16)`，使用 Lambda 编译模式
+- **THEN** 编译后的委托正确调用上下文中的函数
+
+#### Scenario: 禁用 Lambda 编译
+- **WHEN** 使用 `ExpressionOptions.NoLambdaCompilation` 选项
+- **THEN** 回退到 EvaluationVisitor 模式求值
+
+#### Scenario: 编译为强类型委托
+- **WHEN** 调用 `Expression.Compile<Func<ExpressionContext, double>>("sqrt(16)")`
+- **THEN** 返回强类型委托，调用后返回 `4.0`
+
+#### Scenario: Lambda 编译运行时错误
+- **WHEN** 表达式为 `1 / 0`，使用 Lambda 编译模式
+- **THEN** 编译成功，但执行时抛出 EvaluateException
+
+#### Scenario: Lambda 编译线程安全
+- **WHEN** 多个线程并发调用同一编译后的委托
+- **THEN** 各线程独立求值，结果正确
+
+---
+
+### Requirement: 数值类型策略（待定）
+
+> **注意**：此需求当前使用"统一 double"方案，待用户确认是否切换为"long + double 双类型"方案。
+
+当前方案：所有数值统一使用 `double` 表示。
+
+备选方案（long + double 双类型）：
+- 整数字面量 → `long`，浮点字面量 → `double`
+- `long ⊕ long → long`，`long ⊕ double → double`
+- 位运算直接在 `long` 上操作
+- 整除 `//` 和取模 `%` 返回 `long`
+- 除法 `/` 始终返回 `double`
+- 数学函数始终返回 `double`
+
+优势：整数精确、位运算自然、语义正确（`7//2=3` 而非 `3.0`）

@@ -52,9 +52,20 @@
 
 - [ ] Task 7: Expression 主入口 API
   - [ ] SubTask 7.1: 实现 Expression 类（快捷 Eval / Eval<T> 静态方法）
-  - [ ] SubTask 7.2: 实现 ExpressionBuilder（Fluent Builder 模式，With / WithFunction / Build）
+  - [ ] SubTask 7.2: 实现 ExpressionBuilder（Fluent Builder 模式，With / WithFunction / WithOptions / Build）
   - [ ] SubTask 7.3: 实现 ICalculator 接口和 Calculator 类（可复用计算器，Set / Evaluate，线程安全）
   - [ ] SubTask 7.4: 实现表达式缓存机制（ConcurrentDictionary，可配置禁用，线程安全）
+
+- [ ] Task 10: Lambda 编译器
+  - [ ] SubTask 10.1: 实现 LambdaCompilerVisitor，将 AST 转换为 System.Linq.Expressions.Expression 树
+  - [ ] SubTask 10.2: 实现算术/位运算/关系/逻辑/一元运算的 Lambda 表达式生成
+  - [ ] SubTask 10.3: 实现符号访问的 Lambda 表达式生成（通过 ExpressionContext 参数调用 GetSymbolValue 方法）
+  - [ ] SubTask 10.4: 实现函数调用的 Lambda 表达式生成（通过 ExpressionContext 参数调用 InvokeFunction 方法）
+  - [ ] SubTask 10.5: 实现短路求值的 Lambda 表达式生成（and/or 编译为 if-else 条件分支）
+  - [ ] SubTask 10.6: 实现插值字符串的 Lambda 表达式生成（StringBuilder 拼接）
+  - [ ] SubTask 10.7: 实现运行时错误处理的 Lambda 表达式生成（除零检查、类型检查等）
+  - [ ] SubTask 10.8: 实现 Expression.Compile<TDelegate> 方法，将表达式编译为强类型委托
+  - [ ] SubTask 10.9: 集成到 Calculator 类，默认使用 Lambda 编译模式，支持 NoLambdaCompilation 选项回退
 
 - [ ] Task 8: 内置数学函数库
   - [ ] SubTask 8.1: 实现三角函数（sin, cos, tan, asin, acos, atan, atan2）
@@ -79,6 +90,9 @@
   - [ ] SubTask 9.14: 内置数学函数测试（各类函数正确性）
   - [ ] SubTask 9.15: Expression API 测试（快捷 API、Builder API、缓存）
   - [ ] SubTask 9.16: 多线程安全测试（并发求值、并发上下文修改、并发缓存访问）
+  - [ ] SubTask 9.17: Lambda 编译测试（基本求值、短路求值、符号访问、延迟值符号、函数调用、运行时错误、线程安全）
+  - [ ] SubTask 9.18: Lambda 编译 vs Visitor 模式结果一致性测试（所有运算场景两种模式结果相同）
+  - [ ] SubTask 9.19: 性能基准测试（Lambda 编译 vs Visitor 模式的重复求值性能对比）
 
 # Task Dependencies
 - [Task 2] depends on [Task 1]
@@ -88,4 +102,5 @@
 - [Task 6] depends on [Task 3, Task 5]
 - [Task 7] depends on [Task 4, Task 5, Task 6]
 - [Task 8] depends on [Task 5]
-- [Task 9] depends on [Task 7, Task 8]
+- [Task 10] depends on [Task 3, Task 5, Task 7]
+- [Task 9] depends on [Task 7, Task 8, Task 10]

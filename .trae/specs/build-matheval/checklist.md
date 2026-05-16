@@ -190,3 +190,18 @@
 - [ ] UnaryOperatorType 包含按位取反类型（BitwiseNot）
 - [ ] IExpressionVisitor 接口可被自定义实现
 - [ ] EvaluationVisitor 正确遍历并求值所有节点类型
+
+## Lambda 编译
+- [ ] LambdaCompilerVisitor 将 AST 转换为 System.Linq.Expressions.Expression 树
+- [ ] 算术/位运算/关系/逻辑/一元运算的 Lambda 表达式生成正确
+- [ ] 符号访问通过 ExpressionContext 参数正确生成（直接值和延迟值）
+- [ ] 函数调用通过 ExpressionContext 参数正确生成
+- [ ] 短路求值编译为 if-else 条件分支
+- [ ] 插值字符串编译为 StringBuilder 拼接
+- [ ] 运行时错误（除零、类型不匹配）在编译后的委托中正确抛出
+- [ ] Expression.Compile<TDelegate> 返回强类型委托
+- [ ] Calculator 默认使用 Lambda 编译模式
+- [ ] ExpressionOptions.NoLambdaCompilation 选项回退到 Visitor 模式
+- [ ] Lambda 编译结果与 Visitor 模式结果完全一致
+- [ ] Lambda 编译后委托支持多线程并发调用
+- [ ] Lambda 编译后重复求值性能显著优于 Visitor 模式
