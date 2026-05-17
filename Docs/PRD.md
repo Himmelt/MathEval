@@ -726,7 +726,43 @@ context.SetFunction("add", (Delegate)(Func<double, double, double>)((a, b) => a 
 - 适用于需要统一处理不同签名函数的场景
 - 内部通过反射提取参数信息和调用委托
 
-#### 2.5.2 场景
+#### 2.5.2 函数重载支持
+
+系统 SHALL 支持函数重载，即支持同名但不同参数数量或参数类型组合的函数注册。
+
+**重载匹配规则**（按优先级从高到低）：
+1. **参数数量优先匹配**：先匹配相同参数数量的函数
+2. **参数类型匹配**：对于相同参数数量，按以下优先级匹配：
+   - 精确类型匹配 > 数字类型兼容（long ↔ double） > 其他兼容
+3. **弱类型委托**：最后才匹配弱类型委托（ExpressionFunction）作为后备方案
+
+**重载注册示例**：
+```csharp
+// 同一函数名可以注册多个重载
+ctx.SetFunction("add", (Func<double, double, double>)((a, b) => a + b));
+ctx.SetFunction("add", (Func<string, string, string>)((a, b) => a + b));
+ctx.SetFunction("add", args => {
+    // 弱类型委托作为后备方案
+    if (args.Length == 1) return Convert.ToDouble(args[0]);
+    throw new ArgumentException();
+});
+```
+
+**调用匹配示例**：
+| 表达式 | 调用的函数 |
+|----------|-----------|
+| `add(1, 2)` | Func<double, double, double> |
+| `add("a", "b")` | Func<string, string, string> |
+| `add(42)` | 弱类型委托（后备） |
+
+**注意事项**：
+- 强类型 Func<> 仅支持 1~4 个参数的重载
+- 弱类型委托（ExpressionFunction）与强类型 Func<> 混合使用时，强类型优先匹配
+- 重载仅在同一上下文中生效（不跨上下文继承）
+
+---
+
+#### 2.5.3 场景
 
 | 场景 | 注册方式 | 表达式 | 结果 |
 |------|----------|--------|------|
@@ -734,6 +770,8 @@ context.SetFunction("add", (Delegate)(Func<double, double, double>)((a, b) => a 
 | Func<double, double, double> 注册 | `context.SetFunction("add", (Func<double, double, double>)((a, b) => a + b))` | `add(3, 4)` | `7` |
 | Delegate 注册 | `context.SetFunction("mul", (Delegate)(Func<double, double, double>)((a, b) => a * b))` | `mul(3, 4)` | `12` |
 | Func<> 参数类型自动转换 | 注册 `Func<double, double>` 函数，传入整数值 | - | 整数值自动转换为 double 后传入委托 |
+| 函数重载（参数数量） | 同时注册 `add(double, double)` 和 `add(double)` | `add(42)` | 使用单参数重载 |
+| 函数重载（类型区分） | 同时注册 `add(double, double)` 和 `add(string, string)` | `add("a", "b")` | `ab` |
 
 ---
 
