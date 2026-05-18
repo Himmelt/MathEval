@@ -312,14 +312,10 @@ expression   = conditional ;
 - 三元运算符是**右结合**的：`a ? b ? c : d : e` 等价于 `a ? (b ? c : d) : e`
 
 **类型规则**：
-- 两个分支表达式的类型可以相同或不同
+- 三元运算符采用**短路类型推断策略**：结果类型由实际被选中的分支表达式的类型决定（未选中的分支不会被求值，其类型不影响结果类型）
+- 如果被选中的分支为 `number` 类型，结果类型遵循 2.1.6 节的数值类型推断规则（与另一未选中分支的类型无关）
+- 如果被选中的分支为 `string` 或 `bool` 类型，结果类型即为该分支的类型
 - 如果两个分支类型相同，返回该类型
-- 如果两个分支类型不同：
-  - `number` 与 `number` → `number`（按数值类型推断规则）
-  - `string` 与 `number`/`bool` → `string`（数值/布尔转字符串拼接）
-  - `number`/`bool` 与 `string` → `string`（数值/布尔转字符串拼接）
-  - `bool` 与 `number` → `number`（布尔转数值）
-  - `number` 与 `bool` → `number`（布尔转数值）
 
 **与其他运算符的交互**：
 - 三元运算符优先级最低，低于 `or`/`||`
@@ -566,7 +562,7 @@ expression   = conditional ;
 | 条件中使用逻辑运算 | `x > 0 and x < 10 ? 'valid' : 'invalid'` | `'valid'` | 当 x=5 时 |
 | 短路求值（true 分支） | `true ? (1 / 0 > 0) : 0` | `DivisionByZeroException` | 除以零在 true 分支 |
 | 短路求值（false 分支） | `false ? 0 : (1 / 0 > 0)` | `DivisionByZeroException` | 除以零在 false 分支 |
-| 不同数值类型分支 | `true ? 1 : 2.5` | `1` (long) | 选中 true 分支值 1，类型推断为 long,(如果 false 分支值为 double，则类型推断为 double) |
+| 不同数值类型分支 | `true ? 1 : 2.5` | `1` (long) | 选中 true 分支值 1，短路类型推断为 long |
 | 字符串分支 | `x > 0 ? 'positive' : 'non-positive'` | `'positive'` | 当 x=5 时 |
 | 混合类型分支（数+串） | `true ? 42 : 'hello'` | `'42'` (string) | number → string |
 | 混合类型分支（串+数） | `true ? 'value: ' : 100` | `'value: '` (string) | number → string |
@@ -698,7 +694,7 @@ ctx.SetFunction("doubleIt", (Func<double, double>)(x => x * 2));
 | 注册方法 | `Set(name, value)` / `Set(name, func)` | `SetFunction(name, delegate)` |
 | 参数 | 无 | 1~N 个参数 |
 | 典型用途 | 常量、变量、配置值、动态状态 | 计算、转换、业务逻辑 |
-| 删除 | 支持 `Remove(name)` | 不支持删除 |
+| 删除 | 支持 `Remove(name)` | 支持 `Remove(name)` |
 
 **命名空间规则**：
 - 符号与函数共享同一命名空间，同名会产生冲突
@@ -945,6 +941,9 @@ public interface ICalculator
 
     // 设置上下文中的延迟值符号
     void Set(string name, Func<object> value);
+
+    // 删除符号和函数
+    void Remove(string name);
 }
 ```
 
@@ -1021,16 +1020,16 @@ public interface IExpressionVisitor<out T>
 #### 3.1.1 线程安全策略
 
 1. **ExpressionContext 读写安全**：变量、常量、伪常量、函数的存储使用 `ConcurrentDictionary`，保证并发读写安全
-2. **求值过程安全**：`EvaluationVisitor` 每次求值创建独立实例，不共享可变状态；`ExpressionContext` 在求值时提供快照读取
+2. **求值过程安全**：`EvaluationVisitor` 每次求值创建独立实例，不共享可变状态；`ExpressionContext` 在求值过程中每次符号读取通过 `ConcurrentDictionary` 原子操作完成，不保证整个表达式求值使用一致的上下文视图
 3. **表达式缓存安全**：AST 缓存使用 `ConcurrentDictionary`，保证并发访问安全
-4. **ICalculator 线程安全**：`Calculator` 实例的 `Eval()` 方法可从多个线程并发调用，内部通过上下文快照隔离各次求值
+4. **ICalculator 线程安全**：`Calculator` 实例的 `Eval()` 方法可从多个线程并发调用，内部通过 `ConcurrentDictionary` 原子操作读取上下文，不保证各次求值使用一致的上下文快照
 
 #### 3.1.2 场景
 
 | 场景 | 条件 | 结果 |
 |------|------|------|
 | 并发求值 | 多个线程同时调用同一 `Calculator` 实例的 `Eval()` 方法 | 各线程独立求值，互不干扰，结果正确 |
-| 并发上下文修改 | 一个线程修改上下文变量，另一个线程同时求值 | 求值线程使用修改前的快照或修改后的值均可，但不会导致异常或数据损坏 |
+| 并发上下文修改 | 一个线程修改上下文变量，另一个线程同时求值 | 求值线程每次符号读取通过 `ConcurrentDictionary` 原子操作完成，可能读取到修改前的值或修改后的值，但不会导致异常或数据损坏 |
 | 并发缓存访问 | 多个线程首次解析同一表达式字符串 | 缓存正确工作，只有一个线程执行解析，其他线程等待或使用缓存结果 |
 
 ---
