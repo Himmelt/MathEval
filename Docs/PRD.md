@@ -348,9 +348,8 @@ expression   = conditional ;
 - string 操作数不可使用，抛出 `TypeMismatchException`
 
 **整除运算符 `//`**：
-- 操作数必须为 long 类型；非 long 操作数（包括 double）隐式转换为 long（舍去小数部分）后计算
+- 操作数会自动转换为 long 类型（double 操作数舍去小数部分后转换），运算结果始终为 `long` 类型
 - 例如：`7.5` 舍去小数部分转为 long 得 `7`，然后 `7 // 2 = 3`（long）
-- 运算结果始终为 `long` 类型
 
 **取模运算符 `%`**：
 - 纯整数操作数（long + long）：返回 `long`
@@ -564,8 +563,8 @@ expression   = conditional ;
 | 短路求值（false 分支） | `false ? 0 : (1 / 0 > 0)` | `DivisionByZeroException` | 除以零在 false 分支 |
 | 不同数值类型分支 | `true ? 1 : 2.5` | `1` (long) | 选中 true 分支值 1，短路类型推断为 long |
 | 字符串分支 | `x > 0 ? 'positive' : 'non-positive'` | `'positive'` | 当 x=5 时 |
-| 混合类型分支（数+串） | `true ? 42 : 'hello'` | `'42'` (string) | number → string |
-| 混合类型分支（串+数） | `true ? 'value: ' : 100` | `'value: '` (string) | number → string |
+| 混合类型分支（数+串） | `true ? 42 : 'hello'` | `42` (long) | 选中 true 分支 42，短路类型推断为 long |
+| 混合类型分支（串+数） | `true ? 'value: ' : 100` | `'value: '` (string) | 选中 true 分支 'value:'，短路类型推断为 string |
 | 布尔与数值分支 | `flag ? 1 : 0` | `1` | flag=true |
 | 非布尔条件 | `1 ? 2 : 3` | `TypeMismatchException` | 条件必须为 bool |
 | 嵌套在表达式中 | `1 + (x > 0 ? x : -x)` | `6` | 当 x=5 时 |
@@ -595,7 +594,7 @@ expression   = conditional ;
 
 格式说明符仅支持简单的数值格式化，不支持复杂的格式化选项（如货币格式、百分比格式、自定义格式字符串等）。
 
-**注意**：字符串插值仅支持 `bool`、`number`、`string` 三种类型，不支持日期时间类型。格式说明符仅适用于数值类型，对非数值类型使用格式说明符，解析时就发现不支持的格式符，将抛出 `EvaluateException`。
+**注意**：字符串插值仅支持 `bool`、`number`、`string` 三种类型。格式说明符仅适用于数值类型，对非数值类型（如 `bool`/`string`）使用格式说明符，将抛出 `EvaluateException`。使用不支持的格式说明符（如 `C`/`c`、`N`/`n`、`P`/`p` 及自定义格式字符串），将在解析时抛出 `ParseException`。
 
 **数值格式说明符**：
 
@@ -861,6 +860,9 @@ ctx.SetFunction("add", (Func<double, double, double>)((a, b) => a + b));
 | 对数函数 | `ln(e)` | `1` | e 为内置常量 |
 | 绝对值（long） | `abs(-42)` | `42` (long) | 输入 long，返回 long |
 | 绝对值（double） | `abs(-3.14)` | `3.14` (double) | 输入 double，返回 double |
+| max（long + long） | `max(3, 5)` | `5` (long) | 两个参数均为 long，返回 long |
+| max（long + double） | `max(3, 5.5)` | `5.5` (double) | 参数中含 double，返回 double |
+| min（double + long） | `min(3.14, 2)` | `2.0` (double) | 参数中含 double，返回 double |
 
 ---
 
@@ -895,12 +897,12 @@ var calc = Expression.Builder
     .Build("x * 2 + 1");
 
 // 实例方法无需传入上下文
-object result = calc.Eval();           // 21
-double result = calc.Eval<double>();   // 21.0
+object result1 = calc.Eval();           // 21
+double result2 = calc.Eval<double>();   // 21.0
 
 // 可通过实例方法修改上下文中的符号
 calc.Set("x", 20.0);
-result = calc.Eval();                  // 41
+object result3 = calc.Eval();                  // 41
 ```
 
 **`Eval<T>()` 返回类型转换规则**：
@@ -920,7 +922,7 @@ var calc = Expression.Builder
     .Build("price * (1 + tax(rate))");
 
 calc.Set("price", 100.0);
-var result = calc.Eval();  // 105
+var result1 = calc.Eval();  // 105
 ```
 
 #### 2.8.3 ICalculator 接口
