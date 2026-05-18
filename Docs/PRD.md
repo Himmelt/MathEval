@@ -878,14 +878,14 @@ ctx.SetFunction("add", (Func<double, double, double>)((a, b) => a + b));
 
 ```csharp
 // 无上下文计算
-object result = Expression.Eval("2 + 3 * 4");           // 14 (long)
-double result = Expression.Eval<double>("sqrt(16)");     // 4.0
+object result1 = Expression.Eval("2 + 3 * 4");           // 14 (long)
+double result2 = Expression.Eval<double>("sqrt(16)");     // 4.0
 
 // 可选上下文参数
 var ctx = new ExpressionContext();
 ctx.Set("x", 10.0);
-object result = Expression.Eval("x * 2", ctx);           // 20
-double result = Expression.Eval<double>("x * 2", ctx);   // 20.0
+object result3 = Expression.Eval("x * 2", ctx);           // 20
+double result4 = Expression.Eval<double>("x * 2", ctx);   // 20.0
 ```
 
 **实例方法**（上下文存储在实例中）：
