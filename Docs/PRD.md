@@ -606,7 +606,7 @@ expression   = conditional ;
 | `G`/`g` | 常规格式 | `{123.45:G4}` | `123.5` |
 | `X`/`x` | 十六进制（整数） | `{255:X4}` | `00FF` |
 
-**不支持**的格式说明符：`C`/`c`（货币）、`N`/`n`（带千位分隔符）、`P`/`p`（百分比）以及自定义格式字符串。使用不支持的格式说明符将抛出 `EvaluateException`。
+**不支持**的格式说明符：`C`/`c`（货币）、`N`/`n`（带千位分隔符）、`P`/`p`（百分比）以及自定义格式字符串。使用不支持的格式说明符将在解析时抛出 `ParseException`。
 
 #### 2.4.3 场景
 
@@ -1100,7 +1100,7 @@ MathEvalException (基类)
 - 整数字面量 → `long`，浮点字面量 → `double`
 - `long + long → long`，`long + double → double`（其他算术运算同理）
 - 位运算（`&`、`|`、`xor`、`~`、`<<`、`>>`）直接在 `long` 上操作，返回 `long`
-- 整除 `//` 操作数必须为 long（非 long 隐式转换后计算），返回 `long`
+- 整除 `//` 操作数自动转换为 long 类型 （double 操作数舍去小数部分后转换），返回 `long`
 - 取模 `%`：纯整数操作数返回 `long`，含 double 操作数返回 `double`
 - 除法 `/` 始终返回 `double`
 - `long` 运算溢出时抛出 `OverflowException`，`double` 运算溢出时产生 `INF`
