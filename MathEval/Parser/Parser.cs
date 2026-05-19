@@ -29,7 +29,7 @@ public class Parser
     private void Expect(Lexer.TokenType type)
     {
         if (CurrentToken.Type != type)
-            throw new ParseException($"Expected '{type}' but got '{CurrentToken.Type}'", CurrentToken.Line, CurrentToken.Column);
+            throw new ParseException($"期望 '{type}'，但得到 '{CurrentToken.Type}'", CurrentToken.Line, CurrentToken.Column);
         MoveNext();
     }
 
@@ -38,11 +38,11 @@ public class Parser
         _depth = 0;
 
         if (CurrentToken.Type == Lexer.TokenType.EOF)
-            throw new ParseException("Expression cannot be empty", 1, 1);
+            throw new ParseException("表达式不能为空", 1, 1);
 
         var expr = ParseExpression();
         if (CurrentToken.Type != Lexer.TokenType.EOF)
-            throw new ParseException($"Unexpected token '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
+            throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
         return expr;
     }
 
@@ -118,7 +118,7 @@ public class Parser
                 Lexer.TokenType.Greater => BinaryExpressionType.GreaterThan,
                 Lexer.TokenType.LessOrEqual => BinaryExpressionType.LessThanOrEqual,
                 Lexer.TokenType.GreaterOrEqual => BinaryExpressionType.GreaterThanOrEqual,
-                _ => throw new Exceptions.InvalidOperationException($"Unknown relational operator: {op}")
+                _ => throw new Exceptions.InvalidOperationException($"未知的关系运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);
         }
@@ -204,7 +204,7 @@ public class Parser
                 Lexer.TokenType.Slash => BinaryExpressionType.Divide,
                 Lexer.TokenType.DoubleSlash => BinaryExpressionType.IntegerDivide,
                 Lexer.TokenType.Percent => BinaryExpressionType.Modulo,
-                _ => throw new Exceptions.InvalidOperationException($"Unknown multiplicative operator: {op}")
+                _ => throw new Exceptions.InvalidOperationException($"未知的乘法运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);
         }
@@ -312,7 +312,7 @@ public class Parser
                 return interpolated;
 
             default:
-                throw new ParseException($"Unexpected token '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
+                throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
         }
     }
 
@@ -336,11 +336,11 @@ public class Parser
         }
         catch (FormatException ex)
         {
-            throw new ParseException($"Invalid number format: {text}", CurrentToken.Line, CurrentToken.Column, ex);
+            throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
         }
         catch (global::System.OverflowException)
         {
-            throw new Exceptions.OverflowException($"Number '{text}' is too large");
+            throw new Exceptions.OverflowException($"数字 '{text}' 过大");
         }
     }
 
@@ -555,6 +555,6 @@ public class Parser
     {
         _depth++;
         if (_depth > MaxDepth)
-            throw new ParseException("Expression exceeds maximum nesting depth of 1024", CurrentToken.Line, CurrentToken.Column);
+            throw new ParseException("表达式嵌套深度超过最大限制 1024", CurrentToken.Line, CurrentToken.Column);
     }
 }

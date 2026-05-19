@@ -19,14 +19,14 @@ internal static class BuiltInFunctions
                 return Math.Abs(l);
             if (args[0] is double d)
                 return Math.Abs(d);
-            throw new FunctionTypeMismatchException("abs expects a numeric argument");
+            throw new FunctionTypeMismatchException("abs 需要数值参数");
         }));
 
         context.SetFunction("sqrt", (ExpressionFunction)(args =>
         {
             var value = Convert.ToDouble(args[0]);
             if (value < 0)
-                throw new EvaluateException("Square root of negative number is not allowed");
+                throw new EvaluateException("不允许对负数求平方根");
             return Math.Sqrt(value);
         }));
 
@@ -38,7 +38,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value < -1 || value > 1)
-                throw new EvaluateException("asin expects argument in range [-1, 1]");
+                throw new EvaluateException("asin 的参数范围应为 [-1, 1]");
             return Math.Asin(value);
         }));
 
@@ -46,7 +46,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value < -1 || value > 1)
-                throw new EvaluateException("acos expects argument in range [-1, 1]");
+                throw new EvaluateException("acos 的参数范围应为 [-1, 1]");
             return Math.Acos(value);
         }));
 
@@ -58,7 +58,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
-                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+                throw new EvaluateException("不允许对非正数求对数");
             return Math.Log(value);
         }));
 
@@ -66,7 +66,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
-                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+                throw new EvaluateException("不允许对非正数求对数");
             return Math.Log(value);
         }));
 
@@ -74,7 +74,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
-                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+                throw new EvaluateException("不允许对非正数求对数");
             return Math.Log10(value);
         }));
 
@@ -82,7 +82,7 @@ internal static class BuiltInFunctions
         {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
-                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+                throw new EvaluateException("不允许对非正数求对数");
             return Math.Log2(value);
         }));
 
@@ -100,10 +100,10 @@ internal static class BuiltInFunctions
                 var value = Convert.ToDouble(args[0]);
                 var digits = Convert.ToInt32(args[1]);
                 if (digits < 0)
-                    throw new EvaluateException("round decimal digits must be non-negative");
+                    throw new EvaluateException("round 的小数位数必须为非负数");
                 return Math.Round(value, digits);
             }
-            throw new FunctionTypeMismatchException("round expects 1 or 2 arguments");
+            throw new FunctionTypeMismatchException("round 需要 1 或 2 个参数");
         }));
 
         context.SetFunction("truncate", (ExpressionFunction)(args => (long)Math.Truncate(Convert.ToDouble(args[0]))));
@@ -127,7 +127,7 @@ internal static class BuiltInFunctions
             var d1 = Convert.ToDouble(args[0]);
             var d2 = Convert.ToDouble(args[1]);
             if (double.IsNaN(d1) || double.IsNaN(d2))
-                throw new EvaluateException("min does not accept NaN arguments");
+                throw new EvaluateException("min 不接受 NaN 参数");
             return Math.Min(d1, d2);
         }));
 
@@ -136,7 +136,7 @@ internal static class BuiltInFunctions
             var x = Convert.ToDouble(args[0]);
             var y = Convert.ToDouble(args[1]);
             if (x < 0 && y != Math.Floor(y))
-                throw new EvaluateException("Cannot raise negative number to non-integer power");
+                throw new EvaluateException("不能对负数求非整数次幂");
             return Math.Pow(x, y);
         }));
     }

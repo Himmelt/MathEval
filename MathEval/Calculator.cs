@@ -38,7 +38,7 @@ public class Calculator : ICalculator
         }
         catch (InvalidCastException)
         {
-            throw new TypeMismatchException($"Cannot convert result to type {typeof(T).Name}", typeof(T).Name, result?.GetType().Name ?? "null");
+            throw new TypeMismatchException($"无法将结果转换为类型 {typeof(T).Name}", typeof(T).Name, result?.GetType().Name ?? "null");
         }
     }
 
@@ -51,7 +51,7 @@ public class Calculator : ICalculator
         if (_ast != null) return;
 
         if (string.IsNullOrWhiteSpace(_expressionText))
-            throw new ParseException("Expression cannot be empty or whitespace", 1, 1);
+            throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
 
         if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, out _ast))
             return;

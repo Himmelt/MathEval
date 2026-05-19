@@ -34,7 +34,7 @@ public static class TypeHelper
         }
         catch (global::System.OverflowException)
         {
-            throw new Exceptions.OverflowException("Integer overflow in addition");
+            throw new Exceptions.OverflowException("加法运算整数溢出");
         }
     }
 
@@ -46,7 +46,7 @@ public static class TypeHelper
         }
         catch (global::System.OverflowException)
         {
-            throw new Exceptions.OverflowException("Integer overflow in subtraction");
+            throw new Exceptions.OverflowException("减法运算整数溢出");
         }
     }
 
@@ -58,7 +58,7 @@ public static class TypeHelper
         }
         catch (global::System.OverflowException)
         {
-            throw new Exceptions.OverflowException("Integer overflow in multiplication");
+            throw new Exceptions.OverflowException("乘法运算整数溢出");
         }
     }
 
@@ -78,12 +78,12 @@ public static class TypeHelper
     public static string Format(object value, string formatSpec)
     {
         if (value is not long && value is not double)
-            throw new EvaluateException($"Format specifier '{formatSpec}' can only be used with numeric types");
+            throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于数值类型");
 
         var firstChar = char.ToLowerInvariant(formatSpec[0]);
         var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
         if (!supportedFormats.Contains(firstChar))
-            throw new ParseException($"Unsupported format specifier: {formatSpec}", 1, 1);
+            throw new ParseException($"不支持的格式说明符：{formatSpec}", 1, 1);
 
         return string.Format($"{{0:{formatSpec}}}", value);
     }
@@ -98,7 +98,7 @@ public static class TypeHelper
     public static void RequireBool(object value)
     {
         if (value is not bool)
-            throw new TypeMismatchException("Expected boolean type", "bool", value?.GetType().Name ?? "null");
+            throw new TypeMismatchException("期望布尔类型", "bool", value?.GetType().Name ?? "null");
     }
 
     private static bool IsNaN(object value) => value is double d && double.IsNaN(d);
@@ -136,7 +136,7 @@ public static class TypeHelper
             BinaryExpressionType.GreaterThanOrEqual => EvaluateGreaterThanOrEqual(promotedLeft, promotedRight),
             BinaryExpressionType.And => EvaluateAnd(left, right),
             BinaryExpressionType.Or => EvaluateOr(left, right),
-            _ => throw new Exceptions.InvalidOperationException($"Unknown binary operator: {type}")
+            _ => throw new Exceptions.InvalidOperationException($"未知的二元运算符：{type}")
         };
     }
 
@@ -151,7 +151,7 @@ public static class TypeHelper
             return CheckedAdd(l1, l2);
         if (left is double d1 && right is double d2)
             return d1 + d2;
-        throw new TypeMismatchException("Addition requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("加法运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static object EvaluateMinus(object left, object right)
@@ -169,7 +169,7 @@ public static class TypeHelper
             return CheckedSubtract(l1, l2);
         if (left is double d1 && right is double d2)
             return d1 - d2;
-        throw new TypeMismatchException("Subtraction requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("减法运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static object EvaluateMultiply(object left, object right)
@@ -190,7 +190,7 @@ public static class TypeHelper
             return CheckedMultiply(l1, l2);
         if (left is double d1 && right is double d2)
             return d1 * d2;
-        throw new TypeMismatchException("Multiplication requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("乘法运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static object EvaluateDivide(object left, object right)
@@ -214,13 +214,13 @@ public static class TypeHelper
                 throw new DivisionByZeroException();
             return d1 / d2;
         }
-        throw new TypeMismatchException("Division requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("除法运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static object EvaluateIntegerDivide(object left, object right)
     {
         if (IsNaN(left) || IsNaN(right) || IsINF(left) || IsINF(right))
-            throw new EvaluateException("Integer division does not support NaN or INF");
+            throw new EvaluateException("整除运算不支持 NaN 或 INF");
 
         long l1, l2;
         if (left is double d1)
@@ -228,14 +228,14 @@ public static class TypeHelper
         else if (left is long l)
             l1 = l;
         else
-            throw new TypeMismatchException("Integer division requires numeric types", "number", GetTypeName(left, right));
+            throw new TypeMismatchException("整除运算需要数值类型", "number", GetTypeName(left, right));
 
         if (right is double d2)
             l2 = (long)d2;
         else if (right is long l)
             l2 = l;
         else
-            throw new TypeMismatchException("Integer division requires numeric types", "number", GetTypeName(left, right));
+            throw new TypeMismatchException("整除运算需要数值类型", "number", GetTypeName(left, right));
 
         if (l2 == 0)
             throw new DivisionByZeroException();
@@ -268,7 +268,7 @@ public static class TypeHelper
                 throw new DivisionByZeroException();
             return d1 % d2;
         }
-        throw new TypeMismatchException("Modulo requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("取模运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static object EvaluatePower(object left, object right)
@@ -279,14 +279,14 @@ public static class TypeHelper
         if (left is long l1 && right is long l2)
         {
             if (l1 < 0 && l2 < 0)
-                throw new EvaluateException("Cannot raise negative number to negative power");
+                throw new EvaluateException("不能对负数求负数次幂");
             if (l1 < 0 && l2 != (long)Math.Floor((double)l2))
-                throw new EvaluateException("Cannot raise negative number to non-integer power");
+                throw new EvaluateException("不能对负数求非整数次幂");
 
             var result = Math.Pow((double)l1, (double)l2);
 
             if (l1 == 0 && l2 < 0)
-                throw new EvaluateException("Zero cannot be raised to a negative power");
+                throw new EvaluateException("零不能求负数次幂");
 
             if (l2 >= 0 && result == Math.Floor(result) && result >= long.MinValue && result <= long.MaxValue)
                 return (long)result;
@@ -296,10 +296,10 @@ public static class TypeHelper
         if (left is double d1 && right is double d2)
         {
             if (d1 < 0 && d2 != Math.Floor(d2))
-                throw new EvaluateException("Cannot raise negative number to non-integer power");
+                throw new EvaluateException("不能对负数求非整数次幂");
             return Math.Pow(d1, d2);
         }
-        throw new TypeMismatchException("Power requires numeric types", "number", GetTypeName(left, right));
+        throw new TypeMismatchException("幂运算需要数值类型", "number", GetTypeName(left, right));
     }
 
     private static long ToLong(object value)
@@ -310,7 +310,7 @@ public static class TypeHelper
             return l;
         if (value is double d)
             return (long)d;
-        throw new TypeMismatchException("Expected numeric type", "number", GetTypeName(value, null));
+        throw new TypeMismatchException("期望数值类型", "number", GetTypeName(value, null));
     }
 
     private static object EvaluateBitwiseAnd(object left, object right)
@@ -333,7 +333,7 @@ public static class TypeHelper
         long l1 = ToLong(left);
         long l2 = ToLong(right);
         if (l2 < 0)
-            throw new EvaluateException("Shift amount cannot be negative");
+            throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64)
             l2 %= 64;
         return l1 << (int)l2;
@@ -344,7 +344,7 @@ public static class TypeHelper
         long l1 = ToLong(left);
         long l2 = ToLong(right);
         if (l2 < 0)
-            throw new EvaluateException("Shift amount cannot be negative");
+            throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64)
             l2 %= 64;
         return l1 >> (int)l2;
@@ -398,7 +398,7 @@ public static class TypeHelper
             return d1 < d2;
         if (left is string s1 && right is string s2)
             return string.Compare(s1, s2, StringComparison.Ordinal) < 0;
-        throw new TypeMismatchException("Comparison requires compatible types", "number/string", GetTypeName(left, right));
+        throw new TypeMismatchException("比较运算需要兼容类型", "number/string", GetTypeName(left, right));
     }
 
     private static object EvaluateLessThanOrEqual(object left, object right)
@@ -409,7 +409,7 @@ public static class TypeHelper
             return d1 <= d2;
         if (left is string s1 && right is string s2)
             return string.Compare(s1, s2, StringComparison.Ordinal) <= 0;
-        throw new TypeMismatchException("Comparison requires compatible types", "number/string", GetTypeName(left, right));
+        throw new TypeMismatchException("比较运算需要兼容类型", "number/string", GetTypeName(left, right));
     }
 
     private static object EvaluateGreaterThan(object left, object right)
@@ -420,7 +420,7 @@ public static class TypeHelper
             return d1 > d2;
         if (left is string s1 && right is string s2)
             return string.Compare(s1, s2, StringComparison.Ordinal) > 0;
-        throw new TypeMismatchException("Comparison requires compatible types", "number/string", GetTypeName(left, right));
+        throw new TypeMismatchException("比较运算需要兼容类型", "number/string", GetTypeName(left, right));
     }
 
     private static object EvaluateGreaterThanOrEqual(object left, object right)
@@ -431,7 +431,7 @@ public static class TypeHelper
             return d1 >= d2;
         if (left is string s1 && right is string s2)
             return string.Compare(s1, s2, StringComparison.Ordinal) >= 0;
-        throw new TypeMismatchException("Comparison requires compatible types", "number/string", GetTypeName(left, right));
+        throw new TypeMismatchException("比较运算需要兼容类型", "number/string", GetTypeName(left, right));
     }
 
     private static object EvaluateAnd(object left, object right)
@@ -456,7 +456,7 @@ public static class TypeHelper
             UnaryExpressionType.Negate => EvaluateNegate(operand),
             UnaryExpressionType.Not => EvaluateNot(operand),
             UnaryExpressionType.BitwiseNot => EvaluateBitwiseNot(operand),
-            _ => throw new Exceptions.InvalidOperationException($"Unknown unary operator: {type}")
+            _ => throw new Exceptions.InvalidOperationException($"未知的一元运算符：{type}")
         };
     }
 
@@ -466,7 +466,7 @@ public static class TypeHelper
             return l;
         if (operand is double d)
             return d;
-        throw new TypeMismatchException("Positive operator requires numeric type", "number", GetTypeName(operand, null));
+        throw new TypeMismatchException("正号运算符需要数值类型", "number", GetTypeName(operand, null));
     }
 
     private static object EvaluateNegate(object operand)
@@ -479,12 +479,12 @@ public static class TypeHelper
             }
             catch (global::System.OverflowException)
             {
-                throw new Exceptions.OverflowException("Integer overflow in negation");
+                throw new Exceptions.OverflowException("取负运算整数溢出");
             }
         }
         if (operand is double d)
             return -d;
-        throw new TypeMismatchException("Negate operator requires numeric type", "number", GetTypeName(operand, null));
+        throw new TypeMismatchException("取负运算符需要数值类型", "number", GetTypeName(operand, null));
     }
 
     private static object EvaluateNot(object operand)

@@ -15,7 +15,7 @@ public class SymbolNotFoundException : EvaluateException
     /// </summary>
     /// <param name="symbolName">符号名称</param>
     public SymbolNotFoundException(string symbolName) 
-        : base($"Symbol '{symbolName}' not found")
+        : base($"未找到符号 '{symbolName}'")
     {
         SymbolName = symbolName;
     }

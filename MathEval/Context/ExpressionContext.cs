@@ -35,10 +35,10 @@ public class ExpressionContext
     public void Set(string name, object value)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOpException($"Cannot set reserved keyword: {name}");
+            throw new InvalidOpException($"无法设置保留关键字：{name}");
 
         if (_functions.ContainsKey(name))
-            throw new InvalidOpException($"A function with name '{name}' already exists");
+            throw new InvalidOpException($"名为 '{name}' 的函数已存在");
 
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
@@ -46,10 +46,10 @@ public class ExpressionContext
     public void Set(string name, Func<object> value)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOpException($"Cannot set reserved keyword: {name}");
+            throw new InvalidOpException($"无法设置保留关键字：{name}");
 
         if (_functions.ContainsKey(name))
-            throw new InvalidOpException($"A function with name '{name}' already exists");
+            throw new InvalidOpException($"名为 '{name}' 的函数已存在");
 
         _symbols[name] = new SymbolEntry { LazyValue = value };
     }
@@ -57,7 +57,7 @@ public class ExpressionContext
     public void SetFunction(string name, ExpressionFunction func)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOpException($"Cannot register function with reserved keyword: {name}");
+            throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
         _symbols.TryRemove(name, out _);
         _functions[name] = func;
@@ -69,7 +69,7 @@ public class ExpressionContext
     public void SetFunction(string name, Delegate func)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOpException($"Cannot register function with reserved keyword: {name}");
+            throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
         var method = func.Method;
         var parameters = method.GetParameters();
@@ -78,7 +78,7 @@ public class ExpressionContext
         SetFunction(name, args =>
         {
             if (args.Length != argCount)
-                throw new FunctionTypeMismatchException($"Function '{name}' expects {argCount} argument(s), got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数 '{name}' 需要 {argCount} 个参数，但提供了 {args.Length} 个");
 
             try
             {
@@ -92,11 +92,11 @@ public class ExpressionContext
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException($"Argument type mismatch for function '{name}'");
+                throw new FunctionTypeMismatchException($"函数 '{name}' 的参数类型不匹配");
             }
             catch (TargetInvocationException ex)
             {
-                throw new FunctionTypeMismatchException($"Error invoking function '{name}': {ex.InnerException?.Message}");
+                throw new FunctionTypeMismatchException($"调用函数 '{name}' 时出错：{ex.InnerException?.Message}");
             }
         });
     }

@@ -37,7 +37,7 @@ public class Lexer
         _text = text ?? throw new ArgumentNullException(nameof(text));
 
         if (_text.Length > 4096)
-            throw new ParseException("Expression exceeds maximum length of 4096 characters", 1, 1);
+            throw new ParseException("表达式长度超过最大限制 4096 个字符", 1, 1);
     }
 
     public Token CurrentToken { get; private set; } = null!;
@@ -167,7 +167,7 @@ public class Lexer
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("Invalid hexadecimal number: missing digits after '0x'", _startLine, _startColumn);
+            throw new ParseException("无效的十六进制数：'0x' 后缺少数字", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -180,7 +180,7 @@ public class Lexer
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("Invalid octal number: missing digits after '0o'", _startLine, _startColumn);
+            throw new ParseException("无效的八进制数：'0o' 后缺少数字", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -193,7 +193,7 @@ public class Lexer
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("Invalid binary number: missing digits after '0b'", _startLine, _startColumn);
+            throw new ParseException("无效的二进制数：'0b' 后缺少数字", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -228,7 +228,7 @@ public class Lexer
             }
             else
             {
-                throw new ParseException("Invalid number: missing digits after exponent", _startLine, _startColumn);
+                throw new ParseException("无效的数字：指数后缺少数字", _startLine, _startColumn);
             }
         }
         else
@@ -266,7 +266,7 @@ public class Lexer
             {
                 Read();
                 if (IsAtEnd())
-                    throw new ParseException("Unexpected end of string", _line, _column);
+                    throw new ParseException("字符串意外结束", _line, _column);
                 char escaped = Read();
                 switch (escaped)
                 {
@@ -281,13 +281,13 @@ public class Lexer
                     case '"': sb.Append('"'); break;
                     case 'x':
                         if (_position + 2 > _text.Length)
-                            throw new ParseException("Invalid hexadecimal escape sequence", _line, _column);
+                            throw new ParseException("无效的十六进制转义序列", _line, _column);
                         var hex = new string(new[] { Read(), Read() });
                         sb.Append((char)Convert.ToInt32(hex, 16));
                         break;
                     case 'u':
                         if (_position + 4 > _text.Length)
-                            throw new ParseException("Invalid unicode escape sequence", _line, _column);
+                            throw new ParseException("无效的 Unicode 转义序列", _line, _column);
                         var uni = new string(new[] { Read(), Read(), Read(), Read() });
                         sb.Append((char)Convert.ToInt32(uni, 16));
                         break;
@@ -302,7 +302,7 @@ public class Lexer
         }
 
         if (IsAtEnd())
-            throw new ParseException("Unterminated string literal", _line, _column);
+            throw new ParseException("未终止的字符串字面量", _line, _column);
 
         Read();
         CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
@@ -363,7 +363,7 @@ public class Lexer
                 else
                 {
                     // 在顶层遇到未匹配的 }，报错
-                    throw new ParseException("Unmatched '}' in interpolated string", _line, _column);
+                    throw new ParseException("插值字符串中存在未匹配的 '}'", _line, _column);
                 }
             }
             else if (ch == '\'' || ch == '"')
@@ -379,13 +379,13 @@ public class Lexer
         }
 
         if (IsAtEnd())
-            throw new ParseException("Unterminated interpolated string", _line, _column);
+            throw new ParseException("未终止的插值字符串", _line, _column);
 
         // 读取闭引号
         sb.Append(Read());
 
         if (depthStack.Count > 0)
-            throw new ParseException("Unmatched '{' in interpolated string", _startLine, _startColumn);
+            throw new ParseException("插值字符串中存在未匹配的 '{'", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.InterpolatedString, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -401,7 +401,7 @@ public class Lexer
             {
                 sb.Append(Read());
                 if (IsAtEnd())
-                    throw new ParseException("Unexpected end of string in interpolated expression", _line, _column);
+                    throw new ParseException("插值表达式中字符串意外结束", _line, _column);
                 sb.Append(Read());
             }
             else
@@ -411,7 +411,7 @@ public class Lexer
         }
 
         if (IsAtEnd())
-            throw new ParseException("Unterminated string in interpolated expression", _line, _column);
+            throw new ParseException("插值表达式中存在未终止的字符串", _line, _column);
 
         // 读取闭引号
         sb.Append(Read());
@@ -481,7 +481,7 @@ public class Lexer
                 }
                 else
                 {
-                    throw new ParseException("Expected '=' after '='", _line, _column);
+                    throw new ParseException("'=' 后应为 '='", _line, _column);
                 }
                 break;
             case '<':
@@ -543,7 +543,7 @@ public class Lexer
                 }
                 break;
             default:
-                throw new ParseException($"Unexpected character '{ch}'", _line, _column);
+                throw new ParseException($"意外的字符 '{ch}'", _line, _column);
         }
     }
 }

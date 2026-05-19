@@ -15,7 +15,7 @@ public class FunctionNotFoundException : EvaluateException
     /// </summary>
     /// <param name="functionName">函数名称</param>
     public FunctionNotFoundException(string functionName) 
-        : base($"Function '{functionName}' not found")
+        : base($"未找到函数 '{functionName}'")
     {
         FunctionName = functionName;
     }

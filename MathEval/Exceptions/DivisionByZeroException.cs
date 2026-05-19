@@ -8,7 +8,7 @@ public class DivisionByZeroException : EvaluateException
     /// <summary>
     /// 初始化 DivisionByZeroException 类的新实例
     /// </summary>
-    public DivisionByZeroException() : base("Division by zero")
+    public DivisionByZeroException() : base("除零错误")
     {
     }
 }

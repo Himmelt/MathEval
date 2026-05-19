@@ -13,7 +13,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 1)
-                throw new FunctionTypeMismatchException($"Function expects 1 argument, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 1 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -22,7 +22,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -32,7 +32,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 2)
-                throw new FunctionTypeMismatchException($"Function expects 2 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 2 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -42,7 +42,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -52,7 +52,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 3)
-                throw new FunctionTypeMismatchException($"Function expects 3 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 3 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -63,7 +63,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -73,7 +73,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 4)
-                throw new FunctionTypeMismatchException($"Function expects 4 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 4 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -85,7 +85,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -95,7 +95,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 5)
-                throw new FunctionTypeMismatchException($"Function expects 5 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 5 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -108,7 +108,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -118,7 +118,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 6)
-                throw new FunctionTypeMismatchException($"Function expects 6 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 6 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -132,7 +132,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -142,7 +142,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 7)
-                throw new FunctionTypeMismatchException($"Function expects 7 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 7 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -157,7 +157,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
@@ -167,7 +167,7 @@ internal static class FunctionWrapper
         return args =>
         {
             if (args.Length != 8)
-                throw new FunctionTypeMismatchException($"Function expects 8 arguments, got {args.Length}");
+                throw new FunctionTypeMismatchException($"函数需要 8 个参数，但提供了 {args.Length} 个");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
@@ -183,7 +183,7 @@ internal static class FunctionWrapper
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException("Argument type mismatch for function");
+                throw new FunctionTypeMismatchException("函数参数类型不匹配");
             }
         };
     }
