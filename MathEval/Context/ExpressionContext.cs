@@ -33,9 +33,6 @@ public class ExpressionContext {
         if (ReservedKeywords.Contains(name))
             throw new InvalidOpException($"无法设置保留关键字：{name}");
 
-        if (_functions.ContainsKey(name))
-            throw new InvalidOpException($"名为 '{name}' 的函数已存在");
-
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
 
@@ -46,9 +43,6 @@ public class ExpressionContext {
         if (ReservedKeywords.Contains(name))
             throw new InvalidOpException($"无法设置保留关键字：{name}");
 
-        if (_functions.ContainsKey(name))
-            throw new InvalidOpException($"名为 '{name}' 的函数已存在");
-
         _symbols[name] = new SymbolEntry { LazyValue = value };
     }
 
@@ -56,7 +50,6 @@ public class ExpressionContext {
         if (ReservedKeywords.Contains(name))
             throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
-        _symbols.TryRemove(name, out _);
         _functions[name] = func;
     }
 

@@ -820,10 +820,6 @@ public class ExpressionContext
         if (ReservedKeywords.Contains(name))
             throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
 
-        // 检查是否与已注册函数冲突
-        if (_functions.ContainsKey(name))
-            throw new InvalidOperationException($"A function with name '{name}' already exists");
-
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
 
@@ -833,10 +829,6 @@ public class ExpressionContext
         // 检查是否为保留关键字
         if (ReservedKeywords.Contains(name))
             throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
-
-        // 检查是否与已注册函数冲突
-        if (_functions.ContainsKey(name))
-            throw new InvalidOperationException($"A function with name '{name}' already exists");
 
         _symbols[name] = new SymbolEntry { LazyValue = value };
     }
@@ -848,8 +840,6 @@ public class ExpressionContext
         if (ReservedKeywords.Contains(name))
             throw new InvalidOperationException($"Cannot register function with reserved keyword: {name}");
 
-        // 函数可覆盖同名符号（先移除符号）
-        _symbols.TryRemove(name, out _);
         _functions[name] = func;
     }
 
