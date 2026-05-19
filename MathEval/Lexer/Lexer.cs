@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 using MathEval.Exceptions;
 
 namespace MathEval.Lexer;
@@ -43,6 +42,20 @@ public class Lexer
 
     public Token CurrentToken { get; private set; } = null!;
 
+    /// <summary>
+    /// 将表达式文本中的所有 Token 一次性收集为列表
+    /// </summary>
+    public List<Token> TokenizeAll()
+    {
+        var tokens = new List<Token>();
+        do
+        {
+            MoveNext();
+            tokens.Add(CurrentToken);
+        } while (CurrentToken.Type != TokenType.EOF);
+        return tokens;
+    }
+
     public void MoveNext()
     {
         SkipWhitespace();
@@ -58,7 +71,11 @@ public class Lexer
 
         char ch = Peek();
 
-        if (char.IsDigit(ch))
+        if (ch == '$' && (PeekNext() == '\'' || PeekNext() == '"'))
+        {
+            ScanInterpolatedString();
+        }
+        else if (char.IsDigit(ch))
         {
             ScanNumber();
         }
@@ -69,10 +86,6 @@ public class Lexer
         else if (ch == '\'' || ch == '"')
         {
             ScanString();
-        }
-        else if (ch == '$' && (PeekNext() == '\'' || PeekNext() == '"'))
-        {
-            ScanInterpolatedString();
         }
         else
         {
@@ -148,39 +161,39 @@ public class Lexer
 
     private void ScanHexNumber()
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder("0x");
         while (!IsAtEnd() && HexDigits.Contains(Peek()))
         {
             sb.Append(Read());
         }
-        if (sb.Length == 0)
-            throw new ParseException("Invalid hexadecimal number", _startLine, _startColumn);
+        if (sb.Length == 2)
+            throw new ParseException("Invalid hexadecimal number: missing digits after '0x'", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanOctalNumber()
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder("0o");
         while (!IsAtEnd() && OctalDigits.Contains(Peek()))
         {
             sb.Append(Read());
         }
-        if (sb.Length == 0)
-            throw new ParseException("Invalid octal number", _startLine, _startColumn);
+        if (sb.Length == 2)
+            throw new ParseException("Invalid octal number: missing digits after '0o'", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanBinaryNumber()
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder("0b");
         while (!IsAtEnd() && BinaryDigits.Contains(Peek()))
         {
             sb.Append(Read());
         }
-        if (sb.Length == 0)
-            throw new ParseException("Invalid binary number", _startLine, _startColumn);
+        if (sb.Length == 2)
+            throw new ParseException("Invalid binary number: missing digits after '0b'", _startLine, _startColumn);
 
         CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -215,7 +228,7 @@ public class Lexer
             }
             else
             {
-                CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
+                throw new ParseException("Invalid number: missing digits after exponent", _startLine, _startColumn);
             }
         }
         else
@@ -295,36 +308,69 @@ public class Lexer
         CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
+    /// <summary>
+    /// 扫描插值字符串，读取完整原始文本（包含 $ 前缀和引号），
+    /// 产出 InterpolatedString 类型的 Token，由 Parser 负责解析插值段。
+    /// </summary>
     private void ScanInterpolatedString()
     {
-        Read();
-        char quote = Read();
+        // 读取 $ 前缀和开引号
+        Read(); // '$'
+        char quote = Read(); // '\'' or '"'
+
         var sb = new StringBuilder();
-        while (!IsAtEnd() && Peek() != quote)
+        sb.Append('$');
+        sb.Append(quote);
+
+        var depthStack = new Stack<int>();
+
+        while (!IsAtEnd())
         {
-            if (Peek() == '{')
+            char ch = Peek();
+
+            if (ch == quote && depthStack.Count == 0)
+            {
+                break;
+            }
+
+            if (ch == '{')
             {
                 if (PeekNext() == '{')
                 {
+                    // {{ 转义为字面量 {
                     sb.Append(Read());
-                    Read();
+                    sb.Append(Read());
                 }
                 else
                 {
                     sb.Append(Read());
+                    depthStack.Push(0);
                 }
             }
-            else if (Peek() == '}')
+            else if (ch == '}')
             {
-                if (PeekNext() == '}')
+                if (depthStack.Count > 0)
                 {
                     sb.Append(Read());
-                    Read();
+                    depthStack.Pop();
+                }
+                else if (PeekNext() == '}')
+                {
+                    // }} 转义为字面量 }
+                    sb.Append(Read());
+                    sb.Append(Read());
                 }
                 else
                 {
-                    sb.Append(Read());
+                    // 在顶层遇到未匹配的 }，报错
+                    throw new ParseException("Unmatched '}' in interpolated string", _line, _column);
                 }
+            }
+            else if (ch == '\'' || ch == '"')
+            {
+                // 插值表达式内的嵌套字符串，需要完整跳过
+                sb.Append(Read());
+                ScanNestedStringContent(sb, ch);
             }
             else
             {
@@ -335,8 +381,40 @@ public class Lexer
         if (IsAtEnd())
             throw new ParseException("Unterminated interpolated string", _line, _column);
 
-        Read();
-        CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
+        // 读取闭引号
+        sb.Append(Read());
+
+        if (depthStack.Count > 0)
+            throw new ParseException("Unmatched '{' in interpolated string", _startLine, _startColumn);
+
+        CurrentToken = new Token(TokenType.InterpolatedString, sb.ToString(), _startPosition, _startLine, _startColumn);
+    }
+
+    /// <summary>
+    /// 扫描插值表达式内嵌套的字符串字面量内容，将原始字符追加到 sb
+    /// </summary>
+    private void ScanNestedStringContent(StringBuilder sb, char quote)
+    {
+        while (!IsAtEnd() && Peek() != quote)
+        {
+            if (Peek() == '\\')
+            {
+                sb.Append(Read());
+                if (IsAtEnd())
+                    throw new ParseException("Unexpected end of string in interpolated expression", _line, _column);
+                sb.Append(Read());
+            }
+            else
+            {
+                sb.Append(Read());
+            }
+        }
+
+        if (IsAtEnd())
+            throw new ParseException("Unterminated string in interpolated expression", _line, _column);
+
+        // 读取闭引号
+        sb.Append(Read());
     }
 
     private void ScanOperator()

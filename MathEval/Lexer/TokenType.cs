@@ -59,11 +59,7 @@ public enum TokenType
     Comma,
 
     // 字符串插值
-    InterpolationStart,
-    InterpolationOpen,
-    InterpolationClose,
-    InterpolationEscape,
-    InterpolationFormat,
+    InterpolatedString,
 
     // 结束
     EOF

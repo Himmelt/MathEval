@@ -68,7 +68,7 @@ public static class TypeHelper
         {
             bool b => b.ToString(),
             long l => l.ToString(),
-            double d => d.ToString("G"),
+            double d => double.IsNaN(d) ? "NaN" : double.IsPositiveInfinity(d) ? "INF" : d.ToString("G"),
             string s => s,
             null => "",
             _ => value.ToString() ?? ""
@@ -100,6 +100,10 @@ public static class TypeHelper
         if (value is not bool)
             throw new TypeMismatchException("Expected boolean type", "bool", value?.GetType().Name ?? "null");
     }
+
+    private static bool IsNaN(object value) => value is double d && double.IsNaN(d);
+    private static bool IsINF(object value) => value is double d && double.IsPositiveInfinity(d);
+    private static bool IsNullOrINF(object value) => value is double d && (double.IsNaN(d) || double.IsPositiveInfinity(d));
 
     public static object EvaluateBinary(BinaryExpressionType type, object left, object right)
     {
@@ -133,12 +137,17 @@ public static class TypeHelper
             BinaryExpressionType.GreaterThanOrEqual => EvaluateGreaterThanOrEqual(promotedLeft, promotedRight),
             BinaryExpressionType.And => EvaluateAnd(left, right),
             BinaryExpressionType.Or => EvaluateOr(left, right),
-            _ => throw new InvalidOperationException($"Unknown binary operator: {type}")
+            _ => throw new Exceptions.InvalidOperationException($"Unknown binary operator: {type}")
         };
     }
 
     private static object EvaluatePlus(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+        if (IsINF(left) || IsINF(right))
+            return double.PositiveInfinity;
+
         if (left is long l1 && right is long l2)
             return CheckedAdd(l1, l2);
         if (left is double d1 && right is double d2)
@@ -148,6 +157,15 @@ public static class TypeHelper
 
     private static object EvaluateMinus(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+        if (IsINF(left) && IsINF(right))
+            return double.NaN;
+        if (IsINF(left))
+            return double.PositiveInfinity;
+        if (IsINF(right))
+            return double.PositiveInfinity;
+
         if (left is long l1 && right is long l2)
             return CheckedSubtract(l1, l2);
         if (left is double d1 && right is double d2)
@@ -157,6 +175,18 @@ public static class TypeHelper
 
     private static object EvaluateMultiply(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+        if (IsINF(left) || IsINF(right))
+        {
+            var other = IsINF(left) ? right : left;
+            if (other is long l && l == 0)
+                return double.NaN;
+            if (other is double d && d == 0)
+                return double.NaN;
+            return double.PositiveInfinity;
+        }
+
         if (left is long l1 && right is long l2)
             return CheckedMultiply(l1, l2);
         if (left is double d1 && right is double d2)
@@ -166,6 +196,13 @@ public static class TypeHelper
 
     private static object EvaluateDivide(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+        if (IsINF(left))
+            return IsINF(right) ? double.NaN : double.PositiveInfinity;
+        if (IsINF(right))
+            return 0.0;
+
         if (left is long l1 && right is long l2)
         {
             if (l2 == 0)
@@ -183,6 +220,9 @@ public static class TypeHelper
 
     private static object EvaluateIntegerDivide(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right) || IsINF(left) || IsINF(right))
+            throw new EvaluateException("Integer division does not support NaN or INF");
+
         long l1, l2;
         if (left is double d1)
             l1 = (long)d1;
@@ -206,6 +246,13 @@ public static class TypeHelper
 
     private static object EvaluateModulo(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+        if (IsINF(left))
+            return double.NaN;
+        if (IsINF(right))
+            return left;
+
         if (left is long l1 && right is long l2)
         {
             if (l2 == 0)
@@ -223,11 +270,25 @@ public static class TypeHelper
 
     private static object EvaluatePower(object left, object right)
     {
+        if (IsNaN(left) || IsNaN(right))
+            return double.NaN;
+
         if (left is long l1 && right is long l2)
         {
-            if (l1 < 0 && l2 != Math.Floor((double)l2))
+            if (l1 < 0 && l2 < 0)
+                throw new EvaluateException("Cannot raise negative number to negative power");
+            if (l1 < 0 && l2 != (long)Math.Floor((double)l2))
                 throw new EvaluateException("Cannot raise negative number to non-integer power");
-            return Math.Pow((double)l1, (double)l2);
+
+            var result = Math.Pow((double)l1, (double)l2);
+
+            if (l1 == 0 && l2 < 0)
+                throw new EvaluateException("Zero cannot be raised to a negative power");
+
+            if (l2 >= 0 && result == Math.Floor(result) && result >= long.MinValue && result <= long.MaxValue)
+                return (long)result;
+
+            return result;
         }
         if (left is double d1 && right is double d2)
         {
@@ -288,6 +349,19 @@ public static class TypeHelper
 
     private static object EvaluateEqual(object left, object right)
     {
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber)
+        {
+            if (IsNaN(left) || IsNaN(right))
+                return false;
+            var (pl, pr) = Promote(left, right);
+            if (pl is double dl && pr is double dr)
+                return dl == dr;
+            return Equals(pl, pr);
+        }
+
         if (left.GetType() != right.GetType())
             return false;
         return Equals(left, right);
@@ -295,6 +369,19 @@ public static class TypeHelper
 
     private static object EvaluateNotEqual(object left, object right)
     {
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber)
+        {
+            if (IsNaN(left) || IsNaN(right))
+                return true;
+            var (pl, pr) = Promote(left, right);
+            if (pl is double dl && pr is double dr)
+                return dl != dr;
+            return !Equals(pl, pr);
+        }
+
         if (left.GetType() != right.GetType())
             return true;
         return !Equals(left, right);
@@ -366,7 +453,7 @@ public static class TypeHelper
             UnaryExpressionType.Negate => EvaluateNegate(operand),
             UnaryExpressionType.Not => EvaluateNot(operand),
             UnaryExpressionType.BitwiseNot => EvaluateBitwiseNot(operand),
-            _ => throw new InvalidOperationException($"Unknown unary operator: {type}")
+            _ => throw new Exceptions.InvalidOperationException($"Unknown unary operator: {type}")
         };
     }
 
@@ -382,7 +469,16 @@ public static class TypeHelper
     private static object EvaluateNegate(object operand)
     {
         if (operand is long l)
-            return checked(-l);
+        {
+            try
+            {
+                return checked(-l);
+            }
+            catch (global::System.OverflowException)
+            {
+                throw new Exceptions.OverflowException("Integer overflow in negation");
+            }
+        }
         if (operand is double d)
             return -d;
         throw new TypeMismatchException("Negate operator requires numeric type", "number", GetTypeName(operand, null));

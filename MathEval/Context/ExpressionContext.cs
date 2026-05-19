@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.Reflection;
+using MathEval.Exceptions;
 using MathEval.Functions;
+using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Context;
 
@@ -32,10 +35,10 @@ public class ExpressionContext
     public void Set(string name, object value)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
+            throw new InvalidOpException($"Cannot set reserved keyword: {name}");
 
         if (_functions.ContainsKey(name))
-            throw new InvalidOperationException($"A function with name '{name}' already exists");
+            throw new InvalidOpException($"A function with name '{name}' already exists");
 
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
@@ -43,10 +46,10 @@ public class ExpressionContext
     public void Set(string name, Func<object> value)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
+            throw new InvalidOpException($"Cannot set reserved keyword: {name}");
 
         if (_functions.ContainsKey(name))
-            throw new InvalidOperationException($"A function with name '{name}' already exists");
+            throw new InvalidOpException($"A function with name '{name}' already exists");
 
         _symbols[name] = new SymbolEntry { LazyValue = value };
     }
@@ -54,10 +57,48 @@ public class ExpressionContext
     public void SetFunction(string name, ExpressionFunction func)
     {
         if (ReservedKeywords.Contains(name))
-            throw new InvalidOperationException($"Cannot register function with reserved keyword: {name}");
+            throw new InvalidOpException($"Cannot register function with reserved keyword: {name}");
 
         _symbols.TryRemove(name, out _);
         _functions[name] = func;
+    }
+
+    /// <summary>
+    /// 通过 Delegate 注册函数
+    /// </summary>
+    public void SetFunction(string name, Delegate func)
+    {
+        if (ReservedKeywords.Contains(name))
+            throw new InvalidOpException($"Cannot register function with reserved keyword: {name}");
+
+        var method = func.Method;
+        var parameters = method.GetParameters();
+        var argCount = parameters.Length;
+
+        SetFunction(name, args =>
+        {
+            if (args.Length != argCount)
+                throw new FunctionTypeMismatchException($"Function '{name}' expects {argCount} argument(s), got {args.Length}");
+
+            try
+            {
+                var convertedArgs = new object?[argCount];
+                for (int i = 0; i < argCount; i++)
+                {
+                    convertedArgs[i] = Convert.ChangeType(args[i], parameters[i].ParameterType);
+                }
+                var result = method.Invoke(func.Target, convertedArgs);
+                return result!;
+            }
+            catch (InvalidCastException)
+            {
+                throw new FunctionTypeMismatchException($"Argument type mismatch for function '{name}'");
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw new FunctionTypeMismatchException($"Error invoking function '{name}': {ex.InnerException?.Message}");
+            }
+        });
     }
 
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func)
