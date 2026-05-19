@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MathEval\MathEval.csproj" />
+    <ProjectReference Include="..\MathEval\MathEval.csproj" />
   </ItemGroup>
 
 </Project>

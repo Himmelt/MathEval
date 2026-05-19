@@ -117,7 +117,7 @@ public class ExpressionContext
 
     public bool TryGetFunction(string name, out ExpressionFunction func)
     {
-        if (_functions.TryGetValue(name, out func))
+        if (_functions.TryGetValue(name, out func!))
             return true;
 
         if (_parent != null)
