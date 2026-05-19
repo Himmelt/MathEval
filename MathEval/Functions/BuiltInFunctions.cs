@@ -6,15 +6,12 @@ namespace MathEval.Functions;
 /// <summary>
 /// 内置数学函数注册器
 /// </summary>
-internal static class BuiltInFunctions
-{
-    public static void Register(ExpressionContext context)
-    {
+internal static class BuiltInFunctions {
+    public static void Register(ExpressionContext context) {
         context.Set("PI", 3.14159265358979);
         context.Set("E", 2.71828182845905);
 
-        context.SetFunction("abs", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("abs", (ExpressionFunction)(args => {
             if (args[0] is long l)
                 return Math.Abs(l);
             if (args[0] is double d)
@@ -22,8 +19,7 @@ internal static class BuiltInFunctions
             throw new FunctionTypeMismatchException("abs 需要数值参数");
         }));
 
-        context.SetFunction("sqrt", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("sqrt", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value < 0)
                 throw new EvaluateException("不允许对负数求平方根");
@@ -34,16 +30,14 @@ internal static class BuiltInFunctions
         context.SetFunction("cos", (ExpressionFunction)(args => Math.Cos(Convert.ToDouble(args[0]))));
         context.SetFunction("tan", (ExpressionFunction)(args => Math.Tan(Convert.ToDouble(args[0]))));
 
-        context.SetFunction("asin", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("asin", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value < -1 || value > 1)
                 throw new EvaluateException("asin 的参数范围应为 [-1, 1]");
             return Math.Asin(value);
         }));
 
-        context.SetFunction("acos", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("acos", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value < -1 || value > 1)
                 throw new EvaluateException("acos 的参数范围应为 [-1, 1]");
@@ -54,32 +48,28 @@ internal static class BuiltInFunctions
         context.SetFunction("atan2", (ExpressionFunction)(args => Math.Atan2(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
         context.SetFunction("exp", (ExpressionFunction)(args => Math.Exp(Convert.ToDouble(args[0]))));
 
-        context.SetFunction("ln", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("ln", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
                 throw new EvaluateException("不允许对非正数求对数");
             return Math.Log(value);
         }));
 
-        context.SetFunction("log", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("log", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
                 throw new EvaluateException("不允许对非正数求对数");
             return Math.Log(value);
         }));
 
-        context.SetFunction("log10", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("log10", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
                 throw new EvaluateException("不允许对非正数求对数");
             return Math.Log10(value);
         }));
 
-        context.SetFunction("log2", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("log2", (ExpressionFunction)(args => {
             var value = Convert.ToDouble(args[0]);
             if (value <= 0)
                 throw new EvaluateException("不允许对非正数求对数");
@@ -89,14 +79,10 @@ internal static class BuiltInFunctions
         context.SetFunction("ceil", (ExpressionFunction)(args => (long)Math.Ceiling(Convert.ToDouble(args[0]))));
         context.SetFunction("floor", (ExpressionFunction)(args => (long)Math.Floor(Convert.ToDouble(args[0]))));
 
-        context.SetFunction("round", (ExpressionFunction)(args =>
-        {
-            if (args.Length == 1)
-            {
+        context.SetFunction("round", (ExpressionFunction)(args => {
+            if (args.Length == 1) {
                 return (long)Math.Round(Convert.ToDouble(args[0]));
-            }
-            else if (args.Length == 2)
-            {
+            } else if (args.Length == 2) {
                 var value = Convert.ToDouble(args[0]);
                 var digits = Convert.ToInt32(args[1]);
                 if (digits < 0)
@@ -109,8 +95,7 @@ internal static class BuiltInFunctions
         context.SetFunction("truncate", (ExpressionFunction)(args => (long)Math.Truncate(Convert.ToDouble(args[0]))));
         context.SetFunction("sign", (ExpressionFunction)(args => (long)Math.Sign(Convert.ToDouble(args[0]))));
 
-        context.SetFunction("max", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("max", (ExpressionFunction)(args => {
             if (args[0] is long l1 && args[1] is long l2)
                 return Math.Max(l1, l2);
             var d1 = Convert.ToDouble(args[0]);
@@ -120,8 +105,7 @@ internal static class BuiltInFunctions
             return Math.Max(d1, d2);
         }));
 
-        context.SetFunction("min", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("min", (ExpressionFunction)(args => {
             if (args[0] is long l1 && args[1] is long l2)
                 return Math.Min(l1, l2);
             var d1 = Convert.ToDouble(args[0]);
@@ -131,8 +115,7 @@ internal static class BuiltInFunctions
             return Math.Min(d1, d2);
         }));
 
-        context.SetFunction("pow", (ExpressionFunction)(args =>
-        {
+        context.SetFunction("pow", (ExpressionFunction)(args => {
             var x = Convert.ToDouble(args[0]);
             var y = Convert.ToDouble(args[1]);
             if (x < 0 && y != Math.Floor(y))

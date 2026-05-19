@@ -3,8 +3,7 @@ namespace MathEval.Exceptions;
 /// <summary>
 /// 表示表达式解析过程中发生的错误
 /// </summary>
-public class ParseException : MathEvalException
-{
+public class ParseException : MathEvalException {
     /// <summary>
     /// 获取表达式中发生错误的行号
     /// </summary>
@@ -21,8 +20,7 @@ public class ParseException : MathEvalException
     /// <param name="message">异常消息</param>
     /// <param name="line">行号</param>
     /// <param name="column">列号</param>
-    public ParseException(string message, int line, int column) : base(message)
-    {
+    public ParseException(string message, int line, int column) : base(message) {
         Line = line;
         Column = column;
     }
@@ -34,9 +32,8 @@ public class ParseException : MathEvalException
     /// <param name="line">行号</param>
     /// <param name="column">列号</param>
     /// <param name="innerException">内部异常</param>
-    public ParseException(string message, int line, int column, Exception innerException) 
-        : base(message, innerException)
-    {
+    public ParseException(string message, int line, int column, Exception innerException)
+        : base(message, innerException) {
         Line = line;
         Column = column;
     }

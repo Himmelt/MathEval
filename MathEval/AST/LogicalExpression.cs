@@ -5,8 +5,7 @@ namespace MathEval.AST;
 /// <summary>
 /// 表示抽象语法树节点的基类
 /// </summary>
-public abstract class LogicalExpression
-{
+public abstract class LogicalExpression {
     /// <summary>
     /// 接受访问者访问
     /// </summary>

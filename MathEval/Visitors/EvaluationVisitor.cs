@@ -1,4 +1,3 @@
-using System.Text;
 using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
@@ -7,33 +6,22 @@ using MathEval.TypeSystem;
 
 namespace MathEval.Visitors;
 
-public class EvaluationVisitor : IExpressionVisitor<object>
-{
-    private readonly ExpressionContext _context;
+public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<object> {
+    private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
-    public EvaluationVisitor(ExpressionContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
-
-    public object Visit(ValueExpression expr)
-    {
+    public object Visit(ValueExpression expr) {
         return expr.Value;
     }
 
-    public object Visit(Identifier expr)
-    {
-        if (_context.TryGetSymbol(expr.Name, out var value))
-        {
+    public object Visit(Identifier expr) {
+        if (_context.TryGetSymbol(expr.Name, out var value)) {
             return value;
         }
         throw new SymbolNotFoundException(expr.Name);
     }
 
-    public object Visit(BinaryExpression expr)
-    {
-        if (expr.Type == BinaryExpressionType.And)
-        {
+    public object Visit(BinaryExpression expr) {
+        if (expr.Type == BinaryExpressionType.And) {
             var leftResult = expr.Left.Accept(this);
             TypeHelper.RequireBool(leftResult);
             if (!(bool)leftResult)
@@ -43,8 +31,7 @@ public class EvaluationVisitor : IExpressionVisitor<object>
             return rightResult;
         }
 
-        if (expr.Type == BinaryExpressionType.Or)
-        {
+        if (expr.Type == BinaryExpressionType.Or) {
             var leftResult = expr.Left.Accept(this);
             TypeHelper.RequireBool(leftResult);
             if ((bool)leftResult)
@@ -59,39 +46,30 @@ public class EvaluationVisitor : IExpressionVisitor<object>
         return TypeHelper.EvaluateBinary(expr.Type, left, right);
     }
 
-    public object Visit(UnaryExpression expr)
-    {
+    public object Visit(UnaryExpression expr) {
         var operand = expr.Operand.Accept(this);
         return TypeHelper.EvaluateUnary(expr.Type, operand);
     }
 
-    public object Visit(FunctionCall expr)
-    {
+    public object Visit(FunctionCall expr) {
         var args = new List<object>();
-        foreach (var arg in expr.Arguments)
-        {
+        foreach (var arg in expr.Arguments) {
             args.Add(arg.Accept(this));
         }
 
-        if (_context.TryGetFunction(expr.Name, out var func))
-        {
+        if (_context.TryGetFunction(expr.Name, out var func)) {
             return func(args.ToArray());
         }
 
         throw new FunctionNotFoundException(expr.Name);
     }
 
-    public object Visit(InterpolatedString expr)
-    {
+    public object Visit(InterpolatedString expr) {
         var sb = new StringBuilder();
-        foreach (var segment in expr.Segments)
-        {
-            if (segment is TextSegment textSeg)
-            {
+        foreach (var segment in expr.Segments) {
+            if (segment is TextSegment textSeg) {
                 sb.Append(textSeg.Text);
-            }
-            else if (segment is ExpressionSegment exprSeg)
-            {
+            } else if (segment is ExpressionSegment exprSeg) {
                 var value = exprSeg.Expression.Accept(this);
                 if (exprSeg.FormatSpec != null)
                     sb.Append(TypeHelper.Format(value, exprSeg.FormatSpec));
@@ -102,8 +80,7 @@ public class EvaluationVisitor : IExpressionVisitor<object>
         return sb.ToString();
     }
 
-    public object Visit(ConditionalExpression expr)
-    {
+    public object Visit(ConditionalExpression expr) {
         var condition = expr.Condition.Accept(this);
         TypeHelper.RequireBool(condition);
         if ((bool)condition)

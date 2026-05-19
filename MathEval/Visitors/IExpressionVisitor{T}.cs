@@ -6,8 +6,7 @@ namespace MathEval.Visitors;
 /// 表示访问抽象语法树节点并返回结果的泛型访问者接口
 /// </summary>
 /// <typeparam name="T">返回类型</typeparam>
-public interface IExpressionVisitor<out T>
-{
+public interface IExpressionVisitor<out T> {
     /// <summary>
     /// 访问值表达式节点
     /// </summary>

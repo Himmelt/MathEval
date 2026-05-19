@@ -5,8 +5,7 @@ namespace MathEval.Visitors;
 /// <summary>
 /// 表示访问抽象语法树节点的访问者接口
 /// </summary>
-public interface IExpressionVisitor
-{
+public interface IExpressionVisitor {
     /// <summary>
     /// 访问值表达式节点
     /// </summary>

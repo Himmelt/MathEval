@@ -3,8 +3,7 @@ namespace MathEval.Lexer;
 /// <summary>
 /// 表示词法分析器生成的令牌类型
 /// </summary>
-public enum TokenType
-{
+public enum TokenType {
     // 字面量
     Integer,
     Float,

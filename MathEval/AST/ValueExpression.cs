@@ -5,31 +5,23 @@ namespace MathEval.AST;
 /// <summary>
 /// 表示常量值表达式
 /// </summary>
-public class ValueExpression : LogicalExpression
-{
+/// <remarks>
+/// 初始化 ValueExpression 类的新实例
+/// </remarks>
+/// <param name="value">值</param>
+public class ValueExpression(object value) : LogicalExpression {
     /// <summary>
     /// 获取值
     /// </summary>
-    public object Value { get; }
-
-    /// <summary>
-    /// 初始化 ValueExpression 类的新实例
-    /// </summary>
-    /// <param name="value">值</param>
-    public ValueExpression(object value)
-    {
-        Value = value;
-    }
+    public object Value { get; } = value;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor)
-    {
+    public override void Accept(IExpressionVisitor visitor) {
         visitor.Visit(this);
     }
 
     /// <inheritdoc />
-    public override T Accept<T>(IExpressionVisitor<T> visitor)
-    {
+    public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }
 }

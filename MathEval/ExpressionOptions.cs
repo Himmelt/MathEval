@@ -4,8 +4,7 @@ namespace MathEval;
 /// 表示表达式计算选项
 /// </summary>
 [Flags]
-public enum ExpressionOptions
-{
+public enum ExpressionOptions {
     /// <summary>
     /// 无选项
     /// </summary>

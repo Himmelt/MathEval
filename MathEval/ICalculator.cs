@@ -3,8 +3,7 @@ namespace MathEval;
 /// <summary>
 /// 计算器接口
 /// </summary>
-public interface ICalculator
-{
+public interface ICalculator {
     /// <summary>
     /// 求值表达式，返回 object
     /// </summary>

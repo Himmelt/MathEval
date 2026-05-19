@@ -1,18 +1,15 @@
-using System.Text;
 using MathEval.AST;
 using MathEval.Exceptions;
 
 namespace MathEval.Parser;
 
-public class Parser
-{
+public class Parser {
     private readonly Lexer.Lexer _lexer;
     private Lexer.Token _currentToken;
     private int _depth;
     private const int MaxDepth = 1024;
 
-    public Parser(Lexer.Lexer lexer)
-    {
+    public Parser(Lexer.Lexer lexer) {
         _lexer = lexer ?? throw new ArgumentNullException(nameof(lexer));
         _lexer.MoveNext();
         _currentToken = _lexer.CurrentToken;
@@ -20,21 +17,18 @@ public class Parser
 
     private Lexer.Token CurrentToken => _currentToken;
 
-    private void MoveNext()
-    {
+    private void MoveNext() {
         _lexer.MoveNext();
         _currentToken = _lexer.CurrentToken;
     }
 
-    private void Expect(Lexer.TokenType type)
-    {
+    private void Expect(Lexer.TokenType type) {
         if (CurrentToken.Type != type)
             throw new ParseException($"期望 '{type}'，但得到 '{CurrentToken.Type}'", CurrentToken.Line, CurrentToken.Column);
         MoveNext();
     }
 
-    public LogicalExpression Parse()
-    {
+    public LogicalExpression Parse() {
         _depth = 0;
 
         if (CurrentToken.Type == Lexer.TokenType.EOF)
@@ -46,16 +40,13 @@ public class Parser
         return expr;
     }
 
-    private LogicalExpression ParseExpression()
-    {
+    private LogicalExpression ParseExpression() {
         return ParseConditional();
     }
 
-    private LogicalExpression ParseConditional()
-    {
+    private LogicalExpression ParseConditional() {
         var condition = ParseLogicalOr();
-        if (CurrentToken.Type == Lexer.TokenType.QuestionMark)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.QuestionMark) {
             MoveNext();
             var trueExpr = ParseExpression();
             Expect(Lexer.TokenType.Colon);
@@ -65,11 +56,9 @@ public class Parser
         return condition;
     }
 
-    private LogicalExpression ParseLogicalOr()
-    {
+    private LogicalExpression ParseLogicalOr() {
         var left = ParseLogicalAnd();
-        while (CurrentToken.Type == Lexer.TokenType.OrKeyword || CurrentToken.Type == Lexer.TokenType.DoublePipe)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.OrKeyword || CurrentToken.Type == Lexer.TokenType.DoublePipe) {
             MoveNext();
             var right = ParseLogicalAnd();
             left = new BinaryExpression(BinaryExpressionType.Or, left, right);
@@ -77,11 +66,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseLogicalAnd()
-    {
+    private LogicalExpression ParseLogicalAnd() {
         var left = ParseEquality();
-        while (CurrentToken.Type == Lexer.TokenType.AndKeyword || CurrentToken.Type == Lexer.TokenType.DoubleAmpersand)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.AndKeyword || CurrentToken.Type == Lexer.TokenType.DoubleAmpersand) {
             MoveNext();
             var right = ParseEquality();
             left = new BinaryExpression(BinaryExpressionType.And, left, right);
@@ -89,11 +76,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseEquality()
-    {
+    private LogicalExpression ParseEquality() {
         var left = ParseRelational();
-        while (CurrentToken.Type == Lexer.TokenType.Equal || CurrentToken.Type == Lexer.TokenType.NotEqual)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.Equal || CurrentToken.Type == Lexer.TokenType.NotEqual) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParseRelational();
@@ -103,17 +88,14 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseRelational()
-    {
+    private LogicalExpression ParseRelational() {
         var left = ParseBitwiseOr();
         while (CurrentToken.Type == Lexer.TokenType.Less || CurrentToken.Type == Lexer.TokenType.Greater ||
-               CurrentToken.Type == Lexer.TokenType.LessOrEqual || CurrentToken.Type == Lexer.TokenType.GreaterOrEqual)
-        {
+               CurrentToken.Type == Lexer.TokenType.LessOrEqual || CurrentToken.Type == Lexer.TokenType.GreaterOrEqual) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParseBitwiseOr();
-            var type = op switch
-            {
+            var type = op switch {
                 Lexer.TokenType.Less => BinaryExpressionType.LessThan,
                 Lexer.TokenType.Greater => BinaryExpressionType.GreaterThan,
                 Lexer.TokenType.LessOrEqual => BinaryExpressionType.LessThanOrEqual,
@@ -125,11 +107,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseBitwiseOr()
-    {
+    private LogicalExpression ParseBitwiseOr() {
         var left = ParseBitwiseXor();
-        while (CurrentToken.Type == Lexer.TokenType.Pipe)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.Pipe) {
             MoveNext();
             var right = ParseBitwiseXor();
             left = new BinaryExpression(BinaryExpressionType.BitwiseOr, left, right);
@@ -137,11 +117,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseBitwiseXor()
-    {
+    private LogicalExpression ParseBitwiseXor() {
         var left = ParseBitwiseAnd();
-        while (CurrentToken.Type == Lexer.TokenType.XorKeyword)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.XorKeyword) {
             MoveNext();
             var right = ParseBitwiseAnd();
             left = new BinaryExpression(BinaryExpressionType.BitwiseXor, left, right);
@@ -149,11 +127,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseBitwiseAnd()
-    {
+    private LogicalExpression ParseBitwiseAnd() {
         var left = ParseShift();
-        while (CurrentToken.Type == Lexer.TokenType.Ampersand)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.Ampersand) {
             MoveNext();
             var right = ParseShift();
             left = new BinaryExpression(BinaryExpressionType.BitwiseAnd, left, right);
@@ -161,11 +137,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseShift()
-    {
+    private LogicalExpression ParseShift() {
         var left = ParseAdditive();
-        while (CurrentToken.Type == Lexer.TokenType.LeftShift || CurrentToken.Type == Lexer.TokenType.RightShift)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.LeftShift || CurrentToken.Type == Lexer.TokenType.RightShift) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParseAdditive();
@@ -175,11 +149,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseAdditive()
-    {
+    private LogicalExpression ParseAdditive() {
         var left = ParseMultiplicative();
-        while (CurrentToken.Type == Lexer.TokenType.Plus || CurrentToken.Type == Lexer.TokenType.Minus)
-        {
+        while (CurrentToken.Type == Lexer.TokenType.Plus || CurrentToken.Type == Lexer.TokenType.Minus) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParseMultiplicative();
@@ -189,17 +161,14 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseMultiplicative()
-    {
+    private LogicalExpression ParseMultiplicative() {
         var left = ParsePower();
         while (CurrentToken.Type == Lexer.TokenType.Asterisk || CurrentToken.Type == Lexer.TokenType.Slash ||
-               CurrentToken.Type == Lexer.TokenType.DoubleSlash || CurrentToken.Type == Lexer.TokenType.Percent)
-        {
+               CurrentToken.Type == Lexer.TokenType.DoubleSlash || CurrentToken.Type == Lexer.TokenType.Percent) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParsePower();
-            var type = op switch
-            {
+            var type = op switch {
                 Lexer.TokenType.Asterisk => BinaryExpressionType.Multiply,
                 Lexer.TokenType.Slash => BinaryExpressionType.Divide,
                 Lexer.TokenType.DoubleSlash => BinaryExpressionType.IntegerDivide,
@@ -211,11 +180,9 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParsePower()
-    {
+    private LogicalExpression ParsePower() {
         var left = ParseUnary();
-        if (CurrentToken.Type == Lexer.TokenType.Caret)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.Caret) {
             MoveNext();
             CheckDepth();
             var right = ParsePower();
@@ -225,28 +192,23 @@ public class Parser
         return left;
     }
 
-    private LogicalExpression ParseUnary()
-    {
-        if (CurrentToken.Type == Lexer.TokenType.Plus)
-        {
+    private LogicalExpression ParseUnary() {
+        if (CurrentToken.Type == Lexer.TokenType.Plus) {
             MoveNext();
             var operand = ParseUnary();
             return new UnaryExpression(UnaryExpressionType.Positive, operand);
         }
-        if (CurrentToken.Type == Lexer.TokenType.Minus)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.Minus) {
             MoveNext();
             var operand = ParseUnary();
             return new UnaryExpression(UnaryExpressionType.Negate, operand);
         }
-        if (CurrentToken.Type == Lexer.TokenType.NotKeyword || CurrentToken.Type == Lexer.TokenType.Exclamation)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.NotKeyword || CurrentToken.Type == Lexer.TokenType.Exclamation) {
             MoveNext();
             var operand = ParseUnary();
             return new UnaryExpression(UnaryExpressionType.Not, operand);
         }
-        if (CurrentToken.Type == Lexer.TokenType.Tilde)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.Tilde) {
             MoveNext();
             var operand = ParseUnary();
             return new UnaryExpression(UnaryExpressionType.BitwiseNot, operand);
@@ -254,12 +216,10 @@ public class Parser
         return ParsePrimary();
     }
 
-    private LogicalExpression ParsePrimary()
-    {
+    private LogicalExpression ParsePrimary() {
         CheckDepth();
 
-        switch (CurrentToken.Type)
-        {
+        switch (CurrentToken.Type) {
             case Lexer.TokenType.Integer:
                 var intValue = ParseInteger(CurrentToken.Text);
                 MoveNext();
@@ -316,47 +276,34 @@ public class Parser
         }
     }
 
-    private long ParseInteger(string text)
-    {
-        try
-        {
-            if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
+    private long ParseInteger(string text) {
+        try {
+            if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
                 return Convert.ToInt64(text[2..], 16);
             }
-            if (text.StartsWith("0o", StringComparison.OrdinalIgnoreCase))
-            {
+            if (text.StartsWith("0o", StringComparison.OrdinalIgnoreCase)) {
                 return Convert.ToInt64(text[2..], 8);
             }
-            if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
-            {
+            if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) {
                 return Convert.ToInt64(text[2..], 2);
             }
             return long.Parse(text);
-        }
-        catch (FormatException ex)
-        {
+        } catch (FormatException ex) {
             throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
-        }
-        catch (global::System.OverflowException)
-        {
+        } catch (global::System.OverflowException) {
             throw new Exceptions.OverflowException($"数字 '{text}' 过大");
         }
     }
 
-    private LogicalExpression ParseIdentifierOrFunction()
-    {
+    private LogicalExpression ParseIdentifierOrFunction() {
         var name = CurrentToken.Text;
         MoveNext();
-        if (CurrentToken.Type == Lexer.TokenType.LeftParenthesis)
-        {
+        if (CurrentToken.Type == Lexer.TokenType.LeftParenthesis) {
             MoveNext();
             var arguments = new List<LogicalExpression>();
-            if (CurrentToken.Type != Lexer.TokenType.RightParenthesis)
-            {
+            if (CurrentToken.Type != Lexer.TokenType.RightParenthesis) {
                 arguments.Add(ParseExpression());
-                while (CurrentToken.Type == Lexer.TokenType.Comma)
-                {
+                while (CurrentToken.Type == Lexer.TokenType.Comma) {
                     MoveNext();
                     arguments.Add(ParseExpression());
                 }
@@ -371,34 +318,28 @@ public class Parser
     /// 解析插值字符串 Token 文本，构建 InterpolatedString AST 节点。
     /// Token 文本格式：$"content" 或 $'content'，包含 {{ }} 转义和 {expr:format} 插值
     /// </summary>
-    private InterpolatedString ParseInterpolatedString(string rawText)
-    {
+    private InterpolatedString ParseInterpolatedString(string rawText) {
         // 跳过 $" 或 $' 前缀
         int pos = 2;
         char quote = rawText[1];
         var segments = new List<InterpolationSegment>();
         var textBuilder = new StringBuilder();
 
-        while (pos < rawText.Length)
-        {
+        while (pos < rawText.Length) {
             char ch = rawText[pos];
 
-            if (ch == quote)
-            {
+            if (ch == quote) {
                 break;
             }
 
-            if (ch == '{')
-            {
-                if (pos + 1 < rawText.Length && rawText[pos + 1] == '{')
-                {
+            if (ch == '{') {
+                if (pos + 1 < rawText.Length && rawText[pos + 1] == '{') {
                     textBuilder.Append('{');
                     pos += 2;
                     continue;
                 }
 
-                if (textBuilder.Length > 0)
-                {
+                if (textBuilder.Length > 0) {
                     segments.Add(new TextSegment(textBuilder.ToString()));
                     textBuilder.Clear();
                 }
@@ -410,10 +351,8 @@ public class Parser
                 continue;
             }
 
-            if (ch == '}')
-            {
-                if (pos + 1 < rawText.Length && rawText[pos + 1] == '}')
-                {
+            if (ch == '}') {
+                if (pos + 1 < rawText.Length && rawText[pos + 1] == '}') {
                     textBuilder.Append('}');
                     pos += 2;
                     continue;
@@ -424,13 +363,11 @@ public class Parser
             pos++;
         }
 
-        if (textBuilder.Length > 0)
-        {
+        if (textBuilder.Length > 0) {
             segments.Add(new TextSegment(textBuilder.ToString()));
         }
 
-        if (segments.Count == 0)
-        {
+        if (segments.Count == 0) {
             segments.Add(new TextSegment(""));
         }
 
@@ -440,54 +377,39 @@ public class Parser
     /// <summary>
     /// 解析插值表达式 {expr:format}，返回表达式AST、格式说明符和结束位置
     /// </summary>
-    private (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos)
-    {
+    private (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos) {
         var exprBuilder = new StringBuilder();
         int depth = 1;
         int pos = startPos;
 
-        while (pos < rawText.Length && depth > 0)
-        {
+        while (pos < rawText.Length && depth > 0) {
             char ch = rawText[pos];
-            if (ch == '{')
-            {
+            if (ch == '{') {
                 depth++;
                 exprBuilder.Append(ch);
-            }
-            else if (ch == '}')
-            {
+            } else if (ch == '}') {
                 depth--;
                 if (depth > 0)
                     exprBuilder.Append(ch);
-            }
-            else if (ch == '\'' || ch == '"')
-            {
+            } else if (ch == '\'' || ch == '"') {
                 exprBuilder.Append(ch);
                 pos++;
-                while (pos < rawText.Length && rawText[pos] != ch)
-                {
-                    if (rawText[pos] == '\\')
-                    {
+                while (pos < rawText.Length && rawText[pos] != ch) {
+                    if (rawText[pos] == '\\') {
                         exprBuilder.Append(rawText[pos]);
                         pos++;
-                        if (pos < rawText.Length)
-                        {
+                        if (pos < rawText.Length) {
                             exprBuilder.Append(rawText[pos]);
                         }
-                    }
-                    else
-                    {
+                    } else {
                         exprBuilder.Append(rawText[pos]);
                     }
                     pos++;
                 }
-                if (pos < rawText.Length)
-                {
+                if (pos < rawText.Length) {
                     exprBuilder.Append(rawText[pos]);
                 }
-            }
-            else
-            {
+            } else {
                 exprBuilder.Append(ch);
             }
             pos++;
@@ -497,8 +419,7 @@ public class Parser
 
         string? formatSpec = null;
         var colonIndex = FindFormatColon(exprText);
-        if (colonIndex >= 0)
-        {
+        if (colonIndex >= 0) {
             formatSpec = exprText[(colonIndex + 1)..].Trim();
             exprText = exprText[..colonIndex].Trim();
         }
@@ -513,20 +434,16 @@ public class Parser
     /// <summary>
     /// 查找格式说明符的冒号位置，跳过嵌套的括号和字符串
     /// </summary>
-    private static int FindFormatColon(string text)
-    {
+    private static int FindFormatColon(string text) {
         int depth = 0;
         bool inString = false;
         char stringQuote = '\0';
 
-        for (int i = 0; i < text.Length; i++)
-        {
+        for (int i = 0; i < text.Length; i++) {
             char ch = text[i];
 
-            if (inString)
-            {
-                if (ch == '\\')
-                {
+            if (inString) {
+                if (ch == '\\') {
                     i++;
                     continue;
                 }
@@ -535,8 +452,7 @@ public class Parser
                 continue;
             }
 
-            if (ch == '\'' || ch == '"')
-            {
+            if (ch == '\'' || ch == '"') {
                 inString = true;
                 stringQuote = ch;
                 continue;
@@ -551,8 +467,7 @@ public class Parser
         return -1;
     }
 
-    private void CheckDepth()
-    {
+    private void CheckDepth() {
         _depth++;
         if (_depth > MaxDepth)
             throw new ParseException("表达式嵌套深度超过最大限制 1024", CurrentToken.Line, CurrentToken.Column);

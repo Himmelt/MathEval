@@ -3,8 +3,7 @@ namespace MathEval.Parser;
 /// <summary>
 /// 表示二元表达式的类型
 /// </summary>
-public enum BinaryExpressionType
-{
+public enum BinaryExpressionType {
     // 算术运算符
     Plus,
     Minus,
