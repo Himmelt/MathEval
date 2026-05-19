@@ -23,6 +23,20 @@ public static class Expression {
     }
 
     /// <summary>
+    /// 优化求值：启用常量折叠和编译优化
+    /// </summary>
+    public static object OptimizedEval(string expression, ExpressionContext? context = null) {
+        return Eval<object>(expression, context, ExpressionOptions.ConstantFolding | ExpressionOptions.CompileOptimization);
+    }
+
+    /// <summary>
+    /// 优化求值：启用常量折叠和编译优化
+    /// </summary>
+    public static T OptimizedEval<T>(string expression, ExpressionContext? context = null) {
+        return Eval<T>(expression, context, ExpressionOptions.ConstantFolding | ExpressionOptions.CompileOptimization);
+    }
+
+    /// <summary>
     /// 获取表达式构建器
     /// </summary>
     public static ExpressionBuilder Builder => new();

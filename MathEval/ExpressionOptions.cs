@@ -13,5 +13,15 @@ public enum ExpressionOptions {
     /// <summary>
     /// 禁用表达式缓存
     /// </summary>
-    NoCache = 1
+    NoCache = 1,
+    
+    /// <summary>
+    /// 启用常量折叠优化
+    /// </summary>
+    ConstantFolding = 2,
+    
+    /// <summary>
+    /// 启用编译优化（将 AST 编译为委托）
+    /// </summary>
+    CompileOptimization = 4
 }

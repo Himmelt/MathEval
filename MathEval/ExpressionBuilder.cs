@@ -74,6 +74,38 @@ public class ExpressionBuilder {
         return this;
     }
 
+    /// <summary>
+    /// 启用所有优化（常量折叠 + 编译优化）
+    /// </summary>
+    public ExpressionBuilder WithOptimization() {
+        _options |= ExpressionOptions.ConstantFolding | ExpressionOptions.CompileOptimization;
+        return this;
+    }
+
+    /// <summary>
+    /// 启用常量折叠优化
+    /// </summary>
+    public ExpressionBuilder WithConstantFolding() {
+        _options |= ExpressionOptions.ConstantFolding;
+        return this;
+    }
+
+    /// <summary>
+    /// 启用编译优化
+    /// </summary>
+    public ExpressionBuilder WithCompileOptimization() {
+        _options |= ExpressionOptions.CompileOptimization;
+        return this;
+    }
+
+    /// <summary>
+    /// 禁用缓存
+    /// </summary>
+    public ExpressionBuilder WithoutCache() {
+        _options |= ExpressionOptions.NoCache;
+        return this;
+    }
+
     public ICalculator Build(string expression) {
         return new Calculator(expression, _context, _options);
     }

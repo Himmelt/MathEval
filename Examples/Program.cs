@@ -1,5 +1,6 @@
 using MathEval;
 using MathEval.Context;
+using System.Diagnostics;
 
 // 示例 1: 简单表达式计算
 Console.WriteLine("=== 示例 1: 简单表达式 ===");
@@ -53,5 +54,34 @@ var customContext = new ExpressionContext();
 customContext.SetFunction("doubleIt", (Func<double, double>)(x => x * 2));
 var doubleResult = Expression.Eval("doubleIt(7.5)", customContext);
 Console.WriteLine($"doubleIt(7.5) = {doubleResult}");
+
+// 示例 8: 性能对比 - 优化前后的性能对比
+Console.WriteLine("\n=== 示例 8: 性能对比 ===");
+const string testExpr = "2 + 3 * 4 + 5 * (6 + 7 * 8 - 9 * 10)";
+const int iterations = 100000;
+
+// 无优化
+var stopwatch = Stopwatch.StartNew();
+for (int i = 0; i < iterations; i++) {
+    Expression.Eval(testExpr);
+}
+stopwatch.Stop();
+Console.WriteLine($"无优化 - {iterations}次耗时: {stopwatch.ElapsedMilliseconds}ms");
+
+// 优化版
+stopwatch.Restart();
+for (int i = 0; i < iterations; i++) {
+    Expression.OptimizedEval(testExpr);
+}
+stopwatch.Stop();
+Console.WriteLine($"优化版 - {iterations}次耗时: {stopwatch.ElapsedMilliseconds}ms");
+
+// 示例 9: 常量折叠优化
+Console.WriteLine("\n=== 示例 9: 常量折叠 ===");
+// 常量表达式中的所有常量会在解析阶段就被计算
+var optimizedExpr = "(2 + 3 * 4 + 5 * 6 + 7 * 8 - 9 * 10)";
+var unoptimizedResult = Expression.Eval(optimizedExpr, options: ExpressionOptions.None);
+var optimizedResult2 = Expression.Eval(optimizedExpr, options: ExpressionOptions.ConstantFolding);
+Console.WriteLine($"常量折叠前后结果一致: {unoptimizedResult.Equals(optimizedResult2)}");
 
 Console.WriteLine("\n=== 所有示例完成! ===");
