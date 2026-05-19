@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/MathEval/MathEval.csproj" />
+  <Project Path="tests/MathEval.Tests/MathEval.Tests.csproj" />
+</Solution>
