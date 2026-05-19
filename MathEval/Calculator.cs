@@ -7,10 +7,11 @@ using MathEval.Visitors;
 namespace MathEval;
 
 public class Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None) : ICalculator {
-    private readonly string _expressionText = expression ?? throw new ArgumentNullException(nameof(expression));
-    private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
-    private readonly ExpressionOptions _options = options;
+
     private LogicalExpression? _ast;
+    private readonly ExpressionOptions _options = options;
+    private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
+    private readonly string _expressionText = expression ?? throw new ArgumentNullException(nameof(expression));
 
     public object Eval() {
         EnsureParsed();
@@ -30,23 +31,22 @@ public class Calculator(string expression, ExpressionContext context, Expression
     }
 
     public void Set(string name, object value) => _context.Set(name, value);
+
     public void Set(string name, Func<object> value) => _context.Set(name, value);
+
     public void Remove(string name) => _context.Remove(name);
 
     private void EnsureParsed() {
         if (_ast != null) return;
 
-        if (string.IsNullOrWhiteSpace(_expressionText))
-            throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
+        if (string.IsNullOrWhiteSpace(_expressionText)) throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
 
-        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, out _ast))
-            return;
+        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, out _ast)) return;
 
         var lexer = new Lexer.Lexer(_expressionText);
         var parser = new Parser.Parser(lexer);
         _ast = parser.Parse();
 
-        if (!_options.HasFlag(ExpressionOptions.NoCache))
-            ExpressionCache.Set(_expressionText, _ast);
+        if (!_options.HasFlag(ExpressionOptions.NoCache)) ExpressionCache.Set(_expressionText, _ast);
     }
 }

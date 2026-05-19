@@ -290,7 +290,7 @@ public class Parser {
             return long.Parse(text);
         } catch (FormatException ex) {
             throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
-        } catch (global::System.OverflowException) {
+        } catch (System.OverflowException) {
             throw new Exceptions.OverflowException($"数字 '{text}' 过大");
         }
     }
@@ -377,7 +377,7 @@ public class Parser {
     /// <summary>
     /// 解析插值表达式 {expr:format}，返回表达式AST、格式说明符和结束位置
     /// </summary>
-    private (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos) {
+    private static (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos) {
         var exprBuilder = new StringBuilder();
         int depth = 1;
         int pos = startPos;

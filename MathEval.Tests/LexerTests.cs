@@ -7,8 +7,8 @@ using TokenType = MathEval.Lexer.TokenType;
 namespace MathEval.Tests;
 
 public class LexerTests {
-    private Token GetSingleToken(string text) {
-        var lexer = new MathEval.Lexer.Lexer(text);
+    private static Token GetSingleToken(string text) {
+        var lexer = new Lexer.Lexer(text);
         lexer.MoveNext();
         return lexer.CurrentToken;
     }
@@ -234,12 +234,12 @@ public class LexerTests {
     [Fact]
     public void Error_ExpressionExceedsMaxLength() {
         var longText = new string('1', 4097);
-        Assert.Throws<ParseException>(() => new MathEval.Lexer.Lexer(longText));
+        Assert.Throws<ParseException>(() => new Lexer.Lexer(longText));
     }
 
     [Fact]
     public void TokenizeAll_ReturnsAllTokens() {
-        var lexer = new MathEval.Lexer.Lexer("1 + 2");
+        var lexer = new Lexer.Lexer("1 + 2");
         var tokens = lexer.TokenizeAll();
         Assert.Equal(4, tokens.Count);
         Assert.Equal(TokenType.Integer, tokens[0].Type);

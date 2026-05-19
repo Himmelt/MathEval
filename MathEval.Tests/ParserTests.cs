@@ -8,9 +8,9 @@ using UnaryExpressionType = MathEval.Parser.UnaryExpressionType;
 namespace MathEval.Tests;
 
 public class ParserTests {
-    private LogicalExpression Parse(string text) {
-        var lexer = new MathEval.Lexer.Lexer(text);
-        var parser = new MathEval.Parser.Parser(lexer);
+    private static LogicalExpression Parse(string text) {
+        var lexer = new Lexer.Lexer(text);
+        var parser = new Parser.Parser(lexer);
         return parser.Parse();
     }
 

@@ -26,7 +26,7 @@ public static class TypeHelper {
     public static long CheckedAdd(long a, long b) {
         try {
             return checked(a + b);
-        } catch (global::System.OverflowException) {
+        } catch (System.OverflowException) {
             throw new Exceptions.OverflowException("加法运算整数溢出");
         }
     }
@@ -34,7 +34,7 @@ public static class TypeHelper {
     public static long CheckedSubtract(long a, long b) {
         try {
             return checked(a - b);
-        } catch (global::System.OverflowException) {
+        } catch (System.OverflowException) {
             throw new Exceptions.OverflowException("减法运算整数溢出");
         }
     }
@@ -42,7 +42,7 @@ public static class TypeHelper {
     public static long CheckedMultiply(long a, long b) {
         try {
             return checked(a * b);
-        } catch (global::System.OverflowException) {
+        } catch (System.OverflowException) {
             throw new Exceptions.OverflowException("乘法运算整数溢出");
         }
     }
@@ -246,7 +246,7 @@ public static class TypeHelper {
             if (l1 < 0 && l2 != (long)Math.Floor((double)l2))
                 throw new EvaluateException("不能对负数求非整数次幂");
 
-            var result = Math.Pow((double)l1, (double)l2);
+            var result = Math.Pow(l1, l2);
 
             if (l1 == 0 && l2 < 0)
                 throw new EvaluateException("零不能求负数次幂");
@@ -416,7 +416,7 @@ public static class TypeHelper {
         if (operand is long l) {
             try {
                 return checked(-l);
-            } catch (global::System.OverflowException) {
+            } catch (System.OverflowException) {
                 throw new Exceptions.OverflowException("取负运算整数溢出");
             }
         }

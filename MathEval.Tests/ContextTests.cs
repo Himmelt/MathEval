@@ -31,7 +31,7 @@ public class ContextTests {
     [Fact]
     public void SetFunction_WeakTyped_Works() {
         var ctx = new ExpressionContext();
-        ctx.SetFunction("add1", (ExpressionFunction)(args => (long)args[0] + 1));
+        ctx.SetFunction("add1", args => (long)args[0] + 1);
         Assert.Equal(43L, Expression.Eval<long>("add1(42)", ctx));
     }
 
@@ -114,7 +114,7 @@ public class ContextTests {
     [Fact]
     public void Set_AfterSetFunction_ThrowsInvalidOperationException() {
         var ctx = new ExpressionContext();
-        ctx.SetFunction("myFunc", (ExpressionFunction)(args => args[0]));
+        ctx.SetFunction("myFunc", args => args[0]);
         Assert.Throws<InvalidOpException>(() => ctx.Set("myFunc", 42L));
     }
 
@@ -122,7 +122,7 @@ public class ContextTests {
     public void SetFunction_AfterSet_Succeeds() {
         var ctx = new ExpressionContext();
         ctx.Set("x", 1L);
-        ctx.SetFunction("x", (ExpressionFunction)(args => 42L));
+        ctx.SetFunction("x", args => 42L);
         Assert.Equal(42L, Expression.Eval<long>("x(0)", ctx));
     }
 

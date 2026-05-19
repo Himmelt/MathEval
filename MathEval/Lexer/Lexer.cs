@@ -101,11 +101,11 @@ public class Lexer {
         return ch;
     }
 
-    private bool IsIdentifierStart(char ch) {
+    private static bool IsIdentifierStart(char ch) {
         return char.IsLetter(ch) || ch == '_' || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherLetter;
     }
 
-    private bool IsIdentifierPart(char ch) {
+    private static bool IsIdentifierPart(char ch) {
         return char.IsLetterOrDigit(ch) || ch == '_' || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherLetter || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherNumber;
     }
 
