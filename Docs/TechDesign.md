@@ -1,8 +1,8 @@
 # MathEval 技术实现方案
 
-> **版本**：v1.0
+> **版本**：v1.1
 > **最后更新**：2026-05-18
-> **状态**：草稿
+> **状态**：已审核
 
 ---
 
@@ -26,7 +26,7 @@
 | 解析器类型 | **手写递归下降解析器** | NCalc | 简单可靠、无外部依赖、优先级通过方法层级自然表达 |
 | 词法分析器 | **手写逐字符扫描器** | NCalc + NFun 增强 | 轻量，但需扩展多进制字面量和字符串插值 |
 | 求值引擎 | **AST + Visitor 模式** | NCalc | 解耦求值与结构，可扩展性强 |
-| 类型系统 | **long + double 双类型** | PRD 自定 | NCalc 无区分，NFun 过于复杂（18 种原始类型），MathEval 只需 3 种值类型 |
+| 类型系统 | **bool/long/double/string**（对外表现为 bool/number/string） | PRD 自定 | NCalc 无区分，NFun 过于复杂（18 种原始类型），MathEval 只需 3 种值类型 |
 | 上下文系统 | **ConcurrentDictionary + 链式继承** | NFun 启发 | NCalc 无继承，NFun 有作用域栈，MathEval 采用父子链式继承 |
 | 函数注册 | **弱类型 + 强类型双通道** | NCalc 弱类型 + NFun 强类型 | 兼顾灵活性和类型安全 |
 | 缓存机制 | **ConcurrentDictionary 全局缓存** | NCalc | 成熟方案，线程安全 |
@@ -50,7 +50,7 @@
 | 不足 | MathEval 改进方案 |
 |------|------------------|
 | 不支持多进制字面量 | Lexer 增加 `0x`/`0o`/`0b` 前缀扫描 |
-| 不支持字符串插值 | Lexer 增加 `$"..."` 扫描，Parser 增加 `InterpolatedString` 节点 |
+| 不支持字符串插值 | Lexer 增加 `$` 前缀扫描，Parser 增加 `InterpolatedString` 节点 |
 | `^` 表示异或 | 改为 `^` 表示乘方，`xor` 表示异或 |
 | 无上下文继承 | 实现 `CreateChild()` 链式继承 |
 | 弱类型函数注册 | 增加强类型 `Func<T1, ..., TResult>` 注册 |
@@ -77,7 +77,7 @@
 | 不采用的特性 | 原因 |
 |-------------|------|
 | 全局类型推断（Tic 系统） | MathEval 只有 3 种值类型，无需复杂的约束图求解 |
-| 18 种原始类型 | MathEval 只需 `bool`/`long`/`double`/`string` |
+| 18 种原始类型 | MathEval 只需 `bool`/`number`/`string` |
 | Pratt 优先级爬升 | 递归下降更直观，优先级通过方法层级自然表达 |
 | 隐式乘法（`10x`） | PRD 未要求，增加歧义 |
 | 比较链（`a < b < c`） | PRD 未要求 |
@@ -95,7 +95,7 @@ MathEval/
 ├── src/
 │   └── MathEval/
 │       ├── MathEval.csproj              # .NET 10 类库
-│       ├── Exceptions/                   # 异常层次结构
+│       ├── Exceptions/                  # 异常层次结构
 │       │   ├── MathEvalException.cs
 │       │   ├── ParseException.cs
 │       │   ├── EvaluateException.cs
@@ -104,38 +104,37 @@ MathEval/
 │       │   ├── FunctionTypeMismatchException.cs
 │       │   ├── SymbolNotFoundException.cs
 │       │   ├── DivisionByZeroException.cs
-│       │   ├── OverflowException.cs
-│       │   └── InvalidOperationException.cs
-│       ├── Lexer/                        # 词法分析
-│       │   ├── TokenType.cs              # Token 类型枚举
-│       │   ├── Token.cs                  # Token 数据结构
-│       │   └── Lexer.cs                  # 逐字符扫描器
-│       ├── Parser/                       # 语法分析
-│       │   └── Parser.cs                 # 递归下降解析器
-│       ├── AST/                          # 抽象语法树
-│       │   ├── LogicalExpression.cs      # AST 基类
-│       │   ├── ValueExpression.cs        # 常量值节点
-│       │   ├── Identifier.cs             # 标识符节点
-│       │   ├── BinaryExpression.cs       # 二元运算节点
-│       │   ├── UnaryExpression.cs        # 一元运算节点
-│       │   ├── FunctionCall.cs           # 函数调用节点
-│       │   ├── InterpolatedString.cs     # 插值字符串节点
-│       │   └── ConditionalExpression.cs  # 三元条件节点
-│       ├── Visitors/                     # Visitor 模式
-│       │   ├── IExpressionVisitor.cs     # Visitor 接口
-│       │   └── EvaluationVisitor.cs      # 求值 Visitor
-│       ├── Context/                      # 上下文系统
-│       │   ├── ExpressionContext.cs       # 上下文（符号+函数+继承）
-│       │   └── ExpressionFunction.cs     # 函数委托类型
-│       ├── Functions/                    # 内置函数
-│       │   └── BuiltInFunctions.cs       # 内置数学函数注册
-│       ├── API/                          # 公共 API
-│       │   ├── Expression.cs             # 主入口（静态方法 + Builder）
-│       │   ├── ICalculator.cs            # 计算器接口
-│       │   ├── Calculator.cs             # 计算器实现
-│       │   └── ExpressionOptions.cs      # 选项枚举
-│       └── TypeSystem/                   # 类型推断
-│           └── TypeHelper.cs             # 类型转换与推断工具
+│       │   └── OverflowException.cs
+│       ├── Lexer/                       # 词法分析
+│       │   ├── TokenType.cs             # Token 类型枚举
+│       │   ├── Token.cs                 # Token 数据结构
+│       │   └── Lexer.cs                 # 逐字符扫描器
+│       ├── Parser/                      # 语法分析
+│       │   └── Parser.cs                # 递归下降解析器
+│       ├── AST/                         # 抽象语法树
+│       │   ├── LogicalExpression.cs     # AST 基类
+│       │   ├── ValueExpression.cs       # 常量值节点
+│       │   ├── Identifier.cs            # 标识符节点
+│       │   ├── BinaryExpression.cs      # 二元运算节点
+│       │   ├── UnaryExpression.cs       # 一元运算节点
+│       │   ├── FunctionCall.cs          # 函数调用节点
+│       │   ├── InterpolatedString.cs    # 插值字符串节点
+│       │   └── ConditionalExpression.cs # 三元条件节点
+│       ├── Visitors/                    # Visitor 模式
+│       │   ├── IExpressionVisitor.cs    # Visitor 接口
+│       │   └── EvaluationVisitor.cs     # 求值 Visitor
+│       ├── Context/                     # 上下文系统
+│       │   ├── ExpressionContext.cs     # 上下文（符号+函数+继承）
+│       │   └── ExpressionFunction.cs    # 函数委托类型
+│       ├── Functions/                   # 内置函数
+│       │   └── BuiltInFunctions.cs      # 内置数学函数注册
+│       ├── API/                         # 公共 API
+│       │   ├── Expression.cs            # 主入口（静态方法 + Builder）
+│       │   ├── ICalculator.cs           # 计算器接口
+│       │   ├── Calculator.cs            # 计算器实现
+│       │   └── ExpressionOptions.cs     # 选项枚举
+│       └── TypeSystem/                  # 类型推断
+│           └── TypeHelper.cs            # 类型转换与推断工具
 ├── tests/
 │   └── MathEval.Tests/
 │       └── ...
@@ -196,10 +195,10 @@ public class Token
 
 **1. 多进制数字扫描**（借鉴 NFun 的 `ReadNumberOrIp`，但简化）：
 
-- `0x`/`0X` 前缀 → 十六进制，调用 `ReadHexNumber()`
-- `0o`/`0O` 前缀 → 八进制，调用 `ReadOctalNumber()`
-- `0b`/`0B` 前缀 → 二进制，调用 `ReadBinaryNumber()`
-- 其他 → 十进制，调用 `ReadDecimalNumber()`（区分 `Integer` 和 `Float`）
+- `0x`/`0X` 前缀 → 十六进制，调用 `ReadHexNumber()` → 产出 `Integer` Token
+- `0o`/`0O` 前缀 → 八进制，调用 `ReadOctalNumber()` → 产出 `Integer` Token
+- `0b`/`0B` 前缀 → 二进制，调用 `ReadBinaryNumber()` → 产出 `Integer` Token
+- 其他 → 十进制，调用 `ReadDecimalNumber()` → 区分 `Integer`（无小数点/指数）和 `Float`（有小数点/指数）
 
 **2. 字符串插值扫描**（借鉴 NFun 的 `_interpolationLayers` 栈）：
 
@@ -216,6 +215,10 @@ public class Token
 **4. 双字符运算符前瞻**：
 
 `==`, `!=`, `<=`, `>=`, `//`, `<<`, `>>`, `&&`, `||`
+
+**5. 表达式长度限制**：
+
+Lexer 初始化时检查表达式长度，超过 4096 字符抛出 `ParseException`
 
 #### 4.2.4 扫描流程伪代码
 
@@ -235,7 +238,26 @@ while (position < text.Length):
 
 **核心设计**：递归下降解析器，方法层级对应优先级。
 
-#### 4.3.1 方法调用层级（14 级优先级，从低到高）
+#### 4.3.1 14 级优先级完整定义（从高到低）
+
+| 优先级 | 运算符 | 含义 | 结合性 |
+|--------|--------|------|--------|
+| 1 | `()` | 分组 | - |
+| 2 | `+`, `-`, `not`, `!`, `~` | 正号、取负、逻辑非、按位取反 | 右结合 |
+| 3 | `^` | 乘方 | 右结合 |
+| 4 | `*`, `/`, `//`, `%` | 乘法、除法（浮点）、整除、取模 | 左结合 |
+| 5 | `+`, `-` | 加法/字符串拼接、减法 | 左结合 |
+| 6 | `<<`, `>>` | 左移、右移 | 左结合 |
+| 7 | `&` | 按位与 | 左结合 |
+| 8 | `xor` | 按位异或 | 左结合 |
+| 9 | `|` | 按位或 | 左结合 |
+| 10 | `>`, `<`, `>=`, `<=` | 大于、小于、大于等于、小于等于 | 左结合 |
+| 11 | `==`, `!=` | 等于、不等于 | 左结合 |
+| 12 | `and`, `&&` | 逻辑与（短路） | 左结合 |
+| 13 | `or`, `||` | 逻辑或（短路） | 左结合 |
+| 14 | `?:` | 三元条件 | 右结合 |
+
+#### 4.3.2 方法调用层级（14 级优先级，从低到高）
 
 ```
 ParseExpression()                        // 入口
@@ -255,7 +277,7 @@ ParseExpression()                        // 入口
                                                                    └─ ParsePrimary()  // 1: 字面量 / 标识符 / 函数调用 / 括号 / 插值字符串
 ```
 
-#### 4.3.2 关键实现要点
+#### 4.3.3 关键实现要点
 
 - **左结合**（优先级 4~12）：`while` 循环消费同优先级运算符
 - **右结合**（优先级 3 乘方）：递归调用 `ParsePower()` 自身
@@ -263,9 +285,9 @@ ParseExpression()                        // 入口
 - **函数调用**：在 `ParsePrimary()` 中，标识符后跟 `(` 则解析为函数调用
 - **插值字符串**：在 `ParsePrimary()` 中，遇到 `$` + 引号则解析为 `InterpolatedString` 节点
 - **深度限制**：维护 `_depth` 计数器，超过 1024 抛出 `ParseException`
-- **长度限制**：Lexer 初始化时检查表达式长度，超过 4096 抛出 `ParseException`
+- **空表达式检查**：解析前检查是否为空或纯空白，抛出 `ParseException`
 
-#### 4.3.3 二元运算解析示例（左结合）
+#### 4.3.4 二元运算解析示例（左结合）
 
 ```csharp
 private LogicalExpression ParseAdditive()
@@ -283,7 +305,7 @@ private LogicalExpression ParseAdditive()
 }
 ```
 
-#### 4.3.4 乘方解析示例（右结合）
+#### 4.3.5 乘方解析示例（右结合）
 
 ```csharp
 private LogicalExpression ParsePower()
@@ -299,7 +321,7 @@ private LogicalExpression ParsePower()
 }
 ```
 
-#### 4.3.5 三元运算符解析示例（右结合）
+#### 4.3.6 三元运算符解析示例（右结合）
 
 ```csharp
 private LogicalExpression ParseConditional()
@@ -329,11 +351,11 @@ public abstract class LogicalExpression
     public abstract T Accept<T>(IExpressionVisitor<T> visitor);
 }
 
-// 常量值 - 借鉴 NCalc ValueExpression，但增加 ValueType 区分 long/double
+// 常量值 - 借鉴 NCalc ValueExpression
+// 注意：对外表现为 3 种类型（bool/number/string），内部 number 分为 long/double
 public class ValueExpression : LogicalExpression
 {
     public object Value { get; }           // bool / long / double / string
-    public ValueType Type { get; }         // Boolean / Integer / Float / String
 }
 
 // 标识符 - 借鉴 NCalc IdentifierExpression
@@ -373,7 +395,6 @@ public class InterpolatedString : LogicalExpression
 
 public abstract class InterpolationSegment
 {
-    public abstract void Accept(IExpressionVisitor visitor);
 }
 
 public class TextSegment : InterpolationSegment     // 纯文本
@@ -384,7 +405,7 @@ public class TextSegment : InterpolationSegment     // 纯文本
 public class ExpressionSegment : InterpolationSegment  // 表达式 + 可选格式
 {
     public LogicalExpression Expression { get; }
-    public string FormatSpec { get; }    // 可选，如 "F2"
+    public string? FormatSpec { get; }    // 可选，如 "F2"
 }
 
 // 三元条件 - 借鉴 NCalc ConditionalExpression
@@ -459,69 +480,73 @@ public void Visit(LogicalExpression expression)
 #### 4.5.2 EvaluationVisitor 核心逻辑
 
 ```csharp
-public class EvaluationVisitor : IExpressionVisitor
+public class EvaluationVisitor : IExpressionVisitor<object>
 {
     private readonly ExpressionContext _context;
-    public object Result { get; private set; }
+
+    public EvaluationVisitor(ExpressionContext context)
+    {
+        _context = context;
+    }
 
     // 二元运算 - 最复杂的部分
-    public void Visit(BinaryExpression expr)
+    public object Visit(BinaryExpression expr)
     {
         // 短路求值处理（and / or）
         if (expr.Type == BinaryExpressionType.And)
         {
-            expr.Left.Accept(this);
-            if (!IsTruthy(Result)) { Result = false; return; }
-            expr.Right.Accept(this);
-            RequireBool(Result);
-            return;
+            var leftResult = expr.Left.Accept(this);
+            if (!TypeHelper.IsTruthy(leftResult))
+                return false;
+            var rightResult = expr.Right.Accept(this);
+            TypeHelper.RequireBool(rightResult);
+            return rightResult;
         }
-        // ... or 同理
+        if (expr.Type == BinaryExpressionType.Or)
+        {
+            var leftResult = expr.Left.Accept(this);
+            if (TypeHelper.IsTruthy(leftResult))
+                return true;
+            var rightResult = expr.Right.Accept(this);
+            TypeHelper.RequireBool(rightResult);
+            return rightResult;
+        }
 
         // 非短路运算：先求值两侧
-        expr.Left.Accept(this);
-        var left = Result;
-        expr.Right.Accept(this);
-        var right = Result;
+        var left = expr.Left.Accept(this);
+        var right = expr.Right.Accept(this);
 
         // 根据 BinaryExpressionType 分发到具体计算
-        Result = EvaluateBinary(expr.Type, left, right);
+        return TypeHelper.EvaluateBinary(expr.Type, left, right);
     }
 
     // 标识符求值
-    public void Visit(Identifier expr)
+    public object Visit(Identifier expr)
     {
         if (_context.TryGetSymbol(expr.Name, out var value))
         {
-            Result = value;
+            return value;
         }
-        else
-        {
-            throw new SymbolNotFoundException(expr.Name);
-        }
+        throw new SymbolNotFoundException(expr.Name);
     }
 
     // 函数调用求值
-    public void Visit(FunctionCall expr)
+    public object Visit(FunctionCall expr)
     {
         var args = new List<object>();
         foreach (var arg in expr.Arguments)
         {
-            arg.Accept(this);
-            args.Add(Result);
+            args.Add(arg.Accept(this));
         }
-        if (_context.TryGetFunction(expr.Name, out var entry))
+        if (_context.TryGetFunction(expr.Name, out var func))
         {
-            Result = entry.Invoke(args.ToArray());
+            return func(args.ToArray());
         }
-        else
-        {
-            throw new FunctionNotFoundException(expr.Name);
-        }
+        throw new FunctionNotFoundException(expr.Name);
     }
 
     // 插值字符串求值
-    public void Visit(InterpolatedString expr)
+    public object Visit(InterpolatedString expr)
     {
         var sb = new StringBuilder();
         foreach (var segment in expr.Segments)
@@ -532,41 +557,33 @@ public class EvaluationVisitor : IExpressionVisitor
             }
             else if (segment is ExpressionSegment exprSeg)
             {
-                exprSeg.Expression.Accept(this);
-                var value = Result;
+                var value = exprSeg.Expression.Accept(this);
                 if (exprSeg.FormatSpec != null)
                     sb.Append(TypeHelper.Format(value, exprSeg.FormatSpec));
                 else
                     sb.Append(TypeHelper.ToString(value));
             }
         }
-        Result = sb.ToString();
+        return sb.ToString();
     }
 
-    // 三元条件求值
-    public void Visit(ConditionalExpression expr)
+    // 三元条件求值 - 短路类型推断
+    public object Visit(ConditionalExpression expr)
     {
-        expr.Condition.Accept(this);
-        RequireBool(Result);
-        if ((bool)Result)
-            expr.TrueExpression.Accept(this);
+        var condition = expr.Condition.Accept(this);
+        TypeHelper.RequireBool(condition);
+        if ((bool)condition)
+            return expr.TrueExpression.Accept(this);  // 只返回选中分支的类型
         else
-            expr.FalseExpression.Accept(this);
+            return expr.FalseExpression.Accept(this); // 只返回选中分支的类型
     }
 
-    private object EvaluateBinary(BinaryExpressionType type, object left, object right)
+    public object Visit(ValueExpression expr) => expr.Value;
+
+    public object Visit(UnaryExpression expr)
     {
-        // + 运算符：字符串拼接优先（PRD 2.3.3 规则）
-        if (type == BinaryExpressionType.Plus)
-            return EvaluatePlus(left, right);
-
-        // 算术运算：bool 自动转换为数值
-        // 类型推断：long + long → long, long + double → double
-        // 溢出检查：long 运算使用 checked 上下文
-
-        // 位运算：截断为 long 后运算
-
-        // 比较运算：同类型比较，不同类型 == 返回 false
+        var operand = expr.Operand.Accept(this);
+        return TypeHelper.EvaluateUnary(expr.Type, operand);
     }
 }
 ```
@@ -581,10 +598,10 @@ public class EvaluationVisitor : IExpressionVisitor
 public static class TypeHelper
 {
     // 布尔转数值（优先 long）
-    public static object BoolToNumber(bool value, bool preferDouble)
+    public static object BoolToNumber(bool value, bool preferDouble = false)
     {
         long longValue = value ? 1L : 0L;
-        return preferDouble ? (object)(double)longValue : longValue;
+        return preferDouble ? (double)longValue : longValue;
     }
 
     // 数值类型提升
@@ -593,29 +610,155 @@ public static class TypeHelper
         // bool → long（如果另一操作数为 long）
         // bool → double（如果另一操作数为 double）
         // long + double → double + double
+        var leftIsBool = left is bool;
+        var rightIsBool = right is bool;
+        var leftIsLong = left is long;
+        var rightIsLong = right is long;
+        var leftIsDouble = left is double;
+        var rightIsDouble = right is double;
+
+        // 处理布尔值
+        if (leftIsBool)
+            left = BoolToNumber((bool)left, rightIsDouble);
+        if (rightIsBool)
+            right = BoolToNumber((bool)right, leftIsDouble || left is double);
+
+        // 提升 long 到 double
+        if ((left is long && right is double) || (left is double && right is long))
+        {
+            left = left is long l ? (double)l : left;
+            right = right is long r ? (double)r : right;
+        }
+
+        return (left, right);
     }
 
-    // 溢出检查
+    // 溢出检查的算术运算
     public static long CheckedAdd(long a, long b) => checked(a + b);
     public static long CheckedSubtract(long a, long b) => checked(a - b);
     public static long CheckedMultiply(long a, long b) => checked(a * b);
 
     // 数值转字符串
-    public static string NumberToString(object value)
+    public static string ToString(object value)
     {
         return value switch
         {
+            bool b => b.ToString(),
             long l => l.ToString(),
             double d => d.ToString("G"),
-            _ => value.ToString()
+            string s => s,
+            _ => value?.ToString() ?? ""
         };
     }
 
-    // 格式化
+    // 格式化 - 仅支持 D/d/E/e/F/f/G/g/X/x
     public static string Format(object value, string formatSpec)
     {
-        // 仅支持 D/d/E/e/F/f/G/g/X/x 格式说明符
         // 非数值类型使用格式说明符抛出 EvaluateException
+        if (value is not long && value is not double)
+            throw new EvaluateException($"Format specifier '{formatSpec}' can only be used with numeric types");
+
+        // 检查格式说明符是否支持
+        var firstChar = char.ToLowerInvariant(formatSpec[0]);
+        var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
+        if (!supportedFormats.Contains(firstChar))
+            throw new ParseException($"Unsupported format specifier: {formatSpec}");
+
+        // 格式化
+        return string.Format($"{{0:{formatSpec}}}", value);
+    }
+
+    // 检查是否为真值
+    public static bool IsTruthy(object value)
+    {
+        return value is bool b && b;
+    }
+
+    // 要求为布尔类型
+    public static void RequireBool(object value)
+    {
+        if (value is not bool)
+            throw new TypeMismatchException("Expected boolean type", "bool", value?.GetType().Name ?? "null");
+    }
+
+    // 二元运算求值
+    public static object EvaluateBinary(BinaryExpressionType type, object left, object right)
+    {
+        // + 运算符：字符串拼接优先（PRD 2.3.3 规则）
+        if (type == BinaryExpressionType.Plus)
+        {
+            if (left is string || right is string)
+            {
+                return ToString(left) + ToString(right);
+            }
+        }
+
+        // 提升类型
+        var (promotedLeft, promotedRight) = Promote(left, right);
+
+        // 根据运算符类型处理
+        return type switch
+        {
+            BinaryExpressionType.Plus => EvaluatePlus(promotedLeft, promotedRight),
+            BinaryExpressionType.Minus => EvaluateMinus(promotedLeft, promotedRight),
+            BinaryExpressionType.Multiply => EvaluateMultiply(promotedLeft, promotedRight),
+            BinaryExpressionType.Divide => EvaluateDivide(promotedLeft, promotedRight),
+            BinaryExpressionType.IntegerDivide => EvaluateIntegerDivide(promotedLeft, promotedRight),
+            BinaryExpressionType.Modulo => EvaluateModulo(promotedLeft, promotedRight),
+            BinaryExpressionType.Power => EvaluatePower(promotedLeft, promotedRight),
+            BinaryExpressionType.BitwiseAnd => EvaluateBitwiseAnd(promotedLeft, promotedRight),
+            BinaryExpressionType.BitwiseOr => EvaluateBitwiseOr(promotedLeft, promotedRight),
+            BinaryExpressionType.BitwiseXor => EvaluateBitwiseXor(promotedLeft, promotedRight),
+            BinaryExpressionType.LeftShift => EvaluateLeftShift(promotedLeft, promotedRight),
+            BinaryExpressionType.RightShift => EvaluateRightShift(promotedLeft, promotedRight),
+            BinaryExpressionType.Equal => EvaluateEqual(left, right),
+            BinaryExpressionType.NotEqual => EvaluateNotEqual(left, right),
+            BinaryExpressionType.LessThan => EvaluateLessThan(promotedLeft, promotedRight),
+            BinaryExpressionType.LessThanOrEqual => EvaluateLessThanOrEqual(promotedLeft, promotedRight),
+            BinaryExpressionType.GreaterThan => EvaluateGreaterThan(promotedLeft, promotedRight),
+            BinaryExpressionType.GreaterThanOrEqual => EvaluateGreaterThanOrEqual(promotedLeft, promotedRight),
+            _ => throw new InvalidOperationException($"Unknown binary operator: {type}")
+        };
+    }
+
+    // 一元运算求值
+    public static object EvaluateUnary(UnaryExpressionType type, object operand)
+    {
+        return type switch
+        {
+            UnaryExpressionType.Positive => EvaluatePositive(operand),
+            UnaryExpressionType.Negate => EvaluateNegate(operand),
+            UnaryExpressionType.Not => EvaluateNot(operand),
+            UnaryExpressionType.BitwiseNot => EvaluateBitwiseNot(operand),
+            _ => throw new InvalidOperationException($"Unknown unary operator: {type}")
+        };
+    }
+
+    // 具体运算实现...
+    private static object EvaluatePlus(object left, object right)
+    {
+        if (left is long l1 && right is long l2)
+            return CheckedAdd(l1, l2);
+        if (left is double d1 && right is double d2)
+            return d1 + d2;
+        throw new TypeMismatchException("Addition requires numeric types", "number", GetTypeName(left, right));
+    }
+
+    private static object EvaluateEqual(object left, object right)
+    {
+        // 不同类型比较返回 false
+        if (left.GetType() != right.GetType())
+            return false;
+        return Equals(left, right);
+    }
+
+    private static string GetTypeName(object a, object b)
+    {
+        if (a is bool || b is bool) return "bool";
+        if (a is long || b is long) return "long";
+        if (a is double || b is double) return "double";
+        if (a is string || b is string) return "string";
+        return "unknown";
     }
 }
 ```
@@ -633,7 +776,7 @@ public class ExpressionContext
     private readonly ConcurrentDictionary<string, SymbolEntry> _symbols;
 
     // 函数存储：名称 → 函数条目
-    private readonly ConcurrentDictionary<string, FunctionEntry> _functions;
+    private readonly ConcurrentDictionary<string, ExpressionFunction> _functions;
 
     // 符号条目：统一直接值和延迟值
     private class SymbolEntry
@@ -645,50 +788,111 @@ public class ExpressionContext
         public object GetValue() => IsLazy ? LazyValue!() : DirectValue!;
     }
 
-    // 函数条目：统一弱类型和强类型
-    private class FunctionEntry
+    // 构造函数 - 根上下文（注册内置常量和函数）
+    public ExpressionContext() : this(null)
     {
-        public ExpressionFunction? WeakFunc { get; }
-        public Delegate? StrongFunc { get; }
-        public bool IsStrong => StrongFunc != null;
+        // 注册内置常量
+        Set("PI", 3.14159265358979);
+        Set("E", 2.71828182845905);
 
-        public object Invoke(object[] args)
-        {
-            if (IsStrong)
-                return InvokeStrong(StrongFunc!, args);
-            return WeakFunc!(args);
-        }
+        // 注册内置数学函数
+        BuiltInFunctions.Register(this);
     }
+
+    // 构造函数 - 子上下文
+    private ExpressionContext(ExpressionContext? parent)
+    {
+        _parent = parent;
+        _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
+        _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
+    }
+
+    // 保留关键字
+    private static readonly HashSet<string> ReservedKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "true", "false", "and", "or", "not", "xor", "NaN", "INF"
+    };
 
     // 注册直接值符号
     public void Set(string name, object value)
     {
+        // 检查是否为保留关键字
+        if (ReservedKeywords.Contains(name))
+            throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
+
         // 检查是否与已注册函数冲突
-        // 检查是否为保留关键字（NaN, INF）
+        if (_functions.ContainsKey(name))
+            throw new InvalidOperationException($"A function with name '{name}' already exists");
+
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
 
     // 注册延迟值符号
     public void Set(string name, Func<object> value)
     {
-        // 检查是否与已注册函数冲突
         // 检查是否为保留关键字
+        if (ReservedKeywords.Contains(name))
+            throw new InvalidOperationException($"Cannot set reserved keyword: {name}");
+
+        // 检查是否与已注册函数冲突
+        if (_functions.ContainsKey(name))
+            throw new InvalidOperationException($"A function with name '{name}' already exists");
+
         _symbols[name] = new SymbolEntry { LazyValue = value };
     }
 
     // 注册弱类型函数
     public void SetFunction(string name, ExpressionFunction func)
     {
-        // 函数可覆盖同名符号
-        _functions[name] = new FunctionEntry { WeakFunc = func };
+        // 检查是否为保留关键字
+        if (ReservedKeywords.Contains(name))
+            throw new InvalidOperationException($"Cannot register function with reserved keyword: {name}");
+
+        // 函数可覆盖同名符号（先移除符号）
+        _symbols.TryRemove(name, out _);
+        _functions[name] = func;
     }
 
     // 注册强类型函数 - 借鉴 NFun 的 LambdaWrapperFactory
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func)
     {
-        _functions[name] = new FunctionEntry { StrongFunc = func };
+        SetFunction(name, FunctionWrapper.Wrap(func));
     }
-    // ... 支持 Func<T1, T2, TResult> 到 Func<T1, ..., T8, TResult>
+
+    public void SetFunction<T1, T2, TResult>(string name, Func<T1, T2, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, TResult>(string name, Func<T1, T2, T3, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, T4, TResult>(string name, Func<T1, T2, T3, T4, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, T4, T5, TResult>(string name, Func<T1, T2, T3, T4, T5, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, T4, T5, T6, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, T4, T5, T6, T7, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
+
+    public void SetFunction<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> func)
+    {
+        SetFunction(name, FunctionWrapper.Wrap(func));
+    }
 
     // 查找符号 - 链式查找（借鉴 NFun ScopeFunctionDictionary）
     public bool TryGetSymbol(string name, out object value)
@@ -705,13 +909,13 @@ public class ExpressionContext
     }
 
     // 查找函数 - 链式查找
-    public bool TryGetFunction(string name, out FunctionEntry entry)
+    public bool TryGetFunction(string name, out ExpressionFunction func)
     {
-        if (_functions.TryGetValue(name, out entry))
+        if (_functions.TryGetValue(name, out func))
             return true;
         if (_parent != null)
-            return _parent.TryGetFunction(name, out entry!);
-        entry = null!;
+            return _parent.TryGetFunction(name, out func);
+        func = null!;
         return false;
     }
 
@@ -747,11 +951,28 @@ public class ExpressionContext
 **借鉴 NCalc 的简洁 API + NFun 的 Fluent Builder**：
 
 ```csharp
+// 表达式选项枚举
+[Flags]
+public enum ExpressionOptions
+{
+    None = 0,
+    NoCache = 1
+}
+
 public static class Expression
 {
     // 静态快捷方法
-    public static object Eval(string expression, ExpressionContext? context = null);
-    public static T Eval<T>(string expression, ExpressionContext? context = null);
+    public static object Eval(string expression, ExpressionContext? context = null, ExpressionOptions options = ExpressionOptions.None)
+    {
+        return Eval<object>(expression, context, options);
+    }
+
+    public static T Eval<T>(string expression, ExpressionContext? context = null, ExpressionOptions options = ExpressionOptions.None)
+    {
+        context ??= new ExpressionContext();
+        var calculator = new Calculator(expression, context, options);
+        return calculator.Eval<T>();
+    }
 
     // Builder 入口
     public static ExpressionBuilder Builder => new();
@@ -760,6 +981,7 @@ public static class Expression
 public class ExpressionBuilder
 {
     private readonly ExpressionContext _context = new();
+    private ExpressionOptions _options = ExpressionOptions.None;
 
     public ExpressionBuilder With(string name, object value)
     {
@@ -784,11 +1006,18 @@ public class ExpressionBuilder
         _context.SetFunction(name, func);
         return this;
     }
+
+    public ExpressionBuilder WithOptions(ExpressionOptions options)
+    {
+        _options = options;
+        return this;
+    }
+
     // ... 更多 Func<> 重载
 
     public ICalculator Build(string expression)
     {
-        return new Calculator(expression, _context);
+        return new Calculator(expression, _context, _options);
     }
 }
 ```
@@ -813,17 +1042,38 @@ public class Calculator : ICalculator
 {
     private readonly string _expressionText;
     private readonly ExpressionContext _context;
+    private readonly ExpressionOptions _options;
     private LogicalExpression? _ast;
+
+    public Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None)
+    {
+        _expressionText = expression ?? throw new ArgumentNullException(nameof(expression));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _options = options;
+    }
 
     public object Eval()
     {
         EnsureParsed();
         var visitor = new EvaluationVisitor(_context);
-        _ast!.Accept(visitor);
-        return visitor.Result;
+        return _ast!.Accept(visitor);
     }
 
-    public T Eval<T>() => (T)Convert.ChangeType(Eval(), typeof(T));
+    public T Eval<T>()
+    {
+        var result = Eval();
+        // 处理类型转换
+        if (result is T typedResult)
+            return typedResult;
+        try
+        {
+            return (T)Convert.ChangeType(result, typeof(T));
+        }
+        catch (InvalidCastException)
+        {
+            throw new TypeMismatchException($"Cannot convert result to type {typeof(T).Name}", typeof(T).Name, result?.GetType().Name ?? "null");
+        }
+    }
 
     public void Set(string name, object value) => _context.Set(name, value);
     public void Set(string name, Func<object> value) => _context.Set(name, value);
@@ -832,14 +1082,23 @@ public class Calculator : ICalculator
     private void EnsureParsed()
     {
         if (_ast != null) return;
-        // 查缓存
-        if (!ExpressionCache.TryGet(_expressionText, out _ast))
-        {
-            var lexer = new Lexer(_expressionText);
-            var parser = new Parser(lexer);
-            _ast = parser.Parse();
+
+        // 检查空表达式
+        if (string.IsNullOrWhiteSpace(_expressionText))
+            throw new ParseException("Expression cannot be empty or whitespace", 1, 1);
+
+        // 查缓存（如果启用）
+        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, out _ast))
+            return;
+
+        // 解析
+        var lexer = new Lexer(_expressionText);
+        var parser = new Parser(lexer);
+        _ast = parser.Parse();
+
+        // 缓存（如果启用）
+        if (!_options.HasFlag(ExpressionOptions.NoCache))
             ExpressionCache.Set(_expressionText, _ast);
-        }
     }
 }
 ```
@@ -860,15 +1119,16 @@ public static class FunctionWrapper
         return args =>
         {
             if (args.Length != 1)
-                throw new FunctionTypeMismatchException(...);
+                throw new FunctionTypeMismatchException($"Function expects 1 argument, got {args.Length}");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
-                return func(arg1)!;
+                var result = func(arg1);
+                return result!;
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException(...);
+                throw new FunctionTypeMismatchException($"Argument type mismatch for function");
             }
         };
     }
@@ -878,71 +1138,167 @@ public static class FunctionWrapper
         return args =>
         {
             if (args.Length != 2)
-                throw new FunctionTypeMismatchException(...);
+                throw new FunctionTypeMismatchException($"Function expects 2 arguments, got {args.Length}");
             try
             {
                 var arg1 = (T1)Convert.ChangeType(args[0], typeof(T1));
                 var arg2 = (T2)Convert.ChangeType(args[1], typeof(T2));
-                return func(arg1, arg2)!;
+                var result = func(arg1, arg2);
+                return result!;
             }
             catch (InvalidCastException)
             {
-                throw new FunctionTypeMismatchException(...);
+                throw new FunctionTypeMismatchException($"Argument type mismatch for function");
             }
         };
     }
-    // ... 支持 1~8 个参数
-}
-```
 
-**SetFunction 内部实现**：
-
-```csharp
-public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func)
-{
-    var wrapped = FunctionWrapper.Wrap(func);
-    _functions[name] = new FunctionEntry { WeakFunc = wrapped, StrongFunc = func };
+    // ... 支持 3~8 个参数
 }
 ```
 
 ### 4.10 内置数学函数技术方案
 
-内置函数在 `ExpressionContext` 的默认构造函数中注册：
+内置函数在 `BuiltInFunctions.Register` 方法中注册：
 
 ```csharp
-public ExpressionContext() : this(null)
+internal static class BuiltInFunctions
 {
-    // 注册内置常量
-    Set("PI", 3.14159265358979);
-    Set("E", 2.71828182845905);
+    public static void Register(ExpressionContext context)
+    {
+        // 绝对值 - 根据输入类型返回对应类型
+        context.SetFunction("abs", (ExpressionFunction)(args =>
+        {
+            if (args[0] is long l)
+                return Math.Abs(l);
+            if (args[0] is double d)
+                return Math.Abs(d);
+            throw new FunctionTypeMismatchException("abs expects a numeric argument");
+        }));
 
-    // 注册内置数学函数
-    SetFunction("abs", (ExpressionFunction)(args => Math.Abs(Convert.ToDouble(args[0]))));
-    SetFunction("sqrt", (ExpressionFunction)(args => Math.Sqrt(Convert.ToDouble(args[0]))));
-    SetFunction("sin", (ExpressionFunction)(args => Math.Sin(Convert.ToDouble(args[0]))));
-    SetFunction("cos", (ExpressionFunction)(args => Math.Cos(Convert.ToDouble(args[0]))));
-    SetFunction("tan", (ExpressionFunction)(args => Math.Tan(Convert.ToDouble(args[0]))));
-    SetFunction("asin", (ExpressionFunction)(args => Math.Asin(Convert.ToDouble(args[0]))));
-    SetFunction("acos", (ExpressionFunction)(args => Math.Acos(Convert.ToDouble(args[0]))));
-    SetFunction("atan", (ExpressionFunction)(args => Math.Atan(Convert.ToDouble(args[0]))));
-    SetFunction("atan2", (ExpressionFunction)(args => Math.Atan2(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
-    SetFunction("exp", (ExpressionFunction)(args => Math.Exp(Convert.ToDouble(args[0]))));
-    SetFunction("ln", (ExpressionFunction)(args => Math.Log(Convert.ToDouble(args[0]))));
-    SetFunction("log", (ExpressionFunction)(args => Math.Log(Convert.ToDouble(args[0]))));
-    SetFunction("log10", (ExpressionFunction)(args => Math.Log10(Convert.ToDouble(args[0]))));
-    SetFunction("log2", (ExpressionFunction)(args => Math.Log2(Convert.ToDouble(args[0]))));
-    SetFunction("ceil", (ExpressionFunction)(args => (long)Math.Ceiling(Convert.ToDouble(args[0]))));
-    SetFunction("floor", (ExpressionFunction)(args => (long)Math.Floor(Convert.ToDouble(args[0]))));
-    SetFunction("round", (ExpressionFunction)(args => (long)Math.Round(Convert.ToDouble(args[0]))));
-    SetFunction("truncate", (ExpressionFunction)(args => (long)Math.Truncate(Convert.ToDouble(args[0]))));
-    SetFunction("sign", (ExpressionFunction)(args => (long)Math.Sign(Convert.ToDouble(args[0]))));
-    SetFunction("max", (ExpressionFunction)(args => Math.Max(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
-    SetFunction("min", (ExpressionFunction)(args => Math.Min(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
-    SetFunction("pow", (ExpressionFunction)(args => Math.Pow(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
+        context.SetFunction("sqrt", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value < 0)
+                throw new EvaluateException("Square root of negative number is not allowed");
+            return Math.Sqrt(value);
+        }));
+
+        context.SetFunction("sin", (ExpressionFunction)(args => Math.Sin(Convert.ToDouble(args[0]))));
+        context.SetFunction("cos", (ExpressionFunction)(args => Math.Cos(Convert.ToDouble(args[0]))));
+        context.SetFunction("tan", (ExpressionFunction)(args => Math.Tan(Convert.ToDouble(args[0]))));
+
+        context.SetFunction("asin", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value < -1 || value > 1)
+                throw new EvaluateException("asin expects argument in range [-1, 1]");
+            return Math.Asin(value);
+        }));
+
+        context.SetFunction("acos", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value < -1 || value > 1)
+                throw new EvaluateException("acos expects argument in range [-1, 1]");
+            return Math.Acos(value);
+        }));
+
+        context.SetFunction("atan", (ExpressionFunction)(args => Math.Atan(Convert.ToDouble(args[0]))));
+        context.SetFunction("atan2", (ExpressionFunction)(args => Math.Atan2(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
+        context.SetFunction("exp", (ExpressionFunction)(args => Math.Exp(Convert.ToDouble(args[0]))));
+
+        context.SetFunction("ln", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value <= 0)
+                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+            return Math.Log(value);
+        }));
+
+        context.SetFunction("log", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value <= 0)
+                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+            return Math.Log(value);
+        }));
+
+        context.SetFunction("log10", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value <= 0)
+                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+            return Math.Log10(value);
+        }));
+
+        context.SetFunction("log2", (ExpressionFunction)(args =>
+        {
+            var value = Convert.ToDouble(args[0]);
+            if (value <= 0)
+                throw new EvaluateException("Logarithm of non-positive number is not allowed");
+            return Math.Log2(value);
+        }));
+
+        context.SetFunction("ceil", (ExpressionFunction)(args => (long)Math.Ceiling(Convert.ToDouble(args[0]))));
+        context.SetFunction("floor", (ExpressionFunction)(args => (long)Math.Floor(Convert.ToDouble(args[0]))));
+
+        // round 支持单参数和双参数
+        context.SetFunction("round", (ExpressionFunction)(args =>
+        {
+            if (args.Length == 1)
+            {
+                return (long)Math.Round(Convert.ToDouble(args[0]));
+            }
+            else if (args.Length == 2)
+            {
+                var value = Convert.ToDouble(args[0]);
+                var digits = Convert.ToInt32(args[1]);
+                if (digits < 0)
+                    throw new EvaluateException("round decimal digits must be non-negative");
+                return Math.Round(value, digits);
+            }
+            throw new FunctionTypeMismatchException("round expects 1 or 2 arguments");
+        }));
+
+        context.SetFunction("truncate", (ExpressionFunction)(args => (long)Math.Truncate(Convert.ToDouble(args[0]))));
+        context.SetFunction("sign", (ExpressionFunction)(args => (long)Math.Sign(Convert.ToDouble(args[0]))));
+
+        // max - 根据输入类型返回对应类型
+        context.SetFunction("max", (ExpressionFunction)(args =>
+        {
+            if (args[0] is long l1 && args[1] is long l2)
+                return Math.Max(l1, l2);
+            var d1 = Convert.ToDouble(args[0]);
+            var d2 = Convert.ToDouble(args[1]);
+            if (double.IsNaN(d1) || double.IsNaN(d2))
+                throw new EvaluateException("max does not accept NaN arguments");
+            return Math.Max(d1, d2);
+        }));
+
+        // min - 根据输入类型返回对应类型
+        context.SetFunction("min", (ExpressionFunction)(args =>
+        {
+            if (args[0] is long l1 && args[1] is long l2)
+                return Math.Min(l1, l2);
+            var d1 = Convert.ToDouble(args[0]);
+            var d2 = Convert.ToDouble(args[1]);
+            if (double.IsNaN(d1) || double.IsNaN(d2))
+                throw new EvaluateException("min does not accept NaN arguments");
+            return Math.Min(d1, d2);
+        }));
+
+        context.SetFunction("pow", (ExpressionFunction)(args =>
+        {
+            var x = Convert.ToDouble(args[0]);
+            var y = Convert.ToDouble(args[1]);
+            if (x < 0 && y != Math.Floor(y))
+                throw new EvaluateException("Cannot raise negative number to non-integer power");
+            return Math.Pow(x, y);
+        }));
+    }
 }
 ```
-
-**注意**：上述为简化示例，实际实现中 `abs`/`max`/`min` 需要根据输入类型返回对应类型（long 输入返回 long，double 输入返回 double），`round(x, d)` 需要支持双参数版本。
 
 ### 4.11 异常系统技术方案
 
@@ -951,6 +1307,7 @@ public ExpressionContext() : this(null)
 public class MathEvalException : Exception
 {
     public MathEvalException(string message) : base(message) { }
+    public MathEvalException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 // 解析异常
@@ -969,9 +1326,10 @@ public class ParseException : MathEvalException
 public class EvaluateException : MathEvalException
 {
     public EvaluateException(string message) : base(message) { }
+    public EvaluateException(string message, Exception innerException) : base(message, innerException) { }
 }
 
-// 类型不匹配（独立于 EvaluateException，因为可能在解析阶段触发）
+// 类型不匹配
 public class TypeMismatchException : MathEvalException
 {
     public string ExpectedType { get; }
@@ -985,22 +1343,49 @@ public class TypeMismatchException : MathEvalException
 }
 
 // 以下均继承 EvaluateException
-public class FunctionNotFoundException : EvaluateException { ... }
-public class FunctionTypeMismatchException : EvaluateException { ... }
-public class SymbolNotFoundException : EvaluateException { ... }
-public class DivisionByZeroException : EvaluateException { ... }
-public class OverflowException : EvaluateException { ... }
-public class InvalidOperationException : EvaluateException { ... }
+public class FunctionNotFoundException : EvaluateException
+{
+    public string FunctionName { get; }
+    public FunctionNotFoundException(string functionName) : base($"Function '{functionName}' not found")
+    {
+        FunctionName = functionName;
+    }
+}
+
+public class FunctionTypeMismatchException : EvaluateException
+{
+    public FunctionTypeMismatchException(string message) : base(message) { }
+}
+
+public class SymbolNotFoundException : EvaluateException
+{
+    public string SymbolName { get; }
+    public SymbolNotFoundException(string symbolName) : base($"Symbol '{symbolName}' not found")
+    {
+        SymbolName = symbolName;
+    }
+}
+
+public class DivisionByZeroException : EvaluateException
+{
+    public DivisionByZeroException() : base("Division by zero") { }
+}
+
+public class OverflowException : EvaluateException
+{
+    public OverflowException(string message) : base(message) { }
+    public OverflowException(string message, Exception innerException) : base(message, innerException) { }
+}
 ```
 
 ### 4.12 表达式缓存技术方案
 
 ```csharp
-public static class ExpressionCache
+internal static class ExpressionCache
 {
     private static readonly ConcurrentDictionary<string, LogicalExpression> _cache = new();
 
-    public static bool TryGet(string expression, out LogicalExpression? ast)
+    public static bool TryGet(string expression, [MaybeNullWhen(false)] out LogicalExpression ast)
     {
         return _cache.TryGetValue(expression, out ast);
     }
@@ -1031,6 +1416,7 @@ public static class ExpressionCache
 | 线程安全 | ConcurrentDictionary | lock + Dictionary | 细粒度锁，性能更好 |
 | 溢出检查 | checked 算术上下文 | unchecked | PRD 要求 long 溢出抛异常 |
 | 缓存 | 静态 ConcurrentDictionary | 无缓存/LRU | NCalc 验证过的成熟方案 |
+| 三元类型推断 | 短路策略 | 类型统一 | PRD 明确要求短路类型推断 |
 
 ---
 
@@ -1044,6 +1430,7 @@ public static class ExpressionCache
 │  Lexer  │────▶│    Parser    │────▶│  AST Cache   │
 │ 逐字符扫描│     │  递归下降    │     │ ConcurrentDict│
 │ → Tokens │     │  → AST      │     │ string→AST   │
+│ 长度限制 │     │ 深度限制    │     │ NoCache选项  │
 └─────────┘     └──────┬───────┘     └──────┬───────┘
                        │                     │
                        ▼                     ▼
@@ -1065,7 +1452,7 @@ public static class ExpressionCache
               │  ┌─────────────────────────────┐│
               │  │ TypeHelper (类型推断/转换)    ││
               │  │ checked 算术 (溢出检查)      ││
-              │  │ 短路求值 (and/or)            ││
+              │  │ 短路求值 (and/or/?:)         ││
               │  └─────────────────────────────┘│
               └───────────────┬─────────────────┘
                               │
