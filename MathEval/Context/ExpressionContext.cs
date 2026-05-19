@@ -39,6 +39,9 @@ public class ExpressionContext {
         _symbols[name] = new SymbolEntry { DirectValue = value };
     }
 
+    /// <summary>
+    /// 注册延迟值，由用户保证其线程安全！
+    /// </summary>
     public void Set(string name, Func<object> value) {
         if (ReservedKeywords.Contains(name))
             throw new InvalidOpException($"无法设置保留关键字：{name}");
