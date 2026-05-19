@@ -1,4 +1,7 @@
-# MathEval
+<div align="center">
+  <img src="logo.svg" alt="MathEval Logo" width="150" height="150">
+  <h1>MathEval</h1>
+</div>
 
 MathEval 是一个面向 .NET 10+ 的轻量级表达式计算库。
 
