@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="src/MathEval/MathEval.csproj" />
-  <Project Path="tests/MathEval.Tests/MathEval.Tests.csproj" />
+  <Project Path="MathEval/MathEval.csproj" />
+  <Project Path="MathEval.Tests/MathEval.Tests.csproj" />
 </Solution>
