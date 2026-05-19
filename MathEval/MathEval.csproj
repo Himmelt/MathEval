@@ -6,12 +6,23 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <Authors>Himmelt</Authors>
     <Description>A lightweight expression evaluation library for .NET 10+</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/matheval/matheval</RepositoryUrl>
     <PackageTags>expression;evaluator;calculator</PackageTags>
+    <PackageReleaseNotes>Initial 1.0.0 release of MathEval expression evaluation library.</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <Using Include="System" />

@@ -265,9 +265,9 @@ public class EvaluationTests
     }
 
     [Fact]
-    public void Logical_IntAnd_ReturnsFalse()
+    public void Logical_IntAnd_ThrowsTypeMismatch()
     {
-        Assert.False(Expression.Eval<bool>("1 and 2"));
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 and 2"));
     }
 
     [Fact]

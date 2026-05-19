@@ -103,7 +103,6 @@ public static class TypeHelper
 
     private static bool IsNaN(object value) => value is double d && double.IsNaN(d);
     private static bool IsINF(object value) => value is double d && double.IsPositiveInfinity(d);
-    private static bool IsNullOrINF(object value) => value is double d && (double.IsNaN(d) || double.IsPositiveInfinity(d));
 
     public static object EvaluateBinary(BinaryExpressionType type, object left, object right)
     {
@@ -164,7 +163,7 @@ public static class TypeHelper
         if (IsINF(left))
             return double.PositiveInfinity;
         if (IsINF(right))
-            return double.PositiveInfinity;
+            return double.NegativeInfinity;
 
         if (left is long l1 && right is long l2)
             return CheckedSubtract(l1, l2);
@@ -251,7 +250,11 @@ public static class TypeHelper
         if (IsINF(left))
             return double.NaN;
         if (IsINF(right))
+        {
+            if (left is long l)
+                return (double)l;
             return left;
+        }
 
         if (left is long l1 && right is long l2)
         {

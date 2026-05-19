@@ -35,7 +35,8 @@ public class EvaluationVisitor : IExpressionVisitor<object>
         if (expr.Type == BinaryExpressionType.And)
         {
             var leftResult = expr.Left.Accept(this);
-            if (!TypeHelper.IsTruthy(leftResult))
+            TypeHelper.RequireBool(leftResult);
+            if (!(bool)leftResult)
                 return false;
             var rightResult = expr.Right.Accept(this);
             TypeHelper.RequireBool(rightResult);
@@ -45,7 +46,8 @@ public class EvaluationVisitor : IExpressionVisitor<object>
         if (expr.Type == BinaryExpressionType.Or)
         {
             var leftResult = expr.Left.Accept(this);
-            if (TypeHelper.IsTruthy(leftResult))
+            TypeHelper.RequireBool(leftResult);
+            if ((bool)leftResult)
                 return true;
             var rightResult = expr.Right.Accept(this);
             TypeHelper.RequireBool(rightResult);

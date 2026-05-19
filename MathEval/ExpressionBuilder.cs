@@ -28,6 +28,12 @@ public class ExpressionBuilder
         return this;
     }
 
+    public ExpressionBuilder WithFunction(string name, Delegate func)
+    {
+        _context.SetFunction(name, func);
+        return this;
+    }
+
     public ExpressionBuilder WithFunction<T1, TResult>(string name, Func<T1, TResult> func)
     {
         _context.SetFunction(name, func);
