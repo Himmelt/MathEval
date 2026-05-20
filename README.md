@@ -1,7 +1,11 @@
-<div align="center">
-  <img src="logo.svg" alt="MathEval Logo" width="150" height="150">
-  <h1>MathEval</h1>
-</div>
+![Logo](https://raw.githubusercontent.com/Himmelt/MathEval/main/logo.png)
+
+# MathEval
+
+[![MathEval on nuget.org](https://img.shields.io/nuget/v/Himmelt.MathEval)](https://www.nuget.org/packages/Himmelt.MathEval/)
+[![license](https://img.shields.io/github/license/Himmelt/MathEval)](LICENSE)
+![code size](https://img.shields.io/github/languages/code-size/Himmelt/MathEval.svg)
+
 
 MathEval 是一个面向 .NET 10+ 的轻量级表达式计算库。
 
