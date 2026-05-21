@@ -1,6 +1,7 @@
 using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.Parser;
 using MathEval.TypeSystem;
 using System.Linq.Expressions;
 using LinqExpression = System.Linq.Expressions.Expression;
@@ -54,7 +55,7 @@ public class CompiledExpression(LogicalExpression ast) {
     /// 编译标识符节点
     /// </summary>
     private static BlockExpression CompileIdentifier(Identifier expr, ParameterExpression contextParam) {
-        var tryGetSymbolMethod = typeof(ExpressionContext).GetMethod("TryGetSymbol");
+        var tryGetSymbolMethod = typeof(ExpressionContext).GetMethod(nameof(ExpressionContext.TryGetSymbol));
         var symbolName = LinqExpression.Constant(expr.Name);
         var resultVar = LinqExpression.Variable(typeof(object), "symbolValue");
 
@@ -91,7 +92,7 @@ public class CompiledExpression(LogicalExpression ast) {
         var assignLeft = LinqExpression.Assign(leftVar, leftExpr);
         var assignRight = LinqExpression.Assign(rightVar, rightExpr);
 
-        var typeHelperMethod = typeof(TypeHelper).GetMethod("EvaluateBinary");
+        var typeHelperMethod = ((Func<BinaryExpressionType, object, object, object>)TypeHelper.EvaluateBinary).Method;
         var opType = LinqExpression.Constant(expr.Type);
 
         var call = LinqExpression.Call(typeHelperMethod!, opType, leftVar, rightVar);
@@ -108,7 +109,7 @@ public class CompiledExpression(LogicalExpression ast) {
         var operandVar = LinqExpression.Variable(typeof(object), "operand");
         var assign = LinqExpression.Assign(operandVar, operandExpr);
 
-        var typeHelperMethod = typeof(TypeHelper).GetMethod("EvaluateUnary");
+        var typeHelperMethod = ((Func<UnaryExpressionType, object, object>)TypeHelper.EvaluateUnary).Method;
         var opType = LinqExpression.Constant(expr.Type);
 
         var call = LinqExpression.Call(typeHelperMethod!, opType, operandVar);
@@ -125,7 +126,7 @@ public class CompiledExpression(LogicalExpression ast) {
         var initArray = LinqExpression.NewArrayInit(typeof(object), argsExpr);
         var assignArray = LinqExpression.Assign(argsArrayVar, initArray);
 
-        var tryGetFuncMethod = typeof(ExpressionContext).GetMethod("TryGetFunction");
+        var tryGetFuncMethod = typeof(ExpressionContext).GetMethod(nameof(ExpressionContext.TryGetFunction));
         var funcName = LinqExpression.Constant(expr.Name);
         var funcVar = LinqExpression.Variable(typeof(ExpressionFunction), "func");
 
@@ -163,7 +164,7 @@ public class CompiledExpression(LogicalExpression ast) {
         var conditionVar = LinqExpression.Variable(typeof(object), "condition");
         var assignCondition = LinqExpression.Assign(conditionVar, conditionExpr);
 
-        var requireBoolMethod = typeof(TypeHelper).GetMethod("RequireBool");
+        var requireBoolMethod = ((Action<object>)TypeHelper.RequireBool).Method;
 
         var checkBool = LinqExpression.Call(requireBoolMethod, conditionVar);
 
@@ -186,7 +187,7 @@ public class CompiledExpression(LogicalExpression ast) {
 
         foreach (var segment in expr.Segments) {
             if (segment is TextSegment textSeg) {
-                var appendText = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod("Append", [typeof(string)])!, LinqExpression.Constant(textSeg.Text));
+                var appendText = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, LinqExpression.Constant(textSeg.Text));
                 appendExpressions.Add(appendText);
             } else if (segment is ExpressionSegment exprSeg) {
                 var valueExpr = CompileNode(exprSeg.Expression, contextParam);
@@ -196,13 +197,13 @@ public class CompiledExpression(LogicalExpression ast) {
                 LinqExpression appendExpr;
 
                 if (exprSeg.FormatSpec != null) {
-                    var formatMethod = typeof(TypeHelper).GetMethod("Format");
-                    var formatCall = LinqExpression.Call(formatMethod!, valueVar, LinqExpression.Constant(exprSeg.FormatSpec));
-                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod("Append", [typeof(string)])!, formatCall);
+                    var formatMethod = ((Func<object, string, string>)TypeHelper.Format).Method;
+                    var formatCall = LinqExpression.Call(formatMethod, valueVar, LinqExpression.Constant(exprSeg.FormatSpec));
+                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, formatCall);
                 } else {
-                    var toStringMethod = typeof(TypeHelper).GetMethod("ToString");
-                    var toStringCall = LinqExpression.Call(toStringMethod!, valueVar);
-                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod("Append", [typeof(string)])!, toStringCall);
+                    var toStringMethod = ((Func<object, string>)TypeHelper.ToString).Method;
+                    var toStringCall = LinqExpression.Call(toStringMethod, valueVar);
+                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, toStringCall);
                 }
 
                 var block = LinqExpression.Block([valueVar], assignValue, appendExpr);
@@ -210,7 +211,7 @@ public class CompiledExpression(LogicalExpression ast) {
             }
         }
 
-        var toStringCallFinal = LinqExpression.Call(sbVar, typeof(object).GetMethod("ToString")!);
+        var toStringCallFinal = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString))!);
 
         var allExpressions = new List<LinqExpression> {
             assignSb
