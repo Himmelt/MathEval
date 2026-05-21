@@ -1,5 +1,4 @@
 using MathEval.AST;
-using MathEval.Internal;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
@@ -10,12 +9,12 @@ namespace MathEval.Optimization;
 /// </summary>
 public static class OptimizedExpressionCache {
     private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
-    
+
     private class CacheEntry {
         public LogicalExpression? Ast { get; set; }
         public CompiledExpression? Compiled { get; set; }
     }
-    
+
     public static bool TryGetAst(string expression, [MaybeNullWhen(false)] out LogicalExpression ast) {
         if (_cache.TryGetValue(expression, out var entry)) {
             ast = entry.Ast;
@@ -24,7 +23,7 @@ public static class OptimizedExpressionCache {
         ast = null;
         return false;
     }
-    
+
     public static bool TryGetCompiled(string expression, [MaybeNullWhen(false)] out CompiledExpression compiled) {
         if (_cache.TryGetValue(expression, out var entry)) {
             compiled = entry.Compiled;
@@ -33,7 +32,7 @@ public static class OptimizedExpressionCache {
         compiled = null;
         return false;
     }
-    
+
     public static void Set(string expression, LogicalExpression ast) {
         _cache.AddOrUpdate(
             expression,
@@ -45,7 +44,7 @@ public static class OptimizedExpressionCache {
             }
         );
     }
-    
+
     public static void SetCompiled(string expression, CompiledExpression compiled) {
         _cache.AddOrUpdate(
             expression,
@@ -56,18 +55,18 @@ public static class OptimizedExpressionCache {
             }
         );
     }
-    
+
     public static void Clear() {
         _cache.Clear();
     }
-    
+
     public static LogicalExpression GetOrAdd(string expression, Func<string, LogicalExpression> factory) {
         return _cache.GetOrAdd(
             expression,
             expr => new CacheEntry { Ast = factory(expr) }
         ).Ast!;
     }
-    
+
     public static CompiledExpression GetOrAddCompiled(string expression, Func<string, LogicalExpression> astFactory, Func<LogicalExpression, CompiledExpression> compileFactory) {
         var entry = _cache.GetOrAdd(
             expression,
@@ -77,11 +76,11 @@ public static class OptimizedExpressionCache {
                 return new CacheEntry { Ast = ast, Compiled = compiled };
             }
         );
-        
+
         if (entry.Compiled != null) {
             return entry.Compiled;
         }
-        
+
         var compiledExpr = compileFactory(entry.Ast!);
         entry.Compiled = compiledExpr;
         return compiledExpr;

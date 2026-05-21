@@ -224,13 +224,13 @@ public class Lexer {
                     case 'x':
                         if (_position + 2 > _text.Length)
                             throw new ParseException("无效的十六进制转义序列", _line, _column);
-                        var hex = new string(new[] { Read(), Read() });
+                        var hex = new string([Read(), Read()]);
                         sb.Append((char)Convert.ToInt32(hex, 16));
                         break;
                     case 'u':
                         if (_position + 4 > _text.Length)
                             throw new ParseException("无效的 Unicode 转义序列", _line, _column);
-                        var uni = new string(new[] { Read(), Read(), Read(), Read() });
+                        var uni = new string([Read(), Read(), Read(), Read()]);
                         sb.Append((char)Convert.ToInt32(uni, 16));
                         break;
                     default:
