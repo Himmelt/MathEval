@@ -15,14 +15,9 @@ public interface ICalculator {
     T Eval<T>();
 
     /// <summary>
-    /// 设置符号值
+    /// 设置符号值 和 延迟值（Func）
     /// </summary>
     void Set(string name, object value);
-
-    /// <summary>
-    /// 设置延迟值符号
-    /// </summary>
-    void Set(string name, Func<object> value);
 
     /// <summary>
     /// 删除符号或函数
