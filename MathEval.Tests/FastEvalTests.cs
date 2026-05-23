@@ -125,12 +125,8 @@ public class FastEvalTests {
     #region 比较运算
 
     [Fact]
-    public void EvalDouble_LessThan_True() {
+    public void EvalDouble_LessThan() {
         Assert.Equal(1.0, FastEval.EvalDouble("3 < 5"));
-    }
-
-    [Fact]
-    public void EvalDouble_LessThan_False() {
         Assert.Equal(0.0, FastEval.EvalDouble("5 < 3"));
     }
 
@@ -160,12 +156,8 @@ public class FastEvalTests {
     }
 
     [Fact]
-    public void EvalDouble_NaNEqual_ReturnsFalse() {
+    public void EvalDouble_NaNComparison() {
         Assert.Equal(0.0, FastEval.EvalDouble("NaN == NaN"));
-    }
-
-    [Fact]
-    public void EvalDouble_NaNNotEqual_ReturnsTrue() {
         Assert.Equal(1.0, FastEval.EvalDouble("NaN != NaN"));
     }
 
@@ -216,12 +208,8 @@ public class FastEvalTests {
     }
 
     [Fact]
-    public void EvalBool_Comparison_ReturnsTrue() {
+    public void EvalBool_Comparison() {
         Assert.True(FastEval.EvalBool("3 > 2"));
-    }
-
-    [Fact]
-    public void EvalBool_Comparison_ReturnsFalse() {
         Assert.False(FastEval.EvalBool("3 < 2"));
     }
 
@@ -235,12 +223,16 @@ public class FastEvalTests {
     public void EvalBool_ShortCircuitOr() {
         var vars = new Dictionary<string, object> { ["a"] = true };
         Assert.True(FastEval.EvalBool("a or b", vars));
+        vars["a"] = false;
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a or b", vars));
     }
 
     [Fact]
     public void EvalBool_ShortCircuitAnd() {
         var vars = new Dictionary<string, object> { ["a"] = false };
         Assert.False(FastEval.EvalBool("a and b", vars));
+        vars["a"] = true;
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a and b", vars));
     }
 
     #endregion
@@ -248,18 +240,42 @@ public class FastEvalTests {
     #region 三元运算
 
     [Fact]
-    public void EvalDouble_TernaryTrueBranch() {
+    public void EvalDouble_Ternary() {
         Assert.Equal(1.0, FastEval.EvalDouble("3 > 2 ? 1 : 0"));
-    }
-
-    [Fact]
-    public void EvalDouble_TernaryFalseBranch() {
         Assert.Equal(0.0, FastEval.EvalDouble("3 < 2 ? 1 : 0"));
     }
 
     [Fact]
     public void EvalLong_TernaryTrueBranch() {
         Assert.Equal(10L, FastEval.EvalLong("5 > 3 ? 10 : 20"));
+    }
+
+    [Fact]
+    public void EvalDouble_TernaryTrueBranch_ShortCircuit() {
+        Assert.Equal(1.0, FastEval.EvalDouble("true ? 1 : 1/0"));
+        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("true ? 1/0 : 2"));
+    }
+
+    [Fact]
+    public void EvalDouble_TernaryFalseBranch_ShortCircuit() {
+        Assert.Equal(2.0, FastEval.EvalDouble("false ? 1/0 : 2"));
+        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("false ? 1 : 1/0"));
+    }
+
+    [Fact]
+    public void EvalBool_TernaryTrueBranch_ShortCircuit() {
+        var vars = new Dictionary<string, object> { ["a"] = true };
+        Assert.True(FastEval.EvalBool("a ? true : b", vars));
+        vars["a"] = false;
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a ? true : b", vars));
+    }
+
+    [Fact]
+    public void EvalBool_TernaryFalseBranch_ShortCircuit() {
+        var vars = new Dictionary<string, object> { ["a"] = false };
+        Assert.False(FastEval.EvalBool("a ? b : false", vars));
+        vars["a"] = true;
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a ? b : false", vars));
     }
 
     #endregion
@@ -426,12 +442,8 @@ public class FastEvalTests {
     }
 
     [Fact]
-    public void EvalDouble_TrueConstant() {
+    public void EvalDouble_TrueFalseConstants() {
         Assert.Equal(1.0, FastEval.EvalDouble("true"));
-    }
-
-    [Fact]
-    public void EvalDouble_FalseConstant() {
         Assert.Equal(0.0, FastEval.EvalDouble("false"));
     }
 

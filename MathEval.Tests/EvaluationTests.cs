@@ -193,11 +193,13 @@ public class EvaluationTests {
     [Fact]
     public void Logical_AndShortCircuit_DoesNotEvaluateRight() {
         Assert.False(Expression.Eval<bool>("false and (1/0 == 0)"));
+        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<bool>("true and (1/0 == 0)"));
     }
 
     [Fact]
     public void Logical_OrShortCircuit_DoesNotEvaluateRight() {
         Assert.True(Expression.Eval<bool>("true or (1/0 == 0)"));
+        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<bool>("false or (1/0 == 0)"));
     }
 
     [Fact]
@@ -326,12 +328,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Ternary_TrueBranch_Returns1() {
+    public void Ternary_TrueFalseBranch() {
         Assert.Equal(1L, Expression.Eval<long>("true ? 1 : 2"));
-    }
-
-    [Fact]
-    public void Ternary_FalseBranch_Returns2() {
         Assert.Equal(2L, Expression.Eval<long>("false ? 1 : 2"));
     }
 
@@ -348,6 +346,18 @@ public class EvaluationTests {
     [Fact]
     public void Ternary_IntCondition_ThrowsTypeMismatchException() {
         Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 ? 2 : 3"));
+    }
+
+    [Fact]
+    public void Ternary_TrueBranch_ShortCircuit() {
+        Assert.Equal(1L, Expression.Eval<long>("true ? 1 : 1/0"));
+        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<long>("true ? 1/0 : 2"));
+    }
+
+    [Fact]
+    public void Ternary_FalseBranch_ShortCircuit() {
+        Assert.Equal(2L, Expression.Eval<long>("false ? 1/0 : 2"));
+        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<long>("false ? 1 : 1/0"));
     }
 
     [Fact]
