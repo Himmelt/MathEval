@@ -42,12 +42,25 @@ internal sealed class FastEvaluator<T> where T : struct {
 
         if (_scanner.Peek() == '?') {
             _scanner.Read();
-            var trueValue = EvalExpression();
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
-            _scanner.Read();
-            var falseValue = EvalExpression();
-            return ConvertToBool(condition) ? trueValue : falseValue;
+            if (ConvertToBool(condition)) {
+                var trueValue = EvalExpression();
+                _scanner.SkipWhitespace();
+                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
+                _scanner.Read();
+                _skipMode = true;
+                EvalExpression();
+                _skipMode = false;
+                return trueValue;
+            } else {
+                _skipMode = true;
+                EvalExpression();
+                _skipMode = false;
+                _scanner.SkipWhitespace();
+                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
+                _scanner.Read();
+                var falseValue = EvalExpression();
+                return falseValue;
+            }
         }
 
         return condition;
@@ -230,19 +243,19 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '*') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = Multiply(left, right);
+                left = _skipMode ? default : Multiply(left, right);
             } else if (_scanner.Peek() == '/' && _scanner.PeekNext() == '/') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalPower();
-                left = IntegerDivide(left, right);
+                left = _skipMode ? default : IntegerDivide(left, right);
             } else if (_scanner.Peek() == '/') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = Divide(left, right);
+                left = _skipMode ? default : Divide(left, right);
             } else if (_scanner.Peek() == '%') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = Modulo(left, right);
+                left = _skipMode ? default : Modulo(left, right);
             } else break;
         }
         return left;
