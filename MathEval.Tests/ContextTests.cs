@@ -112,10 +112,12 @@ public class ContextTests {
     }
 
     [Fact]
-    public void Set_AfterSetFunction_ThrowsInvalidOperationException() {
+    public void Set_AfterSetFunction_Succeeds() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("myFunc", args => args[0]);
-        Assert.Throws<InvalidOpException>(() => ctx.Set("myFunc", 42L));
+        ctx.Set("myFunc", 42L);
+        Assert.Equal(233, Expression.Eval<long>("myFunc(233)", ctx));
+        Assert.Equal(42L, Expression.Eval<long>("myFunc", ctx));
     }
 
     [Fact]
