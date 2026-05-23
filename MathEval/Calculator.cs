@@ -31,8 +31,7 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
     public T Eval<T>() {
         var result = Eval();
-        if (result is T typedResult)
-            return typedResult;
+        if (result is T typedResult) return typedResult;
         try {
             return (T)Convert.ChangeType(result, typeof(T));
         } catch (InvalidCastException) {
@@ -41,6 +40,8 @@ public class Calculator(string expression, ExpressionContext context, Expression
     }
 
     public void Set(string name, object value) => _context.Set(name, value);
+
+    public void Set(string name, Func<object> value) => _context.Set(name, value);
 
     public void Remove(string name) => _context.Remove(name);
 

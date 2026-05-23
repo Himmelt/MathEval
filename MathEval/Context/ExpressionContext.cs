@@ -8,19 +8,19 @@ namespace MathEval.Context;
 
 public class ExpressionContext {
     private readonly ExpressionContext? _parent;
-    private readonly ConcurrentDictionary<string, object> _symbols;
+    private readonly ConcurrentDictionary<string, SymbolEntry> _symbols;
     private readonly ConcurrentDictionary<string, ExpressionFunction> _functions;
 
     public ExpressionContext() {
         _parent = null;
-        _symbols = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
+        _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
         _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
         BuiltInFunctions.Register(this);
     }
 
     private ExpressionContext(ExpressionContext parent) {
         _parent = parent;
-        _symbols = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
+        _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
         _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
     }
 
@@ -30,15 +30,27 @@ public class ExpressionContext {
     };
 
     /// <summary>
-    /// 注册符号，直接值 和 延迟值。
-    /// 注意：对于延迟值，由用户保证其线程安全 和 异常处理！！！
+    /// 注册直接值符号
     /// </summary>
     public void Set(string name, object value) {
-        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法设置保留关键字：{name}");
+        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
 
-        _symbols[name] = value;
+        _symbols[name] = new SymbolEntry { DirectValue = value };
     }
 
+    /// <summary>
+    /// 注册延迟值符号
+    /// 注意：对于延迟值，由用户保证其 线程安全 和 异常处理！！！
+    /// </summary>
+    public void Set(string name, Func<object> value) {
+        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
+
+        _symbols[name] = new SymbolEntry { LazyValue = value };
+    }
+
+    /// <summary>
+    /// 注册自定义函数
+    /// </summary>
     public void SetFunction(string name, ExpressionFunction func) {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
@@ -107,8 +119,7 @@ public class ExpressionContext {
 
     public bool TryGetSymbol(string name, out object value) {
         if (_symbols.TryGetValue(name, out var entry)) {
-
-            value = entry is Func<object> func ? func() : entry;
+            value = entry.GetValue();
             return true;
         }
 
@@ -119,11 +130,9 @@ public class ExpressionContext {
     }
 
     public bool TryGetFunction(string name, out ExpressionFunction func) {
-        if (_functions.TryGetValue(name, out func!))
-            return true;
+        if (_functions.TryGetValue(name, out func!)) return true;
 
-        if (_parent != null)
-            return _parent.TryGetFunction(name, out func);
+        if (_parent != null) return _parent.TryGetFunction(name, out func);
 
         func = null!;
         return false;
@@ -136,5 +145,13 @@ public class ExpressionContext {
     public void Remove(string name) {
         _symbols.TryRemove(name, out _);
         _functions.TryRemove(name, out _);
+    }
+
+    private class SymbolEntry {
+        public object? DirectValue { get; init; }
+        public Func<object>? LazyValue { get; init; }
+        public bool IsLazy => LazyValue != null;
+
+        public object GetValue() => IsLazy ? LazyValue!() : DirectValue!;
     }
 }
