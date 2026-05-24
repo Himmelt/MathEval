@@ -334,18 +334,10 @@ internal sealed class FastEvaluator<T> where T : struct {
             return EvalFunctionCall(identifierSpan);
         }
 
-        if (identifierSpan.SequenceEqual("true"))
-            return BoolToT(true);
-        if (identifierSpan.SequenceEqual("false"))
-            return BoolToT(false);
-        if (identifierSpan.SequenceEqual("NaN"))
-            return DoubleToT(double.NaN);
-        if (identifierSpan.SequenceEqual("INF"))
-            return DoubleToT(double.PositiveInfinity);
-        if (identifierSpan.SequenceEqual("PI"))
-            return DoubleToT(3.14159265358979);
-        if (identifierSpan.SequenceEqual("E"))
-            return DoubleToT(2.71828182845905);
+        if (identifierSpan.SequenceEqual("true")) return BoolToT(true);
+        if (identifierSpan.SequenceEqual("false")) return BoolToT(false);
+        if (identifierSpan.SequenceEqual("NaN")) return DoubleToT(double.NaN);
+        if (identifierSpan.SequenceEqual("INF")) return DoubleToT(double.PositiveInfinity);
 
         return LookupVariable(identifierSpan);
     }
@@ -385,6 +377,12 @@ internal sealed class FastEvaluator<T> where T : struct {
                 if (name.SequenceEqual(kv.Key)) return kv.Value;
             }
         }
+
+        // 内置常量回退
+        if (name.SequenceEqual("PI")) return DoubleToT(Math.PI);
+        if (name.SequenceEqual("E")) return DoubleToT(Math.E);
+        if (name.SequenceEqual("π")) return DoubleToT(Math.PI);
+
         throw new FastEvalException($"未定义的变量 '{name.ToString()}'");
     }
 

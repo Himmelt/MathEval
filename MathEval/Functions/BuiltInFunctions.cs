@@ -8,14 +8,13 @@ namespace MathEval.Functions;
 /// </summary>
 internal static class BuiltInFunctions {
     public static void Register(ExpressionContext context) {
-        context.Set("PI", 3.14159265358979);
-        context.Set("E", 2.71828182845905);
+        context.Set("PI", Math.PI);
+        context.Set("E", Math.E);
+        context.Set("π", Math.PI);
 
         context.SetFunction("abs", args => {
-            if (args[0] is long l)
-                return Math.Abs(l);
-            if (args[0] is double d)
-                return Math.Abs(d);
+            if (args[0] is long l) return Math.Abs(l);
+            if (args[0] is double d) return Math.Abs(d);
             throw new FunctionTypeMismatchException("abs 需要数值参数");
         });
 

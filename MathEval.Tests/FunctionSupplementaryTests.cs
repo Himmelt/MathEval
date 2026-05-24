@@ -289,12 +289,13 @@ public class FunctionSupplementaryTests {
 
     [Fact]
     public void Constant_PI_HighPrecision() {
-        Assert.Equal(3.14159265358979, Expression.Eval<double>("PI", _ctx), 14);
+        Assert.Equal(Math.PI, Expression.Eval<double>("PI", _ctx), 14);
+        Assert.Equal(Math.PI, Expression.Eval<double>("π", _ctx), 14);
     }
 
     [Fact]
     public void Constant_E_HighPrecision() {
-        Assert.Equal(2.71828182845905, Expression.Eval<double>("E", _ctx), 14);
+        Assert.Equal(Math.E, Expression.Eval<double>("E", _ctx), 14);
     }
 
     [Fact]
@@ -311,16 +312,18 @@ public class FunctionSupplementaryTests {
     public void Constant_PI_Override() {
         _ctx.Set("PI", 3.0);
         Assert.Equal(3.0, Expression.Eval<double>("PI", _ctx), 10);
+        _ctx.Set("π", 4.56);
+        Assert.Equal(4.56, Expression.Eval<double>("π", _ctx), 10);
     }
 
     [Fact]
     public void Constant_NaN_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("NaN", 1.0));
+        Assert.Throws<Exceptions.InvalidOperationException>(() => _ctx.Set("NaN", 1.0));
     }
 
     [Fact]
     public void Constant_INF_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("INF", 1.0));
+        Assert.Throws<Exceptions.InvalidOperationException>(() => _ctx.Set("INF", 1.0));
     }
 
     #endregion
