@@ -163,6 +163,18 @@ public class FastEvalSupplementaryTests {
         Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("(-4) ^ 0.5"));
     }
 
+    [Fact]
+    public void EvalDouble_PowerNegativeBaseNegativeExponent() {
+        var result = FastEval.EvalDouble("(-2) ^ (-3)");
+        Assert.Equal(Math.Pow(-2, -3), result, 12);
+    }
+
+    [Fact]
+    public void EvalDouble_PowerNegativeBaseNegativeExponent_IntegerResult() {
+        var result = FastEval.EvalDouble("(-1) ^ (-2)");
+        Assert.Equal(1.0, result, 12);
+    }
+
     #endregion
 
     #region 整除与取模边界

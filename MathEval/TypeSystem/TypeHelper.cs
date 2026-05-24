@@ -222,9 +222,6 @@ public static class TypeHelper {
         if (IsNaN(left) || IsNaN(right)) return double.NaN;
 
         if (left is long l1 && right is long l2) {
-            if (l1 < 0 && l2 < 0) throw new EvaluateException("不能对负数求负数次幂");
-            if (l1 < 0 && l2 != (long)Math.Floor((double)l2)) throw new EvaluateException("不能对负数求非整数次幂");
-
             var result = Math.Pow(l1, l2);
 
             if (l1 == 0 && l2 < 0) throw new EvaluateException("零不能求负数次幂");

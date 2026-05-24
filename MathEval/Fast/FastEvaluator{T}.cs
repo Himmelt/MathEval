@@ -267,7 +267,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         if (_scanner.Peek() == '^') {
             _scanner.Read();
             var right = EvalPower();
-            return Power(left, right);
+            return CastResult(Power(left, right));
         }
         return left;
     }
@@ -527,23 +527,28 @@ internal sealed class FastEvaluator<T> where T : struct {
         throw new FastEvalException("取模运算需要数值类型");
     }
 
-    private static T Power(T left, T right) {
+    private static double Power(T left, T right) {
+        double d1, d2;
+        var isLong = false;
         if (typeof(T) == typeof(double)) {
-            var d1 = (double)(object)left;
-            var d2 = (double)(object)right;
-            if (d1 < 0 && d2 != Math.Floor(d2)) throw new FastEvalException("不能对负数求非整数次幂");
-            return (T)(object)Math.Pow(d1, d2);
+            d1 = (double)(object)left;
+            d2 = (double)(object)right;
+        } else {
+            d1 = (long)(object)left;
+            d2 = (long)(object)right;
+            isLong = true;
         }
-        if (typeof(T) == typeof(long)) {
-            var l1 = (long)(object)left;
-            var l2 = (long)(object)right;
-            if (l1 < 0 && l2 < 0) throw new FastEvalException("不能对负数求负数次幂");
-            if (l1 == 0 && l2 < 0) throw new FastEvalException("零不能求负数次幂");
-            var result = Math.Pow(l1, l2);
-            if (l2 >= 0 && result == Math.Floor(result) && result >= long.MinValue && result <= long.MaxValue) return (T)(object)(long)result;
-            return (T)(object)(long)result;
-        }
-        throw new FastEvalException("幂运算需要数值类型");
+        if (d1 < 0 && d2 != Math.Floor(d2))
+            throw new FastEvalException("不能对负数求非整数次幂");
+        if (isLong && d1 == 0 && d2 < 0)
+            throw new FastEvalException("零不能求负数次幂");
+        return Math.Pow(d1, d2);
+    }
+
+    private static T CastResult(double value) {
+        if (typeof(T) == typeof(double)) return (T)(object)value;
+        if (typeof(T) == typeof(long)) return (T)(object)(long)value;
+        throw new FastEvalException("幂运算结果类型不匹配");
     }
 
     private static T Negate(T operand) {
