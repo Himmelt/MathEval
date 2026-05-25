@@ -1,0 +1,105 @@
+; MathEval Grammar - ABNF (RFC 5234 / RFC 7405)
+; MathEval 表达式语法规则定义
+;
+; 引用的核心规则 (Core Rules from RFC 5234 Appendix B):
+;   ALPHA     = %x41-5A / %x61-7A         ; A-Z / a-z
+;   DIGIT     = %x30-39                   ; 0-9
+;   HEXDIG    = DIGIT / %x41-46 / %x61-66 ; 0-9 / A-F / a-f
+;   DQUOTE    = %x22                      ; " (双引号)
+;   SP        = %x20                      ; 空格
+;   HTAB      = %x09                      ; 水平制表符
+;   WSP       = SP / HTAB                 ; 空白字符
+;   CRLF      = %x0D.0A                   ; 回车换行
+;   CHAR      = %x01-7F                   ; 任意 ASCII 字符
+;   OCTET     = %x00-FF                   ; 8位数据
+;   CTL       = %x00-1F / %x7F            ; 控制字符
+;   VCHAR     = %x21-7E                   ; 可见字符
+
+; ==============================================================================
+; 基本词法规则 (Basic Lexical Rules)
+; ==============================================================================
+
+LETTER      = ALPHA / "_" / %x4E00-9FFF ; 字母、下划线或中文字符
+
+INTEGER     = 1*DIGIT
+
+DECIMAL     = INTEGER "." INTEGER
+            ; 小数点前后必须有数字
+
+EXPONENT    = %i"E" ["+" / "-"] INTEGER
+
+NUMBER      = DECIMAL [EXPONENT] /
+              INTEGER [EXPONENT] /
+              %i"0x" 1*HEXDIG /
+              %i"0o" 1*(%x30-37) /
+              %i"0b" 1*("0" / "1")
+
+IDENTIFIER  = LETTER *(LETTER / DIGIT)
+
+ESCAPE      = "\" ( DQUOTE / "'" / "\" / "n" / "r" / "t" / "0" / "u" 4HEXDIG ) ; \" / \' / \\ / \n / \r / \t / \0 / \uXXXX
+
+STRING      = "'" *( ESCAPE / %x00-26 / %x28-FF ) "'" /
+              DQUOTE *( ESCAPE / %x00-21 / %x23-FF ) DQUOTE
+            ; 单引号字符串或双引号字符串
+
+; ==============================================================================
+; 关键字 (Keywords)
+; ==============================================================================
+
+KEYWORD     = %i"true" / %i"false" / %i"and" / %i"or" / %i"not" /
+              %i"xor" / %i"mod" / %i"NaN" / %i"INF"
+
+; 关键字优先级：PRIMARY 中 KEYWORD 在 IDENTIFIER 之前匹配
+; 若需更严格区分，可定义 NON-KEYWORD-ID 排除关键字
+
+; ==============================================================================
+; 表达式规则 (Expression Rules)
+; ==============================================================================
+
+PRIMARY     = NUMBER / KEYWORD / IDENTIFIER / STRING /
+              INTERPOLATED-STRING / FUNCTION-CALL /
+              "(" EXPRESSION ")"
+
+FUNCTION-CALL = IDENTIFIER "(" [EXPRESSION *("," EXPRESSION)] ")"
+
+INTERPOLATED-STRING = "$" ( "'" *INTERPOLATED-CONTENT "'" /
+                           DQUOTE *INTERPOLATED-CONTENT DQUOTE )
+
+FORMAT-SPEC = (%s"D" / %s"d" / %s"E" / %s"e" / %s"F" / %s"f" /
+               %s"G" / %s"g" / %s"X" / %s"x") *DIGIT
+
+INTERPOLATED-CONTENT = "{" EXPRESSION [":" FORMAT-SPEC] "}" /
+                        "{{" / "}}" /
+                        NON-BRACE
+
+NON-BRACE   = %x00-7A / %x7C / %x7E-FF
+            ; 非 { 和 } 的字符
+
+POWER       = PRIMARY [("^" / "**") POWER]
+
+UNARY       = ("+" / "-" / %i"not" / "!" / "~") UNARY /
+              POWER
+
+MULTIPLICATIVE = UNARY *(("*" / "/" / "//" / "\" / "%" / %i"mod") UNARY)
+
+ADDITIVE    = MULTIPLICATIVE *(("+" / "-") MULTIPLICATIVE)
+
+SHIFT       = ADDITIVE *(("<<" / ">>" / ">>>") ADDITIVE)
+
+RELATIONAL  = SHIFT *(("<" / ">" / "<=" / ">=") SHIFT)
+
+EQUALITY    = RELATIONAL *(("==" / "!=") RELATIONAL)
+
+BITWISE-AND = EQUALITY *("&" EQUALITY)
+
+BITWISE-XOR = BITWISE-AND *(%i"xor" BITWISE-AND)
+
+BITWISE-OR  = BITWISE-XOR *("|" BITWISE-XOR)
+
+LOGICAL-AND = BITWISE-OR *((%i"and" / "&&") BITWISE-OR)
+
+LOGICAL-OR  = LOGICAL-AND *((%i"or" / "||") LOGICAL-AND)
+
+CONDITIONAL = LOGICAL-OR ["?" EXPRESSION ":" EXPRESSION]
+
+EXPRESSION  = CONDITIONAL
