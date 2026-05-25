@@ -10,6 +10,7 @@ public enum BinaryExpressionType {
     Multiply,
     Divide,
     IntegerDivide,
+    Remainder,
     Modulo,
     Power,
 

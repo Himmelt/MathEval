@@ -22,6 +22,7 @@ public enum TokenType {
     Slash,
     DoubleSlash,
     Percent,
+    ModKeyword,
     Caret,
 
     // 位运算符

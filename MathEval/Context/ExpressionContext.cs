@@ -26,7 +26,7 @@ public class ExpressionContext {
 
     private static readonly HashSet<string> ReservedKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        "true", "false", "and", "or", "not", "xor", "NaN", "INF"
+        "true", "false", "and", "or", "not", "xor", "mod", "NaN", "INF"
     };
 
     /// <summary>

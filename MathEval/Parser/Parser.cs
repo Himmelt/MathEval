@@ -164,7 +164,8 @@ public class Parser {
     private LogicalExpression ParseMultiplicative() {
         var left = ParsePower();
         while (CurrentToken.Type == Lexer.TokenType.Asterisk || CurrentToken.Type == Lexer.TokenType.Slash ||
-               CurrentToken.Type == Lexer.TokenType.DoubleSlash || CurrentToken.Type == Lexer.TokenType.Percent) {
+               CurrentToken.Type == Lexer.TokenType.DoubleSlash || CurrentToken.Type == Lexer.TokenType.Percent ||
+               CurrentToken.Type == Lexer.TokenType.ModKeyword) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParsePower();
@@ -172,7 +173,8 @@ public class Parser {
                 Lexer.TokenType.Asterisk => BinaryExpressionType.Multiply,
                 Lexer.TokenType.Slash => BinaryExpressionType.Divide,
                 Lexer.TokenType.DoubleSlash => BinaryExpressionType.IntegerDivide,
-                Lexer.TokenType.Percent => BinaryExpressionType.Modulo,
+                Lexer.TokenType.Percent => BinaryExpressionType.Remainder,
+                Lexer.TokenType.ModKeyword => BinaryExpressionType.Modulo,
                 _ => throw new Exceptions.InvalidOperationException($"未知的乘法运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);

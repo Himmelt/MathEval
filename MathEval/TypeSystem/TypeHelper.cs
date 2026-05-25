@@ -93,6 +93,7 @@ public static class TypeHelper {
             BinaryExpressionType.Multiply => EvaluateMultiply(promotedLeft, promotedRight),
             BinaryExpressionType.Divide => EvaluateDivide(promotedLeft, promotedRight),
             BinaryExpressionType.IntegerDivide => EvaluateIntegerDivide(promotedLeft, promotedRight),
+            BinaryExpressionType.Remainder => EvaluateRemainder(promotedLeft, promotedRight),
             BinaryExpressionType.Modulo => EvaluateModulo(promotedLeft, promotedRight),
             BinaryExpressionType.Power => EvaluatePower(promotedLeft, promotedRight),
             BinaryExpressionType.BitwiseAnd => EvaluateBitwiseAnd(left, right),
@@ -197,7 +198,7 @@ public static class TypeHelper {
         return l1 / l2;
     }
 
-    private static object EvaluateModulo(object left, object right) {
+    private static object EvaluateRemainder(object left, object right) {
         if (IsNaN(left) || IsNaN(right)) return double.NaN;
 
         if (IsINF(left)) return double.NaN;
@@ -214,6 +215,33 @@ public static class TypeHelper {
         if (left is double d1 && right is double d2) {
             if (d2 == 0) throw new DivisionByZeroException();
             return d1 % d2;
+        }
+        throw new TypeMismatchException("取余运算需要数值类型", "number", GetTypeName(left, right));
+    }
+
+    private static object EvaluateModulo(object left, object right) {
+        if (IsNaN(left) || IsNaN(right)) return double.NaN;
+
+        if (IsINF(left)) return double.NaN;
+
+        if (IsINF(right)) {
+            if (left is long l) return (double)l;
+            return left;
+        }
+
+        if (left is long l1 && right is long l2) {
+            if (l2 == 0) throw new DivisionByZeroException();
+            long r = l1 % l2;
+            if ((r < 0 && l2 > 0) || (r > 0 && l2 < 0))
+                r += l2;
+            return r;
+        }
+        if (left is double d1 && right is double d2) {
+            if (d2 == 0) throw new DivisionByZeroException();
+            double r = d1 % d2;
+            if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0))
+                r += d2;
+            return r;
         }
         throw new TypeMismatchException("取模运算需要数值类型", "number", GetTypeName(left, right));
     }

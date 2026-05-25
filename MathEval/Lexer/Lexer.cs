@@ -22,6 +22,7 @@ public class Lexer {
         { "or", TokenType.OrKeyword },
         { "not", TokenType.NotKeyword },
         { "xor", TokenType.XorKeyword },
+        { "mod", TokenType.ModKeyword },
         { "NaN", TokenType.NaN },
         { "INF", TokenType.INF }
     };
