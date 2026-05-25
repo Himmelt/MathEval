@@ -1,4 +1,5 @@
 using MathEval.Exceptions;
+using MathEval.Operators;
 
 namespace MathEval.Fast;
 
@@ -42,7 +43,7 @@ internal sealed class FastEvaluator<T> where T : struct {
 
         if (_scanner.Peek() == '?') {
             _scanner.Read();
-            if (ConvertToBool(condition)) {
+            if (BuiltInOperators.ConvertToBool(condition)) {
                 var trueValue = EvalExpression();
                 _scanner.SkipWhitespace();
                 if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
@@ -72,23 +73,23 @@ internal sealed class FastEvaluator<T> where T : struct {
             _scanner.SkipWhitespace();
             if (_scanner.Peek() == '|' && _scanner.PeekNext() == '|') {
                 _scanner.Read(); _scanner.Read();
-                if (!_skipMode && ConvertToBool(left)) {
+                if (!_skipMode && BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BoolToT(true);
+                    return BuiltInOperators.BoolToT<T>(true);
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BoolToT(ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
             } else if (MatchKeyword("or")) {
-                if (!_skipMode && ConvertToBool(left)) {
+                if (!_skipMode && BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BoolToT(true);
+                    return BuiltInOperators.BoolToT<T>(true);
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BoolToT(ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
             } else break;
         }
         return left;
@@ -100,23 +101,23 @@ internal sealed class FastEvaluator<T> where T : struct {
             _scanner.SkipWhitespace();
             if (_scanner.Peek() == '&' && _scanner.PeekNext() == '&') {
                 _scanner.Read(); _scanner.Read();
-                if (!_skipMode && !ConvertToBool(left)) {
+                if (!_skipMode && !BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BoolToT(false);
+                    return BuiltInOperators.BoolToT<T>(false);
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BoolToT(ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
             } else if (MatchKeyword("and")) {
-                if (!_skipMode && !ConvertToBool(left)) {
+                if (!_skipMode && !BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BoolToT(false);
+                    return BuiltInOperators.BoolToT<T>(false);
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BoolToT(ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
             } else break;
         }
         return left;
@@ -129,11 +130,11 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '=' && _scanner.PeekNext() == '=') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalRelational();
-                left = Equal(left, right);
+                left = BuiltInOperators.Equal(left, right);
             } else if (_scanner.Peek() == '!' && _scanner.PeekNext() == '=') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalRelational();
-                left = NotEqual(left, right);
+                left = BuiltInOperators.NotEqual(left, right);
             } else break;
         }
         return left;
@@ -146,19 +147,19 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '<' && _scanner.PeekNext() == '=') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalBitwiseOr();
-                left = LessThanOrEqual(left, right);
+                left = BuiltInOperators.LessThanOrEqual(left, right);
             } else if (_scanner.Peek() == '>' && _scanner.PeekNext() == '=') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalBitwiseOr();
-                left = GreaterThanOrEqual(left, right);
+                left = BuiltInOperators.GreaterThanOrEqual(left, right);
             } else if (_scanner.Peek() == '<' && _scanner.PeekNext() != '<') {
                 _scanner.Read();
                 var right = EvalBitwiseOr();
-                left = LessThan(left, right);
+                left = BuiltInOperators.LessThan(left, right);
             } else if (_scanner.Peek() == '>' && _scanner.PeekNext() != '>') {
                 _scanner.Read();
                 var right = EvalBitwiseOr();
-                left = GreaterThan(left, right);
+                left = BuiltInOperators.GreaterThan(left, right);
             } else break;
         }
         return left;
@@ -171,7 +172,7 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '|' && _scanner.PeekNext() != '|') {
                 _scanner.Read();
                 var right = EvalBitwiseXor();
-                left = BitwiseOr(left, right);
+                left = BuiltInOperators.BitwiseOr(left, right);
             } else break;
         }
         return left;
@@ -183,7 +184,7 @@ internal sealed class FastEvaluator<T> where T : struct {
             _scanner.SkipWhitespace();
             if (MatchKeyword("xor")) {
                 var right = EvalBitwiseAnd();
-                left = BitwiseXor(left, right);
+                left = BuiltInOperators.BitwiseXor(left, right);
             } else break;
         }
         return left;
@@ -196,7 +197,7 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '&' && _scanner.PeekNext() != '&') {
                 _scanner.Read();
                 var right = EvalShift();
-                left = BitwiseAnd(left, right);
+                left = BuiltInOperators.BitwiseAnd(left, right);
             } else break;
         }
         return left;
@@ -209,11 +210,11 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '<' && _scanner.PeekNext() == '<') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalAdditive();
-                left = LeftShift(left, right);
+                left = BuiltInOperators.LeftShift(left, right);
             } else if (_scanner.Peek() == '>' && _scanner.PeekNext() == '>') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalAdditive();
-                left = RightShift(left, right);
+                left = BuiltInOperators.RightShift(left, right);
             } else break;
         }
         return left;
@@ -226,11 +227,11 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '+') {
                 _scanner.Read();
                 var right = EvalMultiplicative();
-                left = Add(left, right);
+                left = BuiltInOperators.Add(left, right);
             } else if (_scanner.Peek() == '-') {
                 _scanner.Read();
                 var right = EvalMultiplicative();
-                left = Subtract(left, right);
+                left = BuiltInOperators.Subtract(left, right);
             } else break;
         }
         return left;
@@ -243,19 +244,19 @@ internal sealed class FastEvaluator<T> where T : struct {
             if (_scanner.Peek() == '*') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = _skipMode ? default : Multiply(left, right);
+                left = _skipMode ? default : BuiltInOperators.Multiply(left, right);
             } else if (_scanner.Peek() == '/' && _scanner.PeekNext() == '/') {
                 _scanner.Read(); _scanner.Read();
                 var right = EvalPower();
-                left = _skipMode ? default : IntegerDivide(left, right);
+                left = _skipMode ? default : BuiltInOperators.IntegerDivide(left, right);
             } else if (_scanner.Peek() == '/') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = _skipMode ? default : Divide(left, right);
+                left = _skipMode ? default : BuiltInOperators.Divide(left, right);
             } else if (_scanner.Peek() == '%') {
                 _scanner.Read();
                 var right = EvalPower();
-                left = _skipMode ? default : Modulo(left, right);
+                left = _skipMode ? default : BuiltInOperators.Modulo(left, right);
             } else break;
         }
         return left;
@@ -267,7 +268,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         if (_scanner.Peek() == '^') {
             _scanner.Read();
             var right = EvalPower();
-            return CastResult(Power(left, right));
+            return BuiltInOperators.CastPowerResult<T>(BuiltInOperators.Power(left, right));
         }
         return left;
     }
@@ -281,21 +282,21 @@ internal sealed class FastEvaluator<T> where T : struct {
         if (_scanner.Peek() == '-') {
             _scanner.Read();
             var operand = EvalUnary();
-            return Negate(operand);
+            return BuiltInOperators.Negate(operand);
         }
         if (MatchKeyword("not")) {
             var operand = EvalUnary();
-            return Not(operand);
+            return BuiltInOperators.Not(operand);
         }
         if (_scanner.Peek() == '!' && _scanner.PeekNext() != '=') {
             _scanner.Read();
             var operand = EvalUnary();
-            return Not(operand);
+            return BuiltInOperators.Not(operand);
         }
         if (_scanner.Peek() == '~') {
             _scanner.Read();
             var operand = EvalUnary();
-            return BitwiseNot(operand);
+            return BuiltInOperators.BitwiseNot(operand);
         }
         return EvalPrimary();
     }
@@ -334,10 +335,10 @@ internal sealed class FastEvaluator<T> where T : struct {
             return EvalFunctionCall(identifierSpan);
         }
 
-        if (identifierSpan.SequenceEqual("true")) return BoolToT(true);
-        if (identifierSpan.SequenceEqual("false")) return BoolToT(false);
-        if (identifierSpan.SequenceEqual("NaN")) return DoubleToT(double.NaN);
-        if (identifierSpan.SequenceEqual("INF")) return DoubleToT(double.PositiveInfinity);
+        if (identifierSpan.SequenceEqual("true")) return BuiltInOperators.BoolToT<T>(true);
+        if (identifierSpan.SequenceEqual("false")) return BuiltInOperators.BoolToT<T>(false);
+        if (identifierSpan.SequenceEqual("NaN")) return BuiltInOperators.DoubleToT<T>(double.NaN);
+        if (identifierSpan.SequenceEqual("INF")) return BuiltInOperators.DoubleToT<T>(double.PositiveInfinity);
 
         return LookupVariable(identifierSpan);
     }
@@ -365,8 +366,8 @@ internal sealed class FastEvaluator<T> where T : struct {
     }
 
     private T ReadNumber() {
-        if (typeof(T) == typeof(double)) return DoubleToT(_scanner.ReadDouble());
-        if (typeof(T) == typeof(long)) return LongToT(_scanner.ReadLong());
+        if (typeof(T) == typeof(double)) return BuiltInOperators.DoubleToT<T>(_scanner.ReadDouble());
+        if (typeof(T) == typeof(long)) return BuiltInOperators.LongToT<T>(_scanner.ReadLong());
         throw new FastEvalException($"不支持的数值类型: {typeof(T).Name}");
     }
 
@@ -379,9 +380,9 @@ internal sealed class FastEvaluator<T> where T : struct {
         }
 
         // 内置常量回退
-        if (name.SequenceEqual("PI")) return DoubleToT(Math.PI);
-        if (name.SequenceEqual("E")) return DoubleToT(Math.E);
-        if (name.SequenceEqual("π")) return DoubleToT(Math.PI);
+        if (name.SequenceEqual("PI")) return BuiltInOperators.DoubleToT<T>(Math.PI);
+        if (name.SequenceEqual("E")) return BuiltInOperators.DoubleToT<T>(Math.E);
+        if (name.SequenceEqual("π")) return BuiltInOperators.DoubleToT<T>(Math.PI);
 
         throw new FastEvalException($"未定义的变量 '{name.ToString()}'");
     }
@@ -392,13 +393,13 @@ internal sealed class FastEvaluator<T> where T : struct {
         if (typeof(T) == typeof(double) && BuiltInFastFunctions.TryGetDoubleFunction(nameStr, out var doubleFunc)) {
             var doubleArgs = new double[args.Count];
             for (int i = 0; i < args.Count; i++) doubleArgs[i] = Convert.ToDouble(args[i]);
-            return DoubleToT(doubleFunc(doubleArgs));
+            return BuiltInOperators.DoubleToT<T>(doubleFunc(doubleArgs));
         }
 
         if (typeof(T) == typeof(long) && BuiltInFastFunctions.TryGetLongFunction(nameStr, out var longFunc)) {
             var longArgs = new long[args.Count];
             for (int i = 0; i < args.Count; i++) longArgs[i] = Convert.ToInt64(args[i]);
-            return LongToT(longFunc(longArgs));
+            return BuiltInOperators.LongToT<T>(longFunc(longArgs));
         }
 
         throw new FastEvalException($"未知函数 '{nameStr}'");
@@ -421,246 +422,4 @@ internal sealed class FastEvaluator<T> where T : struct {
         return true;
     }
 
-    #region 类型转换
-
-    private static bool ConvertToBool(T value) {
-        if (typeof(T) == typeof(bool)) return (bool)(object)value;
-        if (typeof(T) == typeof(long)) return (long)(object)value != 0;
-        if (typeof(T) == typeof(double)) return (double)(object)value != 0 && !double.IsNaN((double)(object)value);
-        throw new FastEvalException("无法转换为布尔类型");
-    }
-
-    private static T BoolToT(bool value) {
-        if (typeof(T) == typeof(bool)) return (T)(object)value;
-        if (typeof(T) == typeof(long)) return (T)(object)(value ? 1L : 0L);
-        if (typeof(T) == typeof(double)) return (T)(object)(value ? 1.0 : 0.0);
-        throw new FastEvalException("无法从布尔类型转换");
-    }
-
-    private static T DoubleToT(double value) {
-        if (typeof(T) == typeof(double)) return (T)(object)value;
-        if (typeof(T) == typeof(long)) return (T)(object)(long)value;
-        throw new FastEvalException("无法从 double 类型转换");
-    }
-
-    private static T LongToT(long value) {
-        if (typeof(T) == typeof(long)) return (T)(object)value;
-        if (typeof(T) == typeof(double)) return (T)(object)(double)value;
-        throw new FastEvalException("无法从 long 类型转换");
-    }
-
-    private static double ToDouble(T value) {
-        if (typeof(T) == typeof(double)) return (double)(object)value;
-        if (typeof(T) == typeof(long)) return (long)(object)value;
-        if (typeof(T) == typeof(bool)) return (bool)(object)value ? 1.0 : 0.0;
-        return Convert.ToDouble(value);
-    }
-
-    private static long ToLong(T value) {
-        if (typeof(T) == typeof(long)) return (long)(object)value;
-        if (typeof(T) == typeof(double)) return (long)(double)(object)value;
-        if (typeof(T) == typeof(bool)) return (bool)(object)value ? 1L : 0L;
-        return Convert.ToInt64(value);
-    }
-
-    private static void RequireInteger(T value, string operationName) {
-        if (typeof(T) == typeof(long)) return;
-        if (typeof(T) == typeof(double)) {
-            var d = (double)(object)value;
-            if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d) && d >= long.MinValue && d <= long.MaxValue)
-                return;
-            throw new FastEvalException($"{operationName} 运算需要整数操作数");
-        }
-        throw new FastEvalException($"{operationName} 运算需要整数操作数");
-    }
-
-    private static long ToInteger(T value, string operationName) {
-        RequireInteger(value, operationName);
-        return ToLong(value);
-    }
-
-    #endregion
-
-    #region 算术运算
-
-    private static T Add(T left, T right) {
-        if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left + (double)(object)right);
-        if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left + (long)(object)right);
-        throw new FastEvalException("加法运算需要数值类型");
-    }
-
-    private static T Subtract(T left, T right) {
-        if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left - (double)(object)right);
-        if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left - (long)(object)right);
-        throw new FastEvalException("减法运算需要数值类型");
-    }
-
-    private static T Multiply(T left, T right) {
-        if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left * (double)(object)right);
-        if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left * (long)(object)right);
-        throw new FastEvalException("乘法运算需要数值类型");
-    }
-
-    private static T Divide(T left, T right) {
-        if (typeof(T) == typeof(double)) {
-            var d = (double)(object)right;
-            if (d == 0) throw new DivisionByZeroException();
-            return (T)(object)((double)(object)left / d);
-        }
-        if (typeof(T) == typeof(long)) {
-            var r = (long)(object)right;
-            if (r == 0) throw new DivisionByZeroException();
-            return (T)(object)(long)((double)(long)(object)left / r);
-        }
-        throw new FastEvalException("除法运算需要数值类型");
-    }
-
-    private static T IntegerDivide(T left, T right) {
-        if (typeof(T) == typeof(double)) {
-            var d = (double)(object)right;
-            if (d == 0) throw new DivisionByZeroException();
-            return (T)(object)Math.Truncate((double)(object)left / d);
-        }
-        if (typeof(T) == typeof(long)) {
-            var r = (long)(object)right;
-            if (r == 0) throw new DivisionByZeroException();
-            return (T)(object)((long)(object)left / r);
-        }
-        throw new FastEvalException("整除运算需要数值类型");
-    }
-
-    private static T Modulo(T left, T right) {
-        if (typeof(T) == typeof(double)) {
-            var d = (double)(object)right;
-            if (d == 0) throw new DivisionByZeroException();
-            return (T)(object)((double)(object)left % d);
-        }
-        if (typeof(T) == typeof(long)) {
-            var r = (long)(object)right;
-            if (r == 0) throw new DivisionByZeroException();
-            return (T)(object)((long)(object)left % r);
-        }
-        throw new FastEvalException("取模运算需要数值类型");
-    }
-
-    private static double Power(T left, T right) {
-        double d1, d2;
-        var isLong = false;
-        if (typeof(T) == typeof(double)) {
-            d1 = (double)(object)left;
-            d2 = (double)(object)right;
-        } else {
-            d1 = (long)(object)left;
-            d2 = (long)(object)right;
-            isLong = true;
-        }
-        if (d1 < 0 && d2 != Math.Floor(d2))
-            throw new FastEvalException("不能对负数求非整数次幂");
-        if (isLong && d1 == 0 && d2 < 0)
-            throw new FastEvalException("零不能求负数次幂");
-        return Math.Pow(d1, d2);
-    }
-
-    private static T CastResult(double value) {
-        if (typeof(T) == typeof(double)) return (T)(object)value;
-        if (typeof(T) == typeof(long)) return (T)(object)(long)value;
-        throw new FastEvalException("幂运算结果类型不匹配");
-    }
-
-    private static T Negate(T operand) {
-        if (typeof(T) == typeof(double)) return (T)(object)(-(double)(object)operand);
-        if (typeof(T) == typeof(long)) return (T)(object)checked(-(long)(object)operand);
-        throw new FastEvalException("取负运算需要数值类型");
-    }
-
-    private static T Not(T operand) {
-        if (typeof(T) == typeof(bool)) return (T)(object)(!(bool)(object)operand);
-        if (typeof(T) == typeof(double)) return (T)(object)(ConvertToBool(operand) ? 0.0 : 1.0);
-        if (typeof(T) == typeof(long)) return (T)(object)(ConvertToBool(operand) ? 0L : 1L);
-        throw new FastEvalException("逻辑非运算需要布尔或数值类型");
-    }
-
-    private static T BitwiseNot(T operand) {
-        return (T)(object)(~ToInteger(operand, "按位取反"));
-    }
-
-    private static T BitwiseOr(T left, T right) {
-        return LongToT(ToInteger(left, "按位或") | ToInteger(right, "按位或"));
-    }
-
-    private static T BitwiseAnd(T left, T right) {
-        return LongToT(ToInteger(left, "按位与") & ToInteger(right, "按位与"));
-    }
-
-    private static T BitwiseXor(T left, T right) {
-        return LongToT(ToInteger(left, "按位异或") ^ ToInteger(right, "按位异或"));
-    }
-
-    private static T LeftShift(T left, T right) {
-        var l1 = ToInteger(left, "左移");
-        var l2 = ToInteger(right, "左移");
-        if (l2 < 0) throw new FastEvalException("移位量不能为负数");
-        if (l2 >= 64) l2 %= 64;
-        return LongToT(l1 << (int)l2);
-    }
-
-    private static T RightShift(T left, T right) {
-        var l1 = ToInteger(left, "右移");
-        var l2 = ToInteger(right, "右移");
-        if (l2 < 0) throw new FastEvalException("移位量不能为负数");
-        if (l2 >= 64) l2 %= 64;
-        return LongToT(l1 >> (int)l2);
-    }
-
-    #endregion
-
-    #region 比较运算
-
-    private static T Equal(T left, T right) {
-        if (typeof(T) == typeof(double)) {
-            var d1 = (double)(object)left;
-            var d2 = (double)(object)right;
-            if (double.IsNaN(d1) || double.IsNaN(d2)) return BoolToT(false);
-            return BoolToT(d1 == d2);
-        }
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left == (long)(object)right);
-        return BoolToT(Equals(left, right));
-    }
-
-    private static T NotEqual(T left, T right) {
-        if (typeof(T) == typeof(double)) {
-            var d1 = (double)(object)left;
-            var d2 = (double)(object)right;
-            if (double.IsNaN(d1) || double.IsNaN(d2)) return BoolToT(true);
-            return BoolToT(d1 != d2);
-        }
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left != (long)(object)right);
-        return BoolToT(!Equals(left, right));
-    }
-
-    private static T LessThan(T left, T right) {
-        if (typeof(T) == typeof(double)) return BoolToT((double)(object)left < (double)(object)right);
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left < (long)(object)right);
-        throw new FastEvalException("比较运算需要数值类型");
-    }
-
-    private static T LessThanOrEqual(T left, T right) {
-        if (typeof(T) == typeof(double)) return BoolToT((double)(object)left <= (double)(object)right);
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left <= (long)(object)right);
-        throw new FastEvalException("比较运算需要数值类型");
-    }
-
-    private static T GreaterThan(T left, T right) {
-        if (typeof(T) == typeof(double)) return BoolToT((double)(object)left > (double)(object)right);
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left > (long)(object)right);
-        throw new FastEvalException("比较运算需要数值类型");
-    }
-
-    private static T GreaterThanOrEqual(T left, T right) {
-        if (typeof(T) == typeof(double)) return BoolToT((double)(object)left >= (double)(object)right);
-        if (typeof(T) == typeof(long)) return BoolToT((long)(object)left >= (long)(object)right);
-        throw new FastEvalException("比较运算需要数值类型");
-    }
-
-    #endregion
 }
