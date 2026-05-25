@@ -432,4 +432,88 @@ public class EvaluationTests {
     public void Error_UndefinedVariable_ThrowsSymbolNotFoundException() {
         Assert.Throws<SymbolNotFoundException>(() => Expression.Eval("undefinedVar"));
     }
+
+    [Fact]
+    public void Modulo_PositiveDividend_Returns3() {
+        Assert.Equal(3L, Expression.Eval<long>("7 mod 4"));
+    }
+
+    [Fact]
+    public void Modulo_NegativeDividend_Returns1() {
+        Assert.Equal(1L, Expression.Eval<long>("-7 mod 4"));
+    }
+
+    [Fact]
+    public void Modulo_NegativeDivisor_ReturnsMinus1() {
+        Assert.Equal(-1L, Expression.Eval<long>("7 mod -4"));
+    }
+
+    [Fact]
+    public void Modulo_DoubleValues_ReturnsCorrectResult() {
+        Assert.Equal(1.0, Expression.Eval<double>("-7.0 mod 4.0"));
+    }
+
+    [Fact]
+    public void Remainder_PositiveDividend_Returns3() {
+        Assert.Equal(3L, Expression.Eval<long>("7 % 4"));
+    }
+
+    [Fact]
+    public void Remainder_NegativeDividend_ReturnsMinus3() {
+        Assert.Equal(-3L, Expression.Eval<long>("-7 % 4"));
+    }
+
+    [Fact]
+    public void Remainder_NegativeDivisor_Returns3() {
+        Assert.Equal(3L, Expression.Eval<long>("7 % -4"));
+    }
+
+    [Fact]
+    public void Remainder_Modulo_Difference() {
+        Assert.Equal(-3L, Expression.Eval<long>("-7 % 4"));
+        Assert.Equal(1L, Expression.Eval<long>("-7 mod 4"));
+    }
+
+    [Fact]
+    public void UnsignedRightShift_NegativeOne_ReturnsMaxLong() {
+        Assert.Equal(long.MaxValue, Expression.Eval<long>("-1 >>> 1"));
+    }
+
+    [Fact]
+    public void UnsignedRightShift_Eight_Returns2() {
+        Assert.Equal(2L, Expression.Eval<long>("8 >>> 2"));
+    }
+
+    [Fact]
+    public void UnsignedRightShift_NegativeEight_ReturnsPositiveValue() {
+        var result = Expression.Eval<long>("-8 >>> 2");
+        Assert.True(result > 0);
+    }
+
+    [Fact]
+    public void UnsignedRightShift_VsRightShift_NegativeOne() {
+        Assert.Equal(-1L, Expression.Eval<long>("-1 >> 1"));
+        Assert.Equal(long.MaxValue, Expression.Eval<long>("-1 >>> 1"));
+    }
+
+    [Fact]
+    public void DoubleAsterisk_BasicPower_Returns8() {
+        Assert.Equal(8L, Expression.Eval<long>("2 ** 3"));
+    }
+
+    [Fact]
+    public void DoubleAsterisk_RightAssociative_Returns512() {
+        Assert.Equal(512L, Expression.Eval<long>("2 ** 3 ** 2"));
+    }
+
+    [Fact]
+    public void DoubleAsterisk_FractionalExponent_Returns3() {
+        Assert.Equal(3.0, Expression.Eval<double>("9 ** 0.5"));
+    }
+
+    [Fact]
+    public void DoubleAsterisk_SameAsCaret() {
+        Assert.Equal(Expression.Eval<long>("2 ^ 10"), Expression.Eval<long>("2 ** 10"));
+        Assert.Equal(Expression.Eval<double>("4 ^ 0.5"), Expression.Eval<double>("4 ** 0.5"));
+    }
 }

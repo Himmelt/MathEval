@@ -206,6 +206,27 @@ public class LexerTests {
     }
 
     [Fact]
+    public void ModKeyword() {
+        var token = GetSingleToken("mod");
+        Assert.Equal(TokenType.ModKeyword, token.Type);
+        Assert.Equal("mod", token.Text);
+    }
+
+    [Fact]
+    public void UnsignedRightShift() {
+        var token = GetSingleToken(">>>");
+        Assert.Equal(TokenType.UnsignedRightShift, token.Type);
+        Assert.Equal(">>>", token.Text);
+    }
+
+    [Fact]
+    public void DoubleAsterisk() {
+        var token = GetSingleToken("**");
+        Assert.Equal(TokenType.DoubleAsterisk, token.Type);
+        Assert.Equal("**", token.Text);
+    }
+
+    [Fact]
     public void InterpolatedString() {
         var token = GetSingleToken("$\"Hello {name}!\"");
         Assert.Equal(TokenType.InterpolatedString, token.Type);
