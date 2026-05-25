@@ -72,9 +72,10 @@ public class ExceptionTests {
     }
 
     [Fact]
-    public void OverflowException_CaughtAs_EvaluateException() {
-        var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("9223372036854775807 + 1"));
-        Assert.IsType<OverflowException>(ex);
+    public void OverflowException_NoLongerThrown() {
+        // 现在使用 double 计算，不再有整数溢出
+        var result = Expression.Eval("9223372036854775807 + 1");
+        Assert.IsType<double>(result);
     }
 
     [Fact]
@@ -131,8 +132,10 @@ public class ExceptionTests {
     }
 
     [Fact]
-    public void LongOverflow_Throws_OverflowException() {
-        Assert.Throws<OverflowException>(() => Expression.Eval("9223372036854775807 + 1"));
+    public void LongOverflow_NoLongerThrows() {
+        // 现在使用 double 计算，不再有整数溢出
+        var result = Expression.Eval("9223372036854775807 + 1");
+        Assert.IsType<double>(result);
     }
 
     [Fact]

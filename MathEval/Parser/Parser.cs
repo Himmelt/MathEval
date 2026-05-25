@@ -228,7 +228,7 @@ public class Parser {
 
         switch (CurrentToken.Type) {
             case Lexer.TokenType.Integer:
-                var intValue = ParseInteger(CurrentToken.Text);
+                var intValue = ParseIntegerAsDouble(CurrentToken.Text);
                 MoveNext();
                 _depth--;
                 return new ValueExpression(intValue);
@@ -283,18 +283,19 @@ public class Parser {
         }
     }
 
-    private long ParseInteger(string text) {
+    private double ParseIntegerAsDouble(string text) {
         try {
+            long value;
             if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
-                return Convert.ToInt64(text[2..], 16);
+                value = Convert.ToInt64(text[2..], 16);
+            } else if (text.StartsWith("0o", StringComparison.OrdinalIgnoreCase)) {
+                value = Convert.ToInt64(text[2..], 8);
+            } else if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) {
+                value = Convert.ToInt64(text[2..], 2);
+            } else {
+                value = long.Parse(text);
             }
-            if (text.StartsWith("0o", StringComparison.OrdinalIgnoreCase)) {
-                return Convert.ToInt64(text[2..], 8);
-            }
-            if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) {
-                return Convert.ToInt64(text[2..], 2);
-            }
-            return long.Parse(text);
+            return (double)value;
         } catch (FormatException ex) {
             throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
         } catch (System.OverflowException) {

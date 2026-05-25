@@ -463,6 +463,22 @@ internal sealed class FastEvaluator<T> where T : struct {
         return Convert.ToInt64(value);
     }
 
+    private static void RequireInteger(T value, string operationName) {
+        if (typeof(T) == typeof(long)) return;
+        if (typeof(T) == typeof(double)) {
+            var d = (double)(object)value;
+            if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d) && d >= long.MinValue && d <= long.MaxValue)
+                return;
+            throw new FastEvalException($"{operationName} 运算需要整数操作数");
+        }
+        throw new FastEvalException($"{operationName} 运算需要整数操作数");
+    }
+
+    private static long ToInteger(T value, string operationName) {
+        RequireInteger(value, operationName);
+        return ToLong(value);
+    }
+
     #endregion
 
     #region 算术运算
@@ -565,32 +581,32 @@ internal sealed class FastEvaluator<T> where T : struct {
     }
 
     private static T BitwiseNot(T operand) {
-        return (T)(object)(~ToLong(operand));
+        return (T)(object)(~ToInteger(operand, "按位取反"));
     }
 
     private static T BitwiseOr(T left, T right) {
-        return LongToT(ToLong(left) | ToLong(right));
+        return LongToT(ToInteger(left, "按位或") | ToInteger(right, "按位或"));
     }
 
     private static T BitwiseAnd(T left, T right) {
-        return LongToT(ToLong(left) & ToLong(right));
+        return LongToT(ToInteger(left, "按位与") & ToInteger(right, "按位与"));
     }
 
     private static T BitwiseXor(T left, T right) {
-        return LongToT(ToLong(left) ^ ToLong(right));
+        return LongToT(ToInteger(left, "按位异或") ^ ToInteger(right, "按位异或"));
     }
 
     private static T LeftShift(T left, T right) {
-        var l1 = ToLong(left);
-        var l2 = ToLong(right);
+        var l1 = ToInteger(left, "左移");
+        var l2 = ToInteger(right, "左移");
         if (l2 < 0) throw new FastEvalException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return LongToT(l1 << (int)l2);
     }
 
     private static T RightShift(T left, T right) {
-        var l1 = ToLong(left);
-        var l2 = ToLong(right);
+        var l1 = ToInteger(left, "右移");
+        var l2 = ToInteger(right, "右移");
         if (l2 < 0) throw new FastEvalException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return LongToT(l1 >> (int)l2);

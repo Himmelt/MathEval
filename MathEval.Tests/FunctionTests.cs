@@ -8,10 +8,10 @@ public class FunctionTests {
     private readonly ExpressionContext _ctx = new();
 
     [Fact]
-    public void Abs_Long_ReturnsLong() {
+    public void Abs_Long_ReturnsDouble() {
         var result = Expression.Eval("abs(-42)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(42L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(42.0, (double)result);
     }
 
     [Fact]
@@ -107,31 +107,31 @@ public class FunctionTests {
     }
 
     [Fact]
-    public void Ceil_ReturnsLong() {
+    public void Ceil_ReturnsDouble() {
         var result = Expression.Eval("ceil(3.2)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(4L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(4.0, (double)result);
     }
 
     [Fact]
-    public void Floor_ReturnsLong() {
+    public void Floor_ReturnsDouble() {
         var result = Expression.Eval("floor(3.8)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(3L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(3.0, (double)result);
     }
 
     [Fact]
     public void Round_Midpoint() {
         var result = Expression.Eval("round(3.5)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(4L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(4.0, (double)result);
     }
 
     [Fact]
     public void Round_Down() {
         var result = Expression.Eval("round(3.4)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(3L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(3.0, (double)result);
     }
 
     [Fact]
@@ -140,38 +140,38 @@ public class FunctionTests {
     }
 
     [Fact]
-    public void Truncate_ReturnsLong() {
+    public void Truncate_ReturnsDouble() {
         var result = Expression.Eval("truncate(3.9)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(3L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(3.0, (double)result);
     }
 
     [Fact]
     public void Sign_Negative() {
         var result = Expression.Eval("sign(-5)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(-1L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(-1.0, (double)result);
     }
 
     [Fact]
     public void Sign_Zero() {
         var result = Expression.Eval("sign(0)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(0L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(0.0, (double)result);
     }
 
     [Fact]
     public void Sign_Positive() {
         var result = Expression.Eval("sign(5)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(1L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(1.0, (double)result);
     }
 
     [Fact]
     public void Max_LongLong() {
         var result = Expression.Eval("max(3, 5)", _ctx);
-        Assert.IsType<long>(result);
-        Assert.Equal(5L, (long)result);
+        Assert.IsType<double>(result);
+        Assert.Equal(5.0, (double)result);
     }
 
     [Fact]

@@ -31,8 +31,8 @@ public class ContextTests {
     [Fact]
     public void SetFunction_WeakTyped_Works() {
         var ctx = new ExpressionContext();
-        ctx.SetFunction("add1", args => (long)args[0] + 1);
-        Assert.Equal(43L, Expression.Eval<long>("add1(42)", ctx));
+        ctx.SetFunction("add1", args => (double)args[0] + 1);
+        Assert.Equal(43.0, Expression.Eval<double>("add1(42)", ctx));
     }
 
     [Fact]

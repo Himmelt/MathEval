@@ -263,8 +263,9 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Bitwise_BoolAndInt_Returns0() {
-        Assert.Equal(0L, Expression.Eval<long>("true & 6"));
+    public void Bitwise_BoolAndInt_ThrowsTypeMismatch() {
+        // 按位运算现在要求整数操作数，布尔值不再有效
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval("true & 6"));
     }
 
     [Fact]
@@ -361,8 +362,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void TypeInference_42IsLong() {
-        Assert.IsType<long>(Expression.Eval("42"));
+    public void TypeInference_42IsDouble() {
+        Assert.IsType<double>(Expression.Eval("42"));
     }
 
     [Fact]
@@ -400,8 +401,10 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Overflow_LongMaxPlus1_ThrowsOverflowException() {
-        Assert.Throws<Exceptions.OverflowException>(() => Expression.Eval("9223372036854775807 + 1"));
+    public void Overflow_LongMaxPlus1_ReturnsDouble() {
+        // 现在使用 double 计算，不再有整数溢出
+        var result = Expression.Eval("9223372036854775807 + 1");
+        Assert.IsType<double>(result);
     }
 
     [Fact]

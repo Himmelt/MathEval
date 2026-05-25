@@ -133,7 +133,6 @@ public class CrossValidationTests {
     [InlineData("1 << 4")]
     [InlineData("16 >> 2")]
     [InlineData("1 << 64")]
-    [InlineData("true & 6")]
     public void Bitwise_Long_CrossValidation(string expr) {
         AssertLongConsistent(expr);
     }
@@ -361,9 +360,10 @@ public class CrossValidationTests {
     #region 溢出行为交叉验证
 
     [Fact]
-    public void LongOverflow_MainThrows_FastThrows() {
-        // 主求值器应抛出 MathEval.Exceptions.OverflowException
-        Assert.Throws<Exceptions.OverflowException>(() => Expression.Eval("9223372036854775807 + 1"));
+    public void LongOverflow_MainReturnsDouble_FastThrows() {
+        // 主求值器现在使用 double 计算，不再有整数溢出
+        var mainResult = Expression.Eval("9223372036854775807 + 1");
+        Assert.IsType<double>(mainResult);
         // FastEval 应抛出 System.OverflowException（checked 上下文）
         Assert.Throws<System.OverflowException>(() => FastEval.EvalLong("9223372036854775807 + 1"));
     }

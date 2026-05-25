@@ -4,43 +4,51 @@ using MathEval.Parser;
 namespace MathEval.TypeSystem;
 
 public static class TypeHelper {
-    public static object BoolToNumber(bool value, bool preferDouble = false) {
-        long longValue = value ? 1L : 0L;
-        return preferDouble ? (double)longValue : longValue;
+    public static double BoolToNumber(bool value) {
+        return value ? 1.0 : 0.0;
     }
 
-    public static (object, object) Promote(object left, object right) {
-        if (left is bool _left) left = BoolToNumber(_left, right is double);
-        if (right is bool _right) right = BoolToNumber(_right, left is double);
+    public static (double, double) PromoteToDouble(object left, object right) {
+        double leftDouble = left switch {
+            bool b => BoolToNumber(b),
+            long l => l,
+            double d => d,
+            _ => throw new TypeMismatchException("期望数值类型", "number", left?.GetType().Name ?? "null")
+        };
 
-        if (left is long _left2 && right is double) left = (double)_left2;
-        if (left is double && right is long _right2) right = (double)_right2;
+        double rightDouble = right switch {
+            bool b => BoolToNumber(b),
+            long l => l,
+            double d => d,
+            _ => throw new TypeMismatchException("期望数值类型", "number", right?.GetType().Name ?? "null")
+        };
 
-        return (left, right);
+        return (leftDouble, rightDouble);
     }
 
-    public static long CheckedAdd(long a, long b) {
-        try {
-            return checked(a + b);
-        } catch (System.OverflowException) {
-            throw new Exceptions.OverflowException("加法运算整数溢出");
+    public static double ToDouble(object value) {
+        return value switch {
+            bool b => BoolToNumber(b),
+            long l => l,
+            double d => d,
+            _ => throw new TypeMismatchException("期望数值类型", "number", value?.GetType().Name ?? "null")
+        };
+    }
+
+    public static void RequireInteger(object value, string operationName) {
+        if (value is long) return;
+        if (value is double d) {
+            if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d) && d >= long.MinValue && d <= long.MaxValue)
+                return;
         }
+        throw new TypeMismatchException($"{operationName} 运算需要整数操作数", "integer", value?.GetType().Name ?? "null");
     }
 
-    public static long CheckedSubtract(long a, long b) {
-        try {
-            return checked(a - b);
-        } catch (System.OverflowException) {
-            throw new Exceptions.OverflowException("减法运算整数溢出");
-        }
-    }
-
-    public static long CheckedMultiply(long a, long b) {
-        try {
-            return checked(a * b);
-        } catch (System.OverflowException) {
-            throw new Exceptions.OverflowException("乘法运算整数溢出");
-        }
+    public static long ToInteger(object value, string operationName) {
+        RequireInteger(value, operationName);
+        if (value is long l) return l;
+        if (value is double d) return (long)d;
+        throw new TypeMismatchException($"{operationName} 运算需要整数操作数", "integer", value?.GetType().Name ?? "null");
     }
 
     public static string ToString(object value) {
@@ -62,6 +70,14 @@ public static class TypeHelper {
         var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
         if (!supportedFormats.Contains(firstChar))
             throw new ParseException($"不支持的格式说明符：{formatSpec}", 1, 1);
+
+        // D和X格式说明符只适用于整数类型
+        // 如果value是double且为数学整数，转换为long后格式化
+        if ((firstChar == 'd' || firstChar == 'x') && value is double d) {
+            if (double.IsNaN(d) || double.IsInfinity(d) || d != Math.Truncate(d))
+                throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于整数，但值为 {d}");
+            value = (long)d;
+        }
 
         return string.Format($"{{0:{formatSpec}}}", value);
     }
@@ -85,17 +101,15 @@ public static class TypeHelper {
             if (left is string || right is string) return ToString(left) + ToString(right);
         }
 
-        var (promotedLeft, promotedRight) = Promote(left, right);
-
         return type switch {
-            BinaryExpressionType.Plus => EvaluatePlus(promotedLeft, promotedRight),
-            BinaryExpressionType.Minus => EvaluateMinus(promotedLeft, promotedRight),
-            BinaryExpressionType.Multiply => EvaluateMultiply(promotedLeft, promotedRight),
-            BinaryExpressionType.Divide => EvaluateDivide(promotedLeft, promotedRight),
-            BinaryExpressionType.IntegerDivide => EvaluateIntegerDivide(promotedLeft, promotedRight),
-            BinaryExpressionType.Remainder => EvaluateRemainder(promotedLeft, promotedRight),
-            BinaryExpressionType.Modulo => EvaluateModulo(promotedLeft, promotedRight),
-            BinaryExpressionType.Power => EvaluatePower(promotedLeft, promotedRight),
+            BinaryExpressionType.Plus => EvaluatePlus(left, right),
+            BinaryExpressionType.Minus => EvaluateMinus(left, right),
+            BinaryExpressionType.Multiply => EvaluateMultiply(left, right),
+            BinaryExpressionType.Divide => EvaluateDivide(left, right),
+            BinaryExpressionType.IntegerDivide => EvaluateIntegerDivide(left, right),
+            BinaryExpressionType.Remainder => EvaluateRemainder(left, right),
+            BinaryExpressionType.Modulo => EvaluateModulo(left, right),
+            BinaryExpressionType.Power => EvaluatePower(left, right),
             BinaryExpressionType.BitwiseAnd => EvaluateBitwiseAnd(left, right),
             BinaryExpressionType.BitwiseOr => EvaluateBitwiseOr(left, right),
             BinaryExpressionType.BitwiseXor => EvaluateBitwiseXor(left, right),
@@ -104,206 +118,161 @@ public static class TypeHelper {
             BinaryExpressionType.UnsignedRightShift => EvaluateUnsignedRightShift(left, right),
             BinaryExpressionType.Equal => EvaluateEqual(left, right),
             BinaryExpressionType.NotEqual => EvaluateNotEqual(left, right),
-            BinaryExpressionType.LessThan => EvaluateLessThan(promotedLeft, promotedRight),
-            BinaryExpressionType.LessThanOrEqual => EvaluateLessThanOrEqual(promotedLeft, promotedRight),
-            BinaryExpressionType.GreaterThan => EvaluateGreaterThan(promotedLeft, promotedRight),
-            BinaryExpressionType.GreaterThanOrEqual => EvaluateGreaterThanOrEqual(promotedLeft, promotedRight),
+            BinaryExpressionType.LessThan => EvaluateLessThan(left, right),
+            BinaryExpressionType.LessThanOrEqual => EvaluateLessThanOrEqual(left, right),
+            BinaryExpressionType.GreaterThan => EvaluateGreaterThan(left, right),
+            BinaryExpressionType.GreaterThanOrEqual => EvaluateGreaterThanOrEqual(left, right),
             BinaryExpressionType.And => EvaluateAnd(left, right),
             BinaryExpressionType.Or => EvaluateOr(left, right),
             _ => throw new Exceptions.InvalidOperationException($"未知的二元运算符：{type}")
         };
     }
 
-    private static object EvaluatePlus(object left, object right) {
-        if (IsNaN(left) || IsNaN(right))
+    private static double EvaluatePlus(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
+
+        if (double.IsNaN(d1) || double.IsNaN(d2))
             return double.NaN;
-        if (IsINF(left) || IsINF(right))
+        if (double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2))
             return double.PositiveInfinity;
 
-        if (left is long l1 && right is long l2)
-            return CheckedAdd(l1, l2);
-        if (left is double d1 && right is double d2)
-            return d1 + d2;
-        throw new TypeMismatchException("加法运算需要数值类型", "number", GetTypeName(left, right));
+        return d1 + d2;
     }
 
-    private static object EvaluateMinus(object left, object right) {
-        if (IsNaN(left) || IsNaN(right))
+    private static double EvaluateMinus(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
+
+        if (double.IsNaN(d1) || double.IsNaN(d2))
             return double.NaN;
-        if (IsINF(left) && IsINF(right))
+        if (double.IsPositiveInfinity(d1) && double.IsPositiveInfinity(d2))
             return double.NaN;
-        if (IsINF(left))
+        if (double.IsPositiveInfinity(d1))
             return double.PositiveInfinity;
-        if (IsINF(right))
+        if (double.IsPositiveInfinity(d2))
             return double.NegativeInfinity;
 
-        if (left is long l1 && right is long l2)
-            return CheckedSubtract(l1, l2);
-        if (left is double d1 && right is double d2)
-            return d1 - d2;
-        throw new TypeMismatchException("减法运算需要数值类型", "number", GetTypeName(left, right));
+        return d1 - d2;
     }
 
-    private static object EvaluateMultiply(object left, object right) {
-        if (IsNaN(left) || IsNaN(right))
+    private static double EvaluateMultiply(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
+
+        if (double.IsNaN(d1) || double.IsNaN(d2))
             return double.NaN;
-        if (IsINF(left) || IsINF(right)) {
-            var other = IsINF(left) ? right : left;
-            if (other is long l && l == 0)
-                return double.NaN;
-            if (other is double d && d == 0)
+        if (double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2)) {
+            var other = double.IsPositiveInfinity(d1) ? d2 : d1;
+            if (other == 0)
                 return double.NaN;
             return double.PositiveInfinity;
         }
 
-        if (left is long l1 && right is long l2)
-            return CheckedMultiply(l1, l2);
-        if (left is double d1 && right is double d2)
-            return d1 * d2;
-        throw new TypeMismatchException("乘法运算需要数值类型", "number", GetTypeName(left, right));
+        return d1 * d2;
     }
 
     private static double EvaluateDivide(object left, object right) {
-        if (IsNaN(left) || IsNaN(right)) return double.NaN;
+        var (d1, d2) = PromoteToDouble(left, right);
 
-        if (IsINF(left)) return IsINF(right) ? double.NaN : double.PositiveInfinity;
+        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
 
-        if (IsINF(right)) return 0.0;
+        if (double.IsPositiveInfinity(d1)) return double.IsPositiveInfinity(d2) ? double.NaN : double.PositiveInfinity;
 
-        if (left is long l1 && right is long l2) {
-            if (l2 == 0) throw new DivisionByZeroException();
-            return (double)l1 / l2;
-        }
-        if (left is double d1 && right is double d2) {
-            if (d2 == 0) throw new DivisionByZeroException();
-            return d1 / d2;
-        }
-        throw new TypeMismatchException("除法运算需要数值类型", "number", GetTypeName(left, right));
+        if (double.IsPositiveInfinity(d2)) return 0.0;
+
+        if (d2 == 0) throw new DivisionByZeroException();
+
+        return d1 / d2;
     }
 
-    private static object EvaluateIntegerDivide(object left, object right) {
-        if (IsNaN(left) || IsNaN(right) || IsINF(left) || IsINF(right)) throw new EvaluateException("整除运算不支持 NaN 或 INF");
+    private static long EvaluateIntegerDivide(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
 
-        long l1, l2;
+        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2))
+            throw new EvaluateException("整除运算不支持 NaN 或 INF");
 
-        if (left is double d1) l1 = (long)d1;
-        else if (left is long l) l1 = l;
-        else throw new TypeMismatchException("整除运算需要数值类型", "number", GetTypeName(left, right));
+        if (d2 == 0) throw new DivisionByZeroException();
 
-        if (right is double d2) l2 = (long)d2;
-        else if (right is long l) l2 = l;
-        else throw new TypeMismatchException("整除运算需要数值类型", "number", GetTypeName(left, right));
-
-        if (l2 == 0) throw new DivisionByZeroException();
-
-        return l1 / l2;
+        return (long)(d1 / d2);
     }
 
-    private static object EvaluateRemainder(object left, object right) {
-        if (IsNaN(left) || IsNaN(right)) return double.NaN;
+    private static double EvaluateRemainder(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
 
-        if (IsINF(left)) return double.NaN;
+        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
 
-        if (IsINF(right)) {
-            if (left is long l) return (double)l;
-            return left;
-        }
+        if (double.IsPositiveInfinity(d1)) return double.NaN;
 
-        if (left is long l1 && right is long l2) {
-            if (l2 == 0) throw new DivisionByZeroException();
-            return l1 % l2;
-        }
-        if (left is double d1 && right is double d2) {
-            if (d2 == 0) throw new DivisionByZeroException();
-            return d1 % d2;
-        }
-        throw new TypeMismatchException("取余运算需要数值类型", "number", GetTypeName(left, right));
+        if (double.IsPositiveInfinity(d2)) return d1;
+
+        if (d2 == 0) throw new DivisionByZeroException();
+
+        return d1 % d2;
     }
 
-    private static object EvaluateModulo(object left, object right) {
-        if (IsNaN(left) || IsNaN(right)) return double.NaN;
+    private static double EvaluateModulo(object left, object right) {
+        var (d1, d2) = PromoteToDouble(left, right);
 
-        if (IsINF(left)) return double.NaN;
+        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
 
-        if (IsINF(right)) {
-            if (left is long l) return (double)l;
-            return left;
-        }
+        if (double.IsPositiveInfinity(d1)) return double.NaN;
 
-        if (left is long l1 && right is long l2) {
-            if (l2 == 0) throw new DivisionByZeroException();
-            long r = l1 % l2;
-            if ((r < 0 && l2 > 0) || (r > 0 && l2 < 0))
-                r += l2;
-            return r;
-        }
-        if (left is double d1 && right is double d2) {
-            if (d2 == 0) throw new DivisionByZeroException();
-            double r = d1 % d2;
-            if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0))
-                r += d2;
-            return r;
-        }
-        throw new TypeMismatchException("取模运算需要数值类型", "number", GetTypeName(left, right));
+        if (double.IsPositiveInfinity(d2)) return d1;
+
+        if (d2 == 0) throw new DivisionByZeroException();
+
+        double r = d1 % d2;
+        if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0))
+            r += d2;
+        return r;
     }
 
     private static double EvaluatePower(object left, object right) {
-        if (IsNaN(left) || IsNaN(right)) return double.NaN;
+        var (d1, d2) = PromoteToDouble(left, right);
 
-        if (left is long l1 && right is long l2) {
-            var result = Math.Pow(l1, l2);
+        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
 
-            if (l1 == 0 && l2 < 0) throw new EvaluateException("零不能求负数次幂");
+        if (d1 < 0 && d2 != Math.Floor(d2)) throw new EvaluateException("不能对负数求非整数次幂");
+        if (d1 == 0 && d2 < 0) throw new EvaluateException("零不能求负数次幂");
 
-            if (l2 >= 0 && result == Math.Floor(result) && result >= long.MinValue && result <= long.MaxValue) return (long)result;
-
-            return result;
-        }
-        if (left is double d1 && right is double d2) {
-            if (d1 < 0 && d2 != Math.Floor(d2)) throw new EvaluateException("不能对负数求非整数次幂");
-            return Math.Pow(d1, d2);
-        }
-        throw new TypeMismatchException("幂运算需要数值类型", "number", GetTypeName(left, right));
-    }
-
-    private static long ToLong(object value) {
-        if (value is bool b) return b ? 1L : 0L;
-        if (value is long l) return l;
-        if (value is double d) return (long)d;
-        throw new TypeMismatchException("期望数值类型", "number", GetTypeName(value, null));
+        return Math.Pow(d1, d2);
     }
 
     private static long EvaluateBitwiseAnd(object left, object right) {
-        return ToLong(left) & ToLong(right);
+        long l1 = ToInteger(left, "按位与");
+        long l2 = ToInteger(right, "按位与");
+        return l1 & l2;
     }
 
     private static long EvaluateBitwiseOr(object left, object right) {
-        return ToLong(left) | ToLong(right);
+        long l1 = ToInteger(left, "按位或");
+        long l2 = ToInteger(right, "按位或");
+        return l1 | l2;
     }
 
     private static long EvaluateBitwiseXor(object left, object right) {
-        return ToLong(left) ^ ToLong(right);
+        long l1 = ToInteger(left, "按位异或");
+        long l2 = ToInteger(right, "按位异或");
+        return l1 ^ l2;
     }
 
     private static long EvaluateLeftShift(object left, object right) {
-        long l1 = ToLong(left);
-        long l2 = ToLong(right);
+        long l1 = ToInteger(left, "左移");
+        long l2 = ToInteger(right, "左移");
         if (l2 < 0) throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return l1 << (int)l2;
     }
 
     private static long EvaluateRightShift(object left, object right) {
-        long l1 = ToLong(left);
-        long l2 = ToLong(right);
+        long l1 = ToInteger(left, "右移");
+        long l2 = ToInteger(right, "右移");
         if (l2 < 0) throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return l1 >> (int)l2;
     }
 
     private static long EvaluateUnsignedRightShift(object left, object right) {
-        long l1 = ToLong(left);
-        long l2 = ToLong(right);
+        long l1 = ToInteger(left, "无符号右移");
+        long l2 = ToInteger(right, "无符号右移");
         if (l2 < 0) throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return (long)((ulong)l1 >> (int)l2);
@@ -315,9 +284,8 @@ public static class TypeHelper {
 
         if (leftIsNumber && rightIsNumber) {
             if (IsNaN(left) || IsNaN(right)) return false;
-            var (pl, pr) = Promote(left, right);
-            if (pl is double dl && pr is double dr) return dl == dr;
-            return Equals(pl, pr);
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 == d2;
         }
 
         if (left.GetType() != right.GetType()) return false;
@@ -330,9 +298,8 @@ public static class TypeHelper {
 
         if (leftIsNumber && rightIsNumber) {
             if (IsNaN(left) || IsNaN(right)) return true;
-            var (pl, pr) = Promote(left, right);
-            if (pl is double dl && pr is double dr) return dl != dr;
-            return !Equals(pl, pr);
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 != d2;
         }
 
         if (left.GetType() != right.GetType()) return true;
@@ -340,31 +307,63 @@ public static class TypeHelper {
     }
 
     private static bool EvaluateLessThan(object left, object right) {
-        if (left is long l1 && right is long l2) return l1 < l2;
-        if (left is double d1 && right is double d2) return d1 < d2;
-        if (left is string s1 && right is string s2) return string.Compare(s1, s2, StringComparison.Ordinal) < 0;
-        throw new TypeMismatchException("比较运算需要兼容类型", "number ? string", GetTypeName(left, right));
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber) {
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 < d2;
+        }
+
+        if (left is string s1 && right is string s2)
+            return string.Compare(s1, s2, StringComparison.Ordinal) < 0;
+
+        throw new TypeMismatchException("比较运算需要兼容类型", "number | string", GetTypeName(left, right));
     }
 
     private static bool EvaluateLessThanOrEqual(object left, object right) {
-        if (left is long l1 && right is long l2) return l1 <= l2;
-        if (left is double d1 && right is double d2) return d1 <= d2;
-        if (left is string s1 && right is string s2) return string.Compare(s1, s2, StringComparison.Ordinal) <= 0;
-        throw new TypeMismatchException("比较运算需要兼容类型", "number ? string", GetTypeName(left, right));
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber) {
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 <= d2;
+        }
+
+        if (left is string s1 && right is string s2)
+            return string.Compare(s1, s2, StringComparison.Ordinal) <= 0;
+
+        throw new TypeMismatchException("比较运算需要兼容类型", "number | string", GetTypeName(left, right));
     }
 
     private static bool EvaluateGreaterThan(object left, object right) {
-        if (left is long l1 && right is long l2) return l1 > l2;
-        if (left is double d1 && right is double d2) return d1 > d2;
-        if (left is string s1 && right is string s2) return string.Compare(s1, s2, StringComparison.Ordinal) > 0;
-        throw new TypeMismatchException("比较运算需要兼容类型", "number ? string", GetTypeName(left, right));
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber) {
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 > d2;
+        }
+
+        if (left is string s1 && right is string s2)
+            return string.Compare(s1, s2, StringComparison.Ordinal) > 0;
+
+        throw new TypeMismatchException("比较运算需要兼容类型", "number | string", GetTypeName(left, right));
     }
 
     private static bool EvaluateGreaterThanOrEqual(object left, object right) {
-        if (left is long l1 && right is long l2) return l1 >= l2;
-        if (left is double d1 && right is double d2) return d1 >= d2;
-        if (left is string s1 && right is string s2) return string.Compare(s1, s2, StringComparison.Ordinal) >= 0;
-        throw new TypeMismatchException("比较运算需要兼容类型", "number ? string", GetTypeName(left, right));
+        var leftIsNumber = left is long || left is double;
+        var rightIsNumber = right is long || right is double;
+
+        if (leftIsNumber && rightIsNumber) {
+            var (d1, d2) = PromoteToDouble(left, right);
+            return d1 >= d2;
+        }
+
+        if (left is string s1 && right is string s2)
+            return string.Compare(s1, s2, StringComparison.Ordinal) >= 0;
+
+        throw new TypeMismatchException("比较运算需要兼容类型", "number | string", GetTypeName(left, right));
     }
 
     private static object EvaluateAnd(object left, object right) {
@@ -389,22 +388,12 @@ public static class TypeHelper {
         };
     }
 
-    private static object EvaluatePositive(object operand) {
-        if (operand is long l) return l;
-        if (operand is double d) return d;
-        throw new TypeMismatchException("正号运算符需要数值类型", "number", GetTypeName(operand, null));
+    private static double EvaluatePositive(object operand) {
+        return ToDouble(operand);
     }
 
-    private static object EvaluateNegate(object operand) {
-        if (operand is long l) {
-            try {
-                return checked(-l);
-            } catch (System.OverflowException) {
-                throw new Exceptions.OverflowException("取负运算整数溢出");
-            }
-        }
-        if (operand is double d) return -d;
-        throw new TypeMismatchException("取负运算符需要数值类型", "number", GetTypeName(operand, null));
+    private static double EvaluateNegate(object operand) {
+        return -ToDouble(operand);
     }
 
     private static object EvaluateNot(object operand) {
@@ -412,8 +401,8 @@ public static class TypeHelper {
         return !(bool)operand;
     }
 
-    private static object EvaluateBitwiseNot(object operand) {
-        long l = ToLong(operand);
+    private static long EvaluateBitwiseNot(object operand) {
+        long l = ToInteger(operand, "按位取反");
         return ~l;
     }
 

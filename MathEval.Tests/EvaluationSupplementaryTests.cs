@@ -213,8 +213,8 @@ public class EvaluationSupplementaryTests {
     #region 数值类型推断
 
     [Fact]
-    public void TypeInference_IntegerLiteral_IsLong() {
-        Assert.IsType<long>(Expression.Eval("42"));
+    public void TypeInference_IntegerLiteral_IsDouble() {
+        Assert.IsType<double>(Expression.Eval("42"));
     }
 
     [Fact]
@@ -228,8 +228,8 @@ public class EvaluationSupplementaryTests {
     }
 
     [Fact]
-    public void TypeInference_HexLiteral_IsLong() {
-        Assert.IsType<long>(Expression.Eval("0xFF"));
+    public void TypeInference_HexLiteral_IsDouble() {
+        Assert.IsType<double>(Expression.Eval("0xFF"));
     }
 
     [Fact]
@@ -243,8 +243,8 @@ public class EvaluationSupplementaryTests {
     }
 
     [Fact]
-    public void TypeInference_Modulo_Integers_IsLong() {
-        Assert.IsType<long>(Expression.Eval("7 % 3"));
+    public void TypeInference_Modulo_Integers_IsDouble() {
+        Assert.IsType<double>(Expression.Eval("7 % 3"));
     }
 
     [Fact]

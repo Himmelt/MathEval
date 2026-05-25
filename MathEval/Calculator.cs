@@ -31,12 +31,60 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
     public T Eval<T>() {
         var result = Eval();
+        return ConvertResult<T>(result);
+    }
+
+    private static T ConvertResult<T>(object result) {
+        var targetType = typeof(T);
+
         if (result is T typedResult) return typedResult;
-        try {
-            return (T)Convert.ChangeType(result, typeof(T));
-        } catch (InvalidCastException) {
-            throw new TypeMismatchException($"无法将结果转换为类型 {typeof(T).Name}", typeof(T).Name, result?.GetType().Name ?? "null");
+
+        if (result is double d) {
+            if (targetType == typeof(double)) return (T)(object)d;
+            if (targetType == typeof(float)) return (T)(object)(float)d;
+            if (targetType == typeof(decimal)) return (T)(object)(decimal)d;
+
+            if (IsIntegerType(targetType)) {
+                if (!IsMathematicalInteger(d)) {
+                    throw new TypeMismatchException(
+                        $"无法将非整数 {d} 转换为整数类型 {targetType.Name}",
+                        targetType.Name, "double");
+                }
+
+                try {
+                    return (T)Convert.ChangeType(d, targetType);
+                } catch (System.OverflowException) {
+                    throw new Exceptions.OverflowException(
+                        $"值 {d} 超出 {targetType.Name} 类型的范围");
+                }
+            }
         }
+
+        if (result is bool b && targetType == typeof(bool)) return (T)(object)b;
+        if (result is string s && targetType == typeof(string)) return (T)(object)s;
+
+        try {
+            return (T)Convert.ChangeType(result, targetType);
+        } catch (InvalidCastException) {
+            throw new TypeMismatchException(
+                $"无法将结果转换为类型 {targetType.Name}",
+                targetType.Name, result?.GetType().Name ?? "null");
+        } catch (System.OverflowException) {
+            throw new Exceptions.OverflowException(
+                $"值超出 {targetType.Name} 类型的范围");
+        }
+    }
+
+    private static bool IsIntegerType(Type type) {
+        return type == typeof(byte) || type == typeof(sbyte) ||
+               type == typeof(short) || type == typeof(ushort) ||
+               type == typeof(int) || type == typeof(uint) ||
+               type == typeof(long) || type == typeof(ulong);
+    }
+
+    private static bool IsMathematicalInteger(double value) {
+        if (double.IsNaN(value) || double.IsInfinity(value)) return false;
+        return value == Math.Truncate(value);
     }
 
     public void Set(string name, object value) => _context.Set(name, value);
