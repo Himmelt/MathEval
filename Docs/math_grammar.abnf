@@ -19,7 +19,11 @@
 ; 基本词法规则 (Basic Lexical Rules)
 ; ==============================================================================
 
-LETTER      = ALPHA / "_" / %x4E00-9FFF ; 字母、下划线或中文字符
+LETTER      = ALPHA / "_" / %x4E00-9FFF
+            ; 字母、下划线或中文字符
+
+WS          = SP / HTAB / CRLF
+            ; 空白符：空格、制表符、换行
 
 INTEGER     = 1*DIGIT
 
@@ -36,7 +40,8 @@ NUMBER      = DECIMAL [EXPONENT] /
 
 IDENTIFIER  = LETTER *(LETTER / DIGIT)
 
-ESCAPE      = "\" ( DQUOTE / "'" / "\" / "n" / "r" / "t" / "0" / "u" 4HEXDIG ) ; \" / \' / \\ / \n / \r / \t / \0 / \uXXXX
+ESCAPE      = "\" ( DQUOTE / "'" / "\" / "n" / "r" / "t" / "0" / "u" 4HEXDIG )
+            ; \" / \' / \\ / \n / \r / \t / \0 / \uXXXX
 
 STRING      = "'" *( ESCAPE / %x00-26 / %x28-FF ) "'" /
               DQUOTE *( ESCAPE / %x00-21 / %x23-FF ) DQUOTE
@@ -58,9 +63,9 @@ KEYWORD     = %i"true" / %i"false" / %i"and" / %i"or" / %i"not" /
 
 PRIMARY     = NUMBER / KEYWORD / IDENTIFIER / STRING /
               INTERPOLATED-STRING / FUNCTION-CALL /
-              "(" EXPRESSION ")"
+              "(" *WS EXPRESSION *WS ")"
 
-FUNCTION-CALL = IDENTIFIER "(" [EXPRESSION *("," EXPRESSION)] ")"
+FUNCTION-CALL = IDENTIFIER *WS "(" *WS [EXPRESSION *("," *WS EXPRESSION)] *WS ")"
 
 INTERPOLATED-STRING = "$" ( "'" *INTERPOLATED-CONTENT "'" /
                            DQUOTE *INTERPOLATED-CONTENT DQUOTE )
@@ -75,31 +80,31 @@ INTERPOLATED-CONTENT = "{" EXPRESSION [":" FORMAT-SPEC] "}" /
 NON-BRACE   = %x00-7A / %x7C / %x7E-FF
             ; 非 { 和 } 的字符
 
-POWER       = PRIMARY [("^" / "**") POWER]
+POWER       = PRIMARY *WS [("^" / "**") *WS POWER]
 
-UNARY       = ("+" / "-" / %i"not" / "!" / "~") UNARY /
+UNARY       = ("+" / "-" / %i"not" / "!" / "~") *WS UNARY /
               POWER
 
-MULTIPLICATIVE = UNARY *(("*" / "/" / "//" / "\" / "%" / %i"mod") UNARY)
+MULTIPLICATIVE = UNARY *WS *(("*" / "/" / "//" / "%" / %i"mod") *WS UNARY)
 
-ADDITIVE    = MULTIPLICATIVE *(("+" / "-") MULTIPLICATIVE)
+ADDITIVE    = MULTIPLICATIVE *WS *(("+" / "-") *WS MULTIPLICATIVE)
 
-SHIFT       = ADDITIVE *(("<<" / ">>" / ">>>") ADDITIVE)
+SHIFT       = ADDITIVE *WS *(("<<" / ">>" / ">>>") *WS ADDITIVE)
 
-RELATIONAL  = SHIFT *(("<" / ">" / "<=" / ">=") SHIFT)
+RELATIONAL  = SHIFT *WS *(("<" / ">" / "<=" / ">=") *WS SHIFT)
 
-EQUALITY    = RELATIONAL *(("==" / "!=") RELATIONAL)
+EQUALITY    = RELATIONAL *WS *(("==" / "!=") *WS RELATIONAL)
 
-BITWISE-AND = EQUALITY *("&" EQUALITY)
+BITWISE-AND = EQUALITY *WS *("&" *WS EQUALITY)
 
-BITWISE-XOR = BITWISE-AND *(%i"xor" BITWISE-AND)
+BITWISE-XOR = BITWISE-AND *WS *(%i"xor" *WS BITWISE-AND)
 
-BITWISE-OR  = BITWISE-XOR *("|" BITWISE-XOR)
+BITWISE-OR  = BITWISE-XOR *WS *("|" *WS BITWISE-XOR)
 
-LOGICAL-AND = BITWISE-OR *((%i"and" / "&&") BITWISE-OR)
+LOGICAL-AND = BITWISE-OR *WS *((%i"and" / "&&") *WS BITWISE-OR)
 
-LOGICAL-OR  = LOGICAL-AND *((%i"or" / "||") LOGICAL-AND)
+LOGICAL-OR  = LOGICAL-AND *WS *((%i"or" / "||") *WS LOGICAL-AND)
 
-CONDITIONAL = LOGICAL-OR ["?" EXPRESSION ":" EXPRESSION]
+CONDITIONAL = LOGICAL-OR *WS ["?" *WS EXPRESSION *WS ":" *WS EXPRESSION]
 
 EXPRESSION  = CONDITIONAL
