@@ -139,11 +139,16 @@ public class Parser {
 
     private LogicalExpression ParseShift() {
         var left = ParseAdditive();
-        while (CurrentToken.Type == Lexer.TokenType.LeftShift || CurrentToken.Type == Lexer.TokenType.RightShift) {
+        while (CurrentToken.Type == Lexer.TokenType.LeftShift || CurrentToken.Type == Lexer.TokenType.RightShift || CurrentToken.Type == Lexer.TokenType.UnsignedRightShift) {
             var op = CurrentToken.Type;
             MoveNext();
             var right = ParseAdditive();
-            var type = op == Lexer.TokenType.LeftShift ? BinaryExpressionType.LeftShift : BinaryExpressionType.RightShift;
+            var type = op switch {
+                Lexer.TokenType.LeftShift => BinaryExpressionType.LeftShift,
+                Lexer.TokenType.RightShift => BinaryExpressionType.RightShift,
+                Lexer.TokenType.UnsignedRightShift => BinaryExpressionType.UnsignedRightShift,
+                _ => throw new Exceptions.InvalidOperationException($"未知的移位运算符：{op}")
+            };
             left = new BinaryExpression(type, left, right);
         }
         return left;

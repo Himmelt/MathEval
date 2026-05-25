@@ -405,7 +405,12 @@ public class Lexer {
                     CurrentToken = new Token(TokenType.GreaterOrEqual, ">=", _startPosition, _startLine, _startColumn);
                 } else if (Peek() == '>') {
                     Read();
-                    CurrentToken = new Token(TokenType.RightShift, ">>", _startPosition, _startLine, _startColumn);
+                    if (Peek() == '>') {
+                        Read();
+                        CurrentToken = new Token(TokenType.UnsignedRightShift, ">>>", _startPosition, _startLine, _startColumn);
+                    } else {
+                        CurrentToken = new Token(TokenType.RightShift, ">>", _startPosition, _startLine, _startColumn);
+                    }
                 } else {
                     CurrentToken = new Token(TokenType.Greater, ">", _startPosition, _startLine, _startColumn);
                 }

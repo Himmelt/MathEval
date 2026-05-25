@@ -20,6 +20,7 @@ public enum BinaryExpressionType {
     BitwiseXor,
     LeftShift,
     RightShift,
+    UnsignedRightShift,
 
     // 比较运算符
     Equal,

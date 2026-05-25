@@ -32,6 +32,7 @@ public enum TokenType {
     Tilde,
     LeftShift,
     RightShift,
+    UnsignedRightShift,
 
     // 逻辑运算符
     AndKeyword,

@@ -101,6 +101,7 @@ public static class TypeHelper {
             BinaryExpressionType.BitwiseXor => EvaluateBitwiseXor(left, right),
             BinaryExpressionType.LeftShift => EvaluateLeftShift(left, right),
             BinaryExpressionType.RightShift => EvaluateRightShift(left, right),
+            BinaryExpressionType.UnsignedRightShift => EvaluateUnsignedRightShift(left, right),
             BinaryExpressionType.Equal => EvaluateEqual(left, right),
             BinaryExpressionType.NotEqual => EvaluateNotEqual(left, right),
             BinaryExpressionType.LessThan => EvaluateLessThan(promotedLeft, promotedRight),
@@ -298,6 +299,14 @@ public static class TypeHelper {
         if (l2 < 0) throw new EvaluateException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return l1 >> (int)l2;
+    }
+
+    private static long EvaluateUnsignedRightShift(object left, object right) {
+        long l1 = ToLong(left);
+        long l2 = ToLong(right);
+        if (l2 < 0) throw new EvaluateException("移位量不能为负数");
+        if (l2 >= 64) l2 %= 64;
+        return (long)((ulong)l1 >> (int)l2);
     }
 
     private static bool EvaluateEqual(object left, object right) {
