@@ -24,6 +24,7 @@ public enum TokenType {
     Percent,
     ModKeyword,
     Caret,
+    DoubleAsterisk,
 
     // 位运算符
     Ampersand,

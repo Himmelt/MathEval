@@ -345,7 +345,12 @@ public class Lexer {
                 CurrentToken = new Token(TokenType.Minus, "-", _startPosition, _startLine, _startColumn);
                 break;
             case '*':
-                CurrentToken = new Token(TokenType.Asterisk, "*", _startPosition, _startLine, _startColumn);
+                if (Peek() == '*') {
+                    Read();
+                    CurrentToken = new Token(TokenType.DoubleAsterisk, "**", _startPosition, _startLine, _startColumn);
+                } else {
+                    CurrentToken = new Token(TokenType.Asterisk, "*", _startPosition, _startLine, _startColumn);
+                }
                 break;
             case '%':
                 CurrentToken = new Token(TokenType.Percent, "%", _startPosition, _startLine, _startColumn);

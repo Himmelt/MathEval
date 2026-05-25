@@ -189,7 +189,7 @@ public class Parser {
 
     private LogicalExpression ParsePower() {
         var left = ParseUnary();
-        if (CurrentToken.Type == Lexer.TokenType.Caret) {
+        if (CurrentToken.Type == Lexer.TokenType.Caret || CurrentToken.Type == Lexer.TokenType.DoubleAsterisk) {
             MoveNext();
             CheckDepth();
             var right = ParsePower();
