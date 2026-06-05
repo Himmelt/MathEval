@@ -296,8 +296,9 @@ public class FastEvalSupplementaryTests {
     }
 
     [Fact]
-    public void EvalLong_Division_TruncatesToLong() {
-        Assert.Equal(3L, FastEval.EvalLong("7 / 2"));
+    public void EvalLong_DivisionNotInteger_Throws() {
+        // 内部统一 double 运算，7/2=3.5 不是整数，无法转换为 long
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("7 / 2"));
     }
 
     [Fact]

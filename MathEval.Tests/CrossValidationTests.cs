@@ -1,4 +1,5 @@
 using MathEval.Fast;
+using MathEval.Fast.Exceptions;
 using Xunit;
 
 namespace MathEval.Tests;
@@ -362,8 +363,8 @@ public class CrossValidationTests {
         // 主求值器现在使用 double 计算，不再有整数溢出
         var mainResult = Expression.Eval("9223372036854775807 + 1");
         Assert.IsType<double>(mainResult);
-        // FastEval 应抛出 System.OverflowException（checked 上下文）
-        Assert.Throws<System.OverflowException>(() => FastEval.EvalLong("9223372036854775807 + 1"));
+        // FastEval 内部统一 double 运算，超出 long 范围时抛出 FastEvalException
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("9223372036854775807 + 1"));
     }
 
     [Fact]

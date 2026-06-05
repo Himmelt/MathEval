@@ -324,7 +324,7 @@ public class FastEvalTests {
 
     [Fact]
     public void EvalLong_VariableMultiplication() {
-        var vars = new Dictionary<string, long> { ["a"] = 7L, ["b"] = 6L };
+        var vars = new Dictionary<string, double> { ["a"] = 7.0, ["b"] = 6.0 };
         Assert.Equal(42L, FastEval.EvalLong("a * b", vars));
     }
 
@@ -561,17 +561,20 @@ public class FastEvalTests {
 
     [Fact]
     public void EvalLong_CheckedOverflow_Throws() {
-        Assert.Throws<System.OverflowException>(() => FastEval.EvalLong("9223372036854775807 + 1"));
+        // 内部统一 double 运算，超出 long 范围时抛出 FastEvalException
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("9223372036854775807 + 1"));
     }
 
     [Fact]
-    public void EvalLong_DivisionReturnsTruncated() {
-        Assert.Equal(3L, FastEval.EvalLong("7 / 2"));
+    public void EvalLong_DivisionNotInteger_Throws() {
+        // 内部统一 double 运算，7/2=3.5 不是整数，无法转换为 long
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("7 / 2"));
     }
 
     [Fact]
-    public void EvalLong_FloatLiteralTruncates() {
-        Assert.Equal(3L, FastEval.EvalLong("3.14"));
+    public void EvalLong_FloatLiteralNotInteger_Throws() {
+        // 内部统一 double 运算，3.14 不是整数，无法转换为 long
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("3.14"));
     }
 
     #endregion

@@ -43,36 +43,20 @@ internal struct FastScanner(string text) {
         return _text.AsSpan(start, _position - start);
     }
 
-    public double ReadDouble() {
+    public double ReadNumber() {
         if (Peek() == '0' && (PeekNext() == 'x' || PeekNext() == 'X')) {
             _position += 2;
-            return ReadHexAsDouble();
+            return ReadHex();
         }
         if (Peek() == '0' && (PeekNext() == 'o' || PeekNext() == 'O')) {
             _position += 2;
-            return ReadOctalAsDouble();
+            return ReadOctal();
         }
         if (Peek() == '0' && (PeekNext() == 'b' || PeekNext() == 'B')) {
             _position += 2;
-            return ReadBinaryAsDouble();
+            return ReadBinary();
         }
-        return ReadDecimalAsDouble();
-    }
-
-    public long ReadLong() {
-        if (Peek() == '0' && (PeekNext() == 'x' || PeekNext() == 'X')) {
-            _position += 2;
-            return ReadHexAsLong();
-        }
-        if (Peek() == '0' && (PeekNext() == 'o' || PeekNext() == 'O')) {
-            _position += 2;
-            return ReadOctalAsLong();
-        }
-        if (Peek() == '0' && (PeekNext() == 'b' || PeekNext() == 'B')) {
-            _position += 2;
-            return ReadBinaryAsLong();
-        }
-        return ReadDecimalAsLong();
+        return ReadDecimal();
     }
 
     internal static bool IsIdentifierStart(char ch) {
@@ -86,7 +70,7 @@ internal struct FastScanner(string text) {
             || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherNumber;
     }
 
-    private double ReadDecimalAsDouble() {
+    private double ReadDecimal() {
         var start = _position;
 
         while (_position < _text.Length && char.IsDigit(_text[_position]))
@@ -109,26 +93,7 @@ internal struct FastScanner(string text) {
         return double.Parse(_text.AsSpan(start, _position - start));
     }
 
-    private long ReadDecimalAsLong() {
-        var start = _position;
-
-        while (_position < _text.Length && char.IsDigit(_text[_position]))
-            _position++;
-
-        if (_position < _text.Length && (_text[_position] == '.' || _text[_position] == 'e' || _text[_position] == 'E')) {
-            _position = start;
-            return (long)ReadDecimalAsDouble();
-        }
-
-        if (_position == start)
-            throw new FastEvalException("无效的数字", _position);
-
-        return long.Parse(_text.AsSpan(start, _position - start));
-    }
-
-    private double ReadHexAsDouble() => ReadHexAsLong();
-
-    private long ReadHexAsLong() {
+    private double ReadHex() {
         var start = _position;
         while (_position < _text.Length && IsHexDigit(_text[_position]))
             _position++;
@@ -137,9 +102,7 @@ internal struct FastScanner(string text) {
         return Convert.ToInt64(_text.Substring(start, _position - start), 16);
     }
 
-    private double ReadOctalAsDouble() => ReadOctalAsLong();
-
-    private long ReadOctalAsLong() {
+    private double ReadOctal() {
         var start = _position;
         while (_position < _text.Length && IsOctalDigit(_text[_position]))
             _position++;
@@ -148,9 +111,7 @@ internal struct FastScanner(string text) {
         return Convert.ToInt64(_text.Substring(start, _position - start), 8);
     }
 
-    private double ReadBinaryAsDouble() => ReadBinaryAsLong();
-
-    private long ReadBinaryAsLong() {
+    private double ReadBinary() {
         var start = _position;
         while (_position < _text.Length && IsBinaryDigit(_text[_position]))
             _position++;

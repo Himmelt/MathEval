@@ -7,7 +7,7 @@ namespace MathEval.Fast;
 /// FastEval 内置函数表，硬编码常用数学函数
 /// </summary>
 internal static class BuiltInFastFunctions {
-    private static readonly Dictionary<string, Func<double[], double>> _doubleFunctions = new(StringComparer.OrdinalIgnoreCase) {
+    private static readonly Dictionary<string, Func<double[], double>> _functions = new(StringComparer.OrdinalIgnoreCase) {
         ["sin"] = args => Math.Sin(args[0]),
         ["cos"] = args => Math.Cos(args[0]),
         ["tan"] = args => Math.Tan(args[0]),
@@ -46,16 +46,6 @@ internal static class BuiltInFastFunctions {
             : Math.Pow(args[0], args[1]),
     };
 
-    private static readonly Dictionary<string, Func<long[], long>> _longFunctions = new(StringComparer.OrdinalIgnoreCase) {
-        ["abs"] = args => Math.Abs(args[0]),
-        ["sign"] = args => Math.Sign(args[0]),
-        ["max"] = args => Math.Max(args[0], args[1]),
-        ["min"] = args => Math.Min(args[0], args[1]),
-    };
-
-    public static bool TryGetDoubleFunction(string name, [NotNullWhen(true)] out Func<double[], double>? func)
-        => _doubleFunctions.TryGetValue(name, out func);
-
-    public static bool TryGetLongFunction(string name, [NotNullWhen(true)] out Func<long[], long>? func)
-        => _longFunctions.TryGetValue(name, out func);
+    public static bool TryGetFunction(string name, [NotNullWhen(true)] out Func<double[], double>? func)
+        => _functions.TryGetValue(name, out func);
 }

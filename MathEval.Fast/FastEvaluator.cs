@@ -4,17 +4,19 @@ using MathEval.Fast.Operators;
 namespace MathEval.Fast;
 
 /// <summary>
-/// 泛型递归求值器，边扫描边求值，零 AST 中间层
+/// 递归求值器，边扫描边求值，零 AST 中间层
+/// <br/>
+/// 内部统一使用 double 运算，仅在最终返回时按需转换类型
 /// </summary>
-internal sealed class FastEvaluator<T> where T : struct {
+internal sealed class FastEvaluator {
 
     private int _depth;
     private bool _skipMode;
     private const int MaxDepth = 1024;
     private FastScanner _scanner;
-    private readonly IReadOnlyDictionary<string, T>? _variables;
+    private readonly IReadOnlyDictionary<string, double>? _variables;
 
-    public FastEvaluator(string expression, IReadOnlyDictionary<string, T>? variables = null) {
+    public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
         if (string.IsNullOrEmpty(expression)) throw new FastEvalException("表达式不能为空");
         if (expression.Length > 4096) throw new FastEvalException("表达式长度超过最大限制 4096 个字符");
 
@@ -23,7 +25,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         _depth = 0;
     }
 
-    public T Evaluate() {
+    public double Evaluate() {
         _scanner.SkipWhitespace();
         if (_scanner.IsAtEnd) throw new FastEvalException("表达式不能为空");
 
@@ -35,9 +37,9 @@ internal sealed class FastEvaluator<T> where T : struct {
         return result;
     }
 
-    private T EvalExpression() => EvalConditional();
+    private double EvalExpression() => EvalConditional();
 
-    private T EvalConditional() {
+    private double EvalConditional() {
         var condition = EvalLogicalOr();
         _scanner.SkipWhitespace();
 
@@ -67,7 +69,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return condition;
     }
 
-    private T EvalLogicalOr() {
+    private double EvalLogicalOr() {
         var left = EvalLogicalAnd();
         while (true) {
             _scanner.SkipWhitespace();
@@ -77,25 +79,25 @@ internal sealed class FastEvaluator<T> where T : struct {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToT<T>(true);
+                    return BuiltInOperators.BoolToDouble(true);
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
             } else if (MatchKeyword("or")) {
                 if (!_skipMode && BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToT<T>(true);
+                    return BuiltInOperators.BoolToDouble(true);
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
             } else break;
         }
         return left;
     }
 
-    private T EvalLogicalAnd() {
+    private double EvalLogicalAnd() {
         var left = EvalEquality();
         while (true) {
             _scanner.SkipWhitespace();
@@ -105,25 +107,25 @@ internal sealed class FastEvaluator<T> where T : struct {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToT<T>(false);
+                    return BuiltInOperators.BoolToDouble(false);
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
             } else if (MatchKeyword("and")) {
                 if (!_skipMode && !BuiltInOperators.ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToT<T>(false);
+                    return BuiltInOperators.BoolToDouble(false);
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BuiltInOperators.BoolToT<T>(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
             } else break;
         }
         return left;
     }
 
-    private T EvalEquality() {
+    private double EvalEquality() {
         var left = EvalRelational();
         while (true) {
             _scanner.SkipWhitespace();
@@ -140,7 +142,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalRelational() {
+    private double EvalRelational() {
         var left = EvalBitwiseOr();
         while (true) {
             _scanner.SkipWhitespace();
@@ -165,7 +167,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalBitwiseOr() {
+    private double EvalBitwiseOr() {
         var left = EvalBitwiseXor();
         while (true) {
             _scanner.SkipWhitespace();
@@ -178,7 +180,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalBitwiseXor() {
+    private double EvalBitwiseXor() {
         var left = EvalBitwiseAnd();
         while (true) {
             _scanner.SkipWhitespace();
@@ -190,7 +192,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalBitwiseAnd() {
+    private double EvalBitwiseAnd() {
         var left = EvalShift();
         while (true) {
             _scanner.SkipWhitespace();
@@ -203,7 +205,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalShift() {
+    private double EvalShift() {
         var left = EvalAdditive();
         while (true) {
             _scanner.SkipWhitespace();
@@ -220,7 +222,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalAdditive() {
+    private double EvalAdditive() {
         var left = EvalMultiplicative();
         while (true) {
             _scanner.SkipWhitespace();
@@ -237,7 +239,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalMultiplicative() {
+    private double EvalMultiplicative() {
         var left = EvalPower();
         while (true) {
             _scanner.SkipWhitespace();
@@ -262,18 +264,18 @@ internal sealed class FastEvaluator<T> where T : struct {
         return left;
     }
 
-    private T EvalPower() {
+    private double EvalPower() {
         var left = EvalUnary();
         _scanner.SkipWhitespace();
         if (_scanner.Peek() == '^') {
             _scanner.Read();
             var right = EvalPower();
-            return BuiltInOperators.CastPowerResult<T>(BuiltInOperators.Power(left, right));
+            return _skipMode ? default : BuiltInOperators.Power(left, right);
         }
         return left;
     }
 
-    private T EvalUnary() {
+    private double EvalUnary() {
         _scanner.SkipWhitespace();
         if (_scanner.Peek() == '+') {
             _scanner.Read();
@@ -301,12 +303,12 @@ internal sealed class FastEvaluator<T> where T : struct {
         return EvalPrimary();
     }
 
-    private T EvalPrimary() {
+    private double EvalPrimary() {
         _scanner.SkipWhitespace();
         var ch = _scanner.Peek();
 
         if (char.IsDigit(ch) || ch == '.') {
-            return ReadNumber();
+            return _scanner.ReadNumber();
         }
 
         if (ch == '(') {
@@ -327,7 +329,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         throw new FastEvalException($"意外的字符 '{ch}'", _scanner.Position);
     }
 
-    private T EvalIdentifierOrFunction() {
+    private double EvalIdentifierOrFunction() {
         var identifierSpan = _scanner.ReadIdentifierSpan();
         _scanner.SkipWhitespace();
 
@@ -335,18 +337,18 @@ internal sealed class FastEvaluator<T> where T : struct {
             return EvalFunctionCall(identifierSpan);
         }
 
-        if (identifierSpan.SequenceEqual("true")) return BuiltInOperators.BoolToT<T>(true);
-        if (identifierSpan.SequenceEqual("false")) return BuiltInOperators.BoolToT<T>(false);
-        if (identifierSpan.SequenceEqual("NaN")) return BuiltInOperators.DoubleToT<T>(double.NaN);
-        if (identifierSpan.SequenceEqual("INF")) return BuiltInOperators.DoubleToT<T>(double.PositiveInfinity);
+        if (identifierSpan.SequenceEqual("true")) return BuiltInOperators.BoolToDouble(true);
+        if (identifierSpan.SequenceEqual("false")) return BuiltInOperators.BoolToDouble(false);
+        if (identifierSpan.SequenceEqual("NaN")) return double.NaN;
+        if (identifierSpan.SequenceEqual("INF")) return double.PositiveInfinity;
 
         return LookupVariable(identifierSpan);
     }
 
-    private T EvalFunctionCall(ReadOnlySpan<char> name) {
+    private double EvalFunctionCall(ReadOnlySpan<char> name) {
         _scanner.Read();
 
-        var args = new List<T>();
+        var args = new List<double>();
         _scanner.SkipWhitespace();
         if (_scanner.Peek() != ')') {
             args.Add(EvalExpression());
@@ -365,13 +367,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         return CallBuiltInFunction(name, args);
     }
 
-    private T ReadNumber() {
-        if (typeof(T) == typeof(double)) return BuiltInOperators.DoubleToT<T>(_scanner.ReadDouble());
-        if (typeof(T) == typeof(long)) return BuiltInOperators.LongToT<T>(_scanner.ReadLong());
-        throw new FastEvalException($"不支持的数值类型: {typeof(T).Name}");
-    }
-
-    private T LookupVariable(ReadOnlySpan<char> name) {
+    private double LookupVariable(ReadOnlySpan<char> name) {
         if (_skipMode) return default;
         if (_variables != null) {
             foreach (var kv in _variables) {
@@ -380,26 +376,18 @@ internal sealed class FastEvaluator<T> where T : struct {
         }
 
         // 内置常量回退
-        if (name.SequenceEqual("PI")) return BuiltInOperators.DoubleToT<T>(Math.PI);
-        if (name.SequenceEqual("E")) return BuiltInOperators.DoubleToT<T>(Math.E);
-        if (name.SequenceEqual("π")) return BuiltInOperators.DoubleToT<T>(Math.PI);
+        if (name.SequenceEqual("PI")) return Math.PI;
+        if (name.SequenceEqual("E")) return Math.E;
+        if (name.SequenceEqual("π")) return Math.PI;
 
         throw new FastEvalException($"未定义的变量 '{name.ToString()}'");
     }
 
-    private static T CallBuiltInFunction(ReadOnlySpan<char> name, List<T> args) {
+    private static double CallBuiltInFunction(ReadOnlySpan<char> name, List<double> args) {
         var nameStr = name.ToString();
 
-        if (typeof(T) == typeof(double) && BuiltInFastFunctions.TryGetDoubleFunction(nameStr, out var doubleFunc)) {
-            var doubleArgs = new double[args.Count];
-            for (int i = 0; i < args.Count; i++) doubleArgs[i] = Convert.ToDouble(args[i]);
-            return BuiltInOperators.DoubleToT<T>(doubleFunc(doubleArgs));
-        }
-
-        if (typeof(T) == typeof(long) && BuiltInFastFunctions.TryGetLongFunction(nameStr, out var longFunc)) {
-            var longArgs = new long[args.Count];
-            for (int i = 0; i < args.Count; i++) longArgs[i] = Convert.ToInt64(args[i]);
-            return BuiltInOperators.LongToT<T>(longFunc(longArgs));
+        if (BuiltInFastFunctions.TryGetFunction(nameStr, out var func)) {
+            return func(args.ToArray());
         }
 
         throw new FastEvalException($"未知函数 '{nameStr}'");
@@ -421,5 +409,4 @@ internal sealed class FastEvaluator<T> where T : struct {
         _scanner.Advance(keyword.Length);
         return true;
     }
-
 }
