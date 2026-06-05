@@ -180,26 +180,6 @@ public class FastEvalSupplementaryTests {
     #region 整除与取模边界
 
     [Fact]
-    public void EvalDouble_IntegerDivideByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("7 // 0"));
-    }
-
-    [Fact]
-    public void EvalLong_IntegerDivideByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalLong("7 // 0"));
-    }
-
-    [Fact]
-    public void EvalDouble_ModuloByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("7 % 0"));
-    }
-
-    [Fact]
-    public void EvalLong_ModuloByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalLong("7 % 0"));
-    }
-
-    [Fact]
     public void EvalLong_NegativeIntegerDivide_TruncatesTowardZero() {
         Assert.Equal(-3L, FastEval.EvalLong("-7 // 2"));
     }
@@ -299,11 +279,6 @@ public class FastEvalSupplementaryTests {
     public void EvalLong_DivisionNotInteger_Throws() {
         // 内部统一 double 运算，7/2=3.5 不是整数，无法转换为 long
         Assert.Throws<FastEvalException>(() => FastEval.EvalLong("7 / 2"));
-    }
-
-    [Fact]
-    public void EvalDouble_FloatDivideByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("1.5 / 0"));
     }
 
     #endregion

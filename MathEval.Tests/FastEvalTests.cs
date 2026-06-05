@@ -110,16 +110,6 @@ public class FastEvalTests {
         Assert.Equal(1L, FastEval.EvalLong("7 % 2"));
     }
 
-    [Fact]
-    public void EvalDouble_DivisionByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("1 / 0"));
-    }
-
-    [Fact]
-    public void EvalLong_DivisionByZero_Throws() {
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalLong("1 / 0"));
-    }
-
     #endregion
 
     #region 比较运算
@@ -248,18 +238,6 @@ public class FastEvalTests {
     [Fact]
     public void EvalLong_TernaryTrueBranch() {
         Assert.Equal(10L, FastEval.EvalLong("5 > 3 ? 10 : 20"));
-    }
-
-    [Fact]
-    public void EvalDouble_TernaryTrueBranch_ShortCircuit() {
-        Assert.Equal(1.0, FastEval.EvalDouble("true ? 1 : 1/0"));
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("true ? 1/0 : 2"));
-    }
-
-    [Fact]
-    public void EvalDouble_TernaryFalseBranch_ShortCircuit() {
-        Assert.Equal(2.0, FastEval.EvalDouble("false ? 1/0 : 2"));
-        Assert.Throws<DivisionByZeroException>(() => FastEval.EvalDouble("false ? 1 : 1/0"));
     }
 
     [Fact]

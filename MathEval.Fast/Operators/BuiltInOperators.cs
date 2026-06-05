@@ -65,7 +65,6 @@ internal static class BuiltInOperators {
     /// 除法运算 /
     /// </summary>
     public static double Divide(double left, double right) {
-        if (right == 0) throw new DivisionByZeroException();
         return left / right;
     }
 
@@ -73,7 +72,7 @@ internal static class BuiltInOperators {
     /// 整除运算 //
     /// </summary>
     public static double IntegerDivide(double left, double right) {
-        if (right == 0) throw new DivisionByZeroException();
+        // TODO 实现泛型版本，支持整数和浮点数的整除
         return Math.Truncate(left / right);
     }
 
@@ -83,7 +82,6 @@ internal static class BuiltInOperators {
     /// 结果符号与除数（右操作数）相同，计算时向负无穷取整
     /// </summary>
     public static double Modulo(double left, double right) {
-        if (right == 0) throw new DivisionByZeroException();
         return left % right;
     }
 
