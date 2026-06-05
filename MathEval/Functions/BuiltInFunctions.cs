@@ -35,7 +35,7 @@ internal static class BuiltInFunctions {
         context.SetFunction("ceil", static (double x) => Math.Ceiling(x));
         context.SetFunction("floor", static (double x) => Math.Floor(x));
         context.SetFunction("trunc", static (double x) => Math.Truncate(x));
-        context.SetFunction("round", static (object[] args) => {
+        context.SetFunction("round", static args => {
             if (args.Length == 1) {
                 return Math.Round(Convert.ToDouble(args[0]));
             } else if (args.Length == 2) {
@@ -46,7 +46,7 @@ internal static class BuiltInFunctions {
             throw new FunctionTypeMismatchException("round 需要 1 或 2 个参数");
         });
 
-        context.SetFunction("max", static (object[] args) => args.Max(a => Convert.ToDouble(a)));
-        context.SetFunction("min", static (object[] args) => args.Min(a => Convert.ToDouble(a)));
+        context.SetFunction("max", static args => args.Max(a => Convert.ToDouble(a)));
+        context.SetFunction("min", static args => args.Min(a => Convert.ToDouble(a)));
     }
 }
