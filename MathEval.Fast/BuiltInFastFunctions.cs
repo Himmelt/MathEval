@@ -1,4 +1,4 @@
-using MathEval.Exceptions;
+using MathEval.Fast.Exceptions;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MathEval.Fast;

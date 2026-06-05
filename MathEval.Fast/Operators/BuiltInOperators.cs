@@ -1,6 +1,6 @@
-using MathEval.Exceptions;
+using MathEval.Fast.Exceptions;
 
-namespace MathEval.Operators;
+namespace MathEval.Fast.Operators;
 
 /// <summary>
 /// 内置运算符实现

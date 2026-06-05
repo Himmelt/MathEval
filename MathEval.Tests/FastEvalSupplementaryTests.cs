@@ -1,5 +1,5 @@
-using MathEval.Exceptions;
 using MathEval.Fast;
+using MathEval.Fast.Exceptions;
 using Xunit;
 
 namespace MathEval.Tests;

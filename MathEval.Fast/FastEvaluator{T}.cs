@@ -1,5 +1,5 @@
-using MathEval.Exceptions;
-using MathEval.Operators;
+using MathEval.Fast.Exceptions;
+using MathEval.Fast.Operators;
 
 namespace MathEval.Fast;
 
@@ -362,7 +362,7 @@ internal sealed class FastEvaluator<T> where T : struct {
         if (_scanner.Peek() != ')') throw new FastEvalException("函数调用未闭合", _scanner.Position);
         _scanner.Read();
 
-        return FastEvaluator<T>.CallBuiltInFunction(name, args);
+        return CallBuiltInFunction(name, args);
     }
 
     private T ReadNumber() {
