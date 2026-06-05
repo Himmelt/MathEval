@@ -52,7 +52,7 @@ public class FastEvalSupplementaryTests {
 
     [Fact]
     public void EvalDouble_TruncateFunction() {
-        Assert.Equal(3.0, FastEval.EvalDouble("truncate(3.9)"));
+        Assert.Equal(3.0, FastEval.EvalDouble("trunc(3.9)"));
     }
 
     [Fact]

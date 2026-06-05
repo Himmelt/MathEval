@@ -37,7 +37,7 @@ internal static class BuiltInFastFunctions {
         ["round"] = args => args.Length == 1
             ? Math.Round(args[0])
             : Math.Round(args[0], (int)args[1]),
-        ["truncate"] = args => Math.Truncate(args[0]),
+        ["trunc"] = args => Math.Truncate(args[0]),
         ["sign"] = args => Math.Sign(args[0]),
         ["max"] = args => Math.Max(args[0], args[1]),
         ["min"] = args => Math.Min(args[0], args[1]),

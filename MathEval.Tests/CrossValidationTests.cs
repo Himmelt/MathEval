@@ -283,7 +283,7 @@ public class CrossValidationTests {
     [InlineData("exp(1)")]
     [InlineData("ceil(3.2)")]
     [InlineData("floor(3.8)")]
-    [InlineData("truncate(3.9)")]
+    [InlineData("trunc(3.9)")]
     [InlineData("sign(5)")]
     [InlineData("sign(-5)")]
     [InlineData("max(3, 10)")]
