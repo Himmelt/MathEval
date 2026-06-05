@@ -4,53 +4,54 @@ namespace MathEval.Operators;
 
 /// <summary>
 /// 内置运算符实现
+/// <br/>
 /// 集中管理所有运算符的计算逻辑，便于查阅和维护
 /// </summary>
 internal static class BuiltInOperators {
 
     #region 类型转换辅助方法
 
-    public static bool ConvertToBool<T>(T value) {
+    public static bool ConvertToBool<T>(T value) where T : struct {
         if (typeof(T) == typeof(bool)) return (bool)(object)value;
         if (typeof(T) == typeof(long)) return (long)(object)value != 0;
         if (typeof(T) == typeof(double)) return (double)(object)value != 0 && !double.IsNaN((double)(object)value);
         throw new FastEvalException("无法转换为布尔类型");
     }
 
-    public static T BoolToT<T>(bool value) {
+    public static T BoolToT<T>(bool value) where T : struct {
         if (typeof(T) == typeof(bool)) return (T)(object)value;
         if (typeof(T) == typeof(long)) return (T)(object)(value ? 1L : 0L);
         if (typeof(T) == typeof(double)) return (T)(object)(value ? 1.0 : 0.0);
         throw new FastEvalException("无法从布尔类型转换");
     }
 
-    public static T DoubleToT<T>(double value) {
+    public static T DoubleToT<T>(double value) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)value;
         if (typeof(T) == typeof(long)) return (T)(object)(long)value;
         throw new FastEvalException("无法从 double 类型转换");
     }
 
-    public static T LongToT<T>(long value) {
+    public static T LongToT<T>(long value) where T : struct {
         if (typeof(T) == typeof(long)) return (T)(object)value;
         if (typeof(T) == typeof(double)) return (T)(object)(double)value;
         throw new FastEvalException("无法从 long 类型转换");
     }
 
-    public static double ToDouble<T>(T value) {
+    public static double ToDouble<T>(T value) where T : struct {
         if (typeof(T) == typeof(double)) return (double)(object)value;
         if (typeof(T) == typeof(long)) return (long)(object)value;
         if (typeof(T) == typeof(bool)) return (bool)(object)value ? 1.0 : 0.0;
         return Convert.ToDouble(value);
     }
 
-    public static long ToLong<T>(T value) {
+    public static long ToLong<T>(T value) where T : struct {
         if (typeof(T) == typeof(long)) return (long)(object)value;
         if (typeof(T) == typeof(double)) return (long)(double)(object)value;
         if (typeof(T) == typeof(bool)) return (bool)(object)value ? 1L : 0L;
         return Convert.ToInt64(value);
     }
 
-    public static void RequireInteger<T>(T value, string operationName) {
+    public static void RequireInteger<T>(T value, string operationName) where T : struct {
         if (typeof(T) == typeof(long)) return;
         if (typeof(T) == typeof(double)) {
             var d = (double)(object)value;
@@ -61,7 +62,7 @@ internal static class BuiltInOperators {
         throw new FastEvalException($"{operationName} 运算需要整数操作数");
     }
 
-    public static long ToInteger<T>(T value, string operationName) {
+    public static long ToInteger<T>(T value, string operationName) where T : struct {
         RequireInteger<T>(value, operationName);
         return ToLong<T>(value);
     }
@@ -71,36 +72,36 @@ internal static class BuiltInOperators {
     #region 算术运算
 
     /// <summary>
-    /// 加法运算 (+)
+    /// 加法运算 +
     /// </summary>
-    public static T Add<T>(T left, T right) {
+    public static T Add<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left + (double)(object)right);
         if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left + (long)(object)right);
         throw new FastEvalException("加法运算需要数值类型");
     }
 
     /// <summary>
-    /// 减法运算 (-)
+    /// 减法运算 -
     /// </summary>
-    public static T Subtract<T>(T left, T right) {
+    public static T Subtract<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left - (double)(object)right);
         if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left - (long)(object)right);
         throw new FastEvalException("减法运算需要数值类型");
     }
 
     /// <summary>
-    /// 乘法运算 (*)
+    /// 乘法运算 *
     /// </summary>
-    public static T Multiply<T>(T left, T right) {
+    public static T Multiply<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)((double)(object)left * (double)(object)right);
         if (typeof(T) == typeof(long)) return (T)(object)checked((long)(object)left * (long)(object)right);
         throw new FastEvalException("乘法运算需要数值类型");
     }
 
     /// <summary>
-    /// 除法运算 (/)
+    /// 除法运算 /
     /// </summary>
-    public static T Divide<T>(T left, T right) {
+    public static T Divide<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) {
             var d = (double)(object)right;
             if (d == 0) throw new DivisionByZeroException();
@@ -115,9 +116,9 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 整除运算 (// 或 \)
+    /// 整除运算 //
     /// </summary>
-    public static T IntegerDivide<T>(T left, T right) {
+    public static T IntegerDivide<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) {
             var d = (double)(object)right;
             if (d == 0) throw new DivisionByZeroException();
@@ -132,10 +133,11 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 取模运算 (mod)
+    /// 取模运算 mod
+    /// <br/>
     /// 结果符号与除数（右操作数）相同，计算时向负无穷取整
     /// </summary>
-    public static T Modulo<T>(T left, T right) {
+    public static T Modulo<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) {
             var d = (double)(object)right;
             if (d == 0) throw new DivisionByZeroException();
@@ -150,9 +152,9 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 乘方运算 (^ 或 **)
+    /// 乘方运算 ^ 或 **
     /// </summary>
-    public static double Power<T>(T left, T right) {
+    public static double Power<T>(T left, T right) where T : struct {
         double d1, d2;
         var isLong = false;
         if (typeof(T) == typeof(double)) {
@@ -173,7 +175,7 @@ internal static class BuiltInOperators {
     /// <summary>
     /// 乘方结果类型转换
     /// </summary>
-    public static T CastPowerResult<T>(double value) {
+    public static T CastPowerResult<T>(double value) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)value;
         if (typeof(T) == typeof(long)) return (T)(object)(long)value;
         throw new FastEvalException("幂运算结果类型不匹配");
@@ -184,18 +186,18 @@ internal static class BuiltInOperators {
     #region 一元运算
 
     /// <summary>
-    /// 一元负号 (-)
+    /// 一元负号 -
     /// </summary>
-    public static T Negate<T>(T operand) {
+    public static T Negate<T>(T operand) where T : struct {
         if (typeof(T) == typeof(double)) return (T)(object)(-(double)(object)operand);
         if (typeof(T) == typeof(long)) return (T)(object)checked(-(long)(object)operand);
         throw new FastEvalException("取负运算需要数值类型");
     }
 
     /// <summary>
-    /// 逻辑非运算 (! 或 not)
+    /// 逻辑非运算 ! 或 not
     /// </summary>
-    public static T Not<T>(T operand) {
+    public static T Not<T>(T operand) where T : struct {
         if (typeof(T) == typeof(bool)) return (T)(object)(!(bool)(object)operand);
         if (typeof(T) == typeof(double)) return (T)(object)(ConvertToBool<T>(operand) ? 0.0 : 1.0);
         if (typeof(T) == typeof(long)) return (T)(object)(ConvertToBool<T>(operand) ? 0L : 1L);
@@ -203,9 +205,9 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 按位取反运算 (~)
+    /// 按位取反运算 ~
     /// </summary>
-    public static T BitwiseNot<T>(T operand) {
+    public static T BitwiseNot<T>(T operand) where T : struct {
         return LongToT<T>(~ToInteger<T>(operand, "按位取反"));
     }
 
@@ -214,30 +216,30 @@ internal static class BuiltInOperators {
     #region 位运算
 
     /// <summary>
-    /// 按位或运算 (|)
+    /// 按位或运算 |
     /// </summary>
-    public static T BitwiseOr<T>(T left, T right) {
+    public static T BitwiseOr<T>(T left, T right) where T : struct {
         return LongToT<T>(ToInteger<T>(left, "按位或") | ToInteger<T>(right, "按位或"));
     }
 
     /// <summary>
-    /// 按位与运算 (&)
+    /// 按位与运算 &amp;
     /// </summary>
-    public static T BitwiseAnd<T>(T left, T right) {
+    public static T BitwiseAnd<T>(T left, T right) where T : struct {
         return LongToT<T>(ToInteger<T>(left, "按位与") & ToInteger<T>(right, "按位与"));
     }
 
     /// <summary>
-    /// 按位异或运算 (xor)
+    /// 按位异或运算 xor
     /// </summary>
-    public static T BitwiseXor<T>(T left, T right) {
+    public static T BitwiseXor<T>(T left, T right) where T : struct {
         return LongToT<T>(ToInteger<T>(left, "按位异或") ^ ToInteger<T>(right, "按位异或"));
     }
 
     /// <summary>
-    /// 左移运算 (&lt;&lt;)
+    /// 左移运算 &lt;&lt;
     /// </summary>
-    public static T LeftShift<T>(T left, T right) {
+    public static T LeftShift<T>(T left, T right) where T : struct {
         var l1 = ToInteger<T>(left, "左移");
         var l2 = ToInteger<T>(right, "左移");
         if (l2 < 0) throw new FastEvalException("移位量不能为负数");
@@ -246,9 +248,9 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 算术右移运算 (&gt;&gt;)
+    /// 算术右移运算 &gt;&gt;
     /// </summary>
-    public static T RightShift<T>(T left, T right) {
+    public static T RightShift<T>(T left, T right) where T : struct {
         var l1 = ToInteger<T>(left, "右移");
         var l2 = ToInteger<T>(right, "右移");
         if (l2 < 0) throw new FastEvalException("移位量不能为负数");
@@ -261,9 +263,9 @@ internal static class BuiltInOperators {
     #region 比较运算
 
     /// <summary>
-    /// 相等运算 (==)
+    /// 相等运算 ==
     /// </summary>
-    public static T Equal<T>(T left, T right) {
+    public static T Equal<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) {
             var d1 = (double)(object)left;
             var d2 = (double)(object)right;
@@ -275,9 +277,9 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 不等运算 (!=)
+    /// 不等运算 !=
     /// </summary>
-    public static T NotEqual<T>(T left, T right) {
+    public static T NotEqual<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) {
             var d1 = (double)(object)left;
             var d2 = (double)(object)right;
@@ -289,36 +291,36 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 小于运算 (&lt;)
+    /// 小于运算 &lt;
     /// </summary>
-    public static T LessThan<T>(T left, T right) {
+    public static T LessThan<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return BoolToT<T>((double)(object)left < (double)(object)right);
         if (typeof(T) == typeof(long)) return BoolToT<T>((long)(object)left < (long)(object)right);
         throw new FastEvalException("比较运算需要数值类型");
     }
 
     /// <summary>
-    /// 小于等于运算 (&lt;=)
+    /// 小于等于运算 &lt;=
     /// </summary>
-    public static T LessThanOrEqual<T>(T left, T right) {
+    public static T LessThanOrEqual<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return BoolToT<T>((double)(object)left <= (double)(object)right);
         if (typeof(T) == typeof(long)) return BoolToT<T>((long)(object)left <= (long)(object)right);
         throw new FastEvalException("比较运算需要数值类型");
     }
 
     /// <summary>
-    /// 大于运算 (&gt;)
+    /// 大于运算 &gt;
     /// </summary>
-    public static T GreaterThan<T>(T left, T right) {
+    public static T GreaterThan<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return BoolToT<T>((double)(object)left > (double)(object)right);
         if (typeof(T) == typeof(long)) return BoolToT<T>((long)(object)left > (long)(object)right);
         throw new FastEvalException("比较运算需要数值类型");
     }
 
     /// <summary>
-    /// 大于等于运算 (&gt;=)
+    /// 大于等于运算 &gt;=
     /// </summary>
-    public static T GreaterThanOrEqual<T>(T left, T right) {
+    public static T GreaterThanOrEqual<T>(T left, T right) where T : struct {
         if (typeof(T) == typeof(double)) return BoolToT<T>((double)(object)left >= (double)(object)right);
         if (typeof(T) == typeof(long)) return BoolToT<T>((long)(object)left >= (long)(object)right);
         throw new FastEvalException("比较运算需要数值类型");
@@ -329,19 +331,21 @@ internal static class BuiltInOperators {
     #region 逻辑运算
 
     /// <summary>
-    /// 条件逻辑与运算 (&& 或 and)
+    /// 条件逻辑与运算 &amp;&amp; 或 and
+    /// <br/>
     /// 短路求值：仅当左操作数为 true 时才计算右操作数
     /// </summary>
-    public static T LogicalAnd<T>(T left, Func<T> rightEval) {
+    public static T LogicalAnd<T>(T left, Func<T> rightEval) where T : struct {
         if (!ConvertToBool<T>(left)) return BoolToT<T>(false);
         return BoolToT<T>(ConvertToBool<T>(rightEval()));
     }
 
     /// <summary>
-    /// 条件逻辑或运算 (|| 或 or)
+    /// 条件逻辑或运算 || 或 or
+    /// <br/>
     /// 短路求值：仅当左操作数为 false 时才计算右操作数
     /// </summary>
-    public static T LogicalOr<T>(T left, Func<T> rightEval) {
+    public static T LogicalOr<T>(T left, Func<T> rightEval) where T : struct {
         if (ConvertToBool<T>(left)) return BoolToT<T>(true);
         return BoolToT<T>(ConvertToBool<T>(rightEval()));
     }

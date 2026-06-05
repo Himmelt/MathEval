@@ -1,5 +1,3 @@
-using MathEval.Context;
-using MathEval.Exceptions;
 using MathEval.Fast;
 using Xunit;
 
@@ -409,7 +407,7 @@ public class CrossValidationTests {
     #endregion
 
     #region 审查问题 #15: TypeHelper.EvaluatePower 死代码验证
-    
+
     [Fact]
     public void Power_NegativeBaseNegativeExponent_Long() {
         // l1 < 0 && l2 < 0 的情况：(-2) ^ (-3)
@@ -417,13 +415,13 @@ public class CrossValidationTests {
         var result = Expression.Eval<double>("(-2) ^ (-3)");
         Assert.Equal(Math.Pow(-2, -3), result);
     }
-    
+
     [Fact]
     public void Power_NegativeBaseNegativeExponent_FastEval() {
         var result = FastEval.EvalDouble("(-2) ^ (-3)");
         Assert.Equal(Math.Pow(-2, -3), result, 12);
     }
-    
+
     #endregion
 
     #region 综合表达式交叉验证
