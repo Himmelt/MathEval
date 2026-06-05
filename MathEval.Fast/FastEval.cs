@@ -1,3 +1,4 @@
+using MathEval.Fast.Core;
 using MathEval.Fast.Exceptions;
 using MathEval.Fast.Operators;
 
@@ -24,7 +25,7 @@ public static class FastEval {
     public static long EvalLong(string expression, IReadOnlyDictionary<string, double>? variables = null) {
         var result = EvalDouble(expression, variables);
         if (!BuiltInOperators.IsInteger(result))
-            throw new FastEvalException($"结果 {result} 不是整数，无法转换为 long");
+            throw new FastEvalException($"结果 {result} 不是整数，无法转换为 long", expression);
         return (long)result;
     }
 

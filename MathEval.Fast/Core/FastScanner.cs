@@ -1,6 +1,6 @@
 using MathEval.Fast.Exceptions;
 
-namespace MathEval.Fast;
+namespace MathEval.Fast.Core;
 
 /// <summary>
 /// 快速字符扫描器，基于 ReadOnlySpan&lt;char&gt; 操作，零字符串分配

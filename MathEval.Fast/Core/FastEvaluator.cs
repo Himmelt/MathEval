@@ -1,7 +1,7 @@
 using MathEval.Fast.Exceptions;
 using MathEval.Fast.Operators;
 
-namespace MathEval.Fast;
+namespace MathEval.Fast.Core;
 
 /// <summary>
 /// 递归求值器，边扫描边求值，零 AST 中间层
@@ -10,29 +10,25 @@ namespace MathEval.Fast;
 /// </summary>
 internal sealed class FastEvaluator {
 
-    private int _depth;
     private bool _skipMode;
-    private const int MaxDepth = 1024;
     private FastScanner _scanner;
     private readonly IReadOnlyDictionary<string, double>? _variables;
 
     public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
-        if (string.IsNullOrEmpty(expression)) throw new FastEvalException("表达式不能为空");
-        if (expression.Length > 4096) throw new FastEvalException("表达式长度超过最大限制 4096 个字符");
+        if (string.IsNullOrEmpty(expression)) throw new FastEvalException("表达式不能为空", expression);
 
         _scanner = new FastScanner(expression);
         _variables = variables;
-        _depth = 0;
     }
 
     public double Evaluate() {
         _scanner.SkipWhitespace();
-        if (_scanner.IsAtEnd) throw new FastEvalException("表达式不能为空");
+        if (_scanner.IsAtEnd) throw new FastEvalException("表达式不能为空", expression);
 
         var result = EvalExpression();
 
         _scanner.SkipWhitespace();
-        if (!_scanner.IsAtEnd) throw new FastEvalException($"意外的字符 '{_scanner.Peek()}'，位置 {_scanner.Position}");
+        if (!_scanner.IsAtEnd) throw new FastEvalException($"意外的字符 '{_scanner.Peek()}'，位置 {_scanner.Position}", expression);
 
         return result;
     }
@@ -312,13 +308,11 @@ internal sealed class FastEvaluator {
         }
 
         if (ch == '(') {
-            if (++_depth > MaxDepth) throw new FastEvalException("表达式嵌套深度超过最大限制");
             _scanner.Read();
             var result = EvalExpression();
             _scanner.SkipWhitespace();
             if (_scanner.Peek() != ')') throw new FastEvalException("未闭合的括号", _scanner.Position);
             _scanner.Read();
-            _depth--;
             return result;
         }
 
