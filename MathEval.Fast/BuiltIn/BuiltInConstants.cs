@@ -1,4 +1,4 @@
-namespace MathEval.Fast;
+namespace MathEval.Fast.BuiltIn;
 
 /// <summary>
 /// FastEval 内置常量表，包含数学常数和特殊值

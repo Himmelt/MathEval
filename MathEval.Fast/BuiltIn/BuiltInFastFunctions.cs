@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace MathEval.Fast;
+namespace MathEval.Fast.BuiltIn;
 
 /// <summary>
 /// FastEval 内置函数表，硬编码常用数学函数

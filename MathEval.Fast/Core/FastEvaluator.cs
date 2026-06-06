@@ -1,3 +1,4 @@
+using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
 using MathEval.Fast.Operators;
 
