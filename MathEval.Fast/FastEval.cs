@@ -24,8 +24,7 @@ public static class FastEval {
     /// </summary>
     public static long EvalLong(string expression, IReadOnlyDictionary<string, double>? variables = null) {
         var result = EvalDouble(expression, variables);
-        if (!BuiltInOperators.IsInteger(result))
-            throw new FastEvalException($"结果 {result} 不是整数，无法转换为 long", expression);
+        if (!BuiltInOperators.IsInteger(result)) throw new FastEvalException($"结果 {result} 不是整数，无法转换为 long", expression);
         return (long)result;
     }
 
