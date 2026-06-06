@@ -246,6 +246,9 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
             } else if (_scanner.Peek() == '%') {
                 _scanner.Read();
                 var right = EvalPower();
+                left = _skipMode ? default : BuiltInOperators.Remainder(left, right);
+            } else if (MatchKeyword("mod")) {
+                var right = EvalPower();
                 left = _skipMode ? default : BuiltInOperators.Modulo(left, right);
             } else break;
         }

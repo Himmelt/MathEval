@@ -75,12 +75,24 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 取模运算 %
+    /// 取余运算 %
+    /// <br/>
+    /// 结果符号与被除数（左操作数）相同，直接使用 C# 的 % 运算符
+    /// </summary>
+    public static double Remainder(double left, double right) {
+        return left % right;
+    }
+
+    /// <summary>
+    /// 取模运算 mod
     /// <br/>
     /// 结果符号与除数（右操作数）相同，计算时向负无穷取整
     /// </summary>
     public static double Modulo(double left, double right) {
-        return left % right;
+        double r = left % right;
+        if ((r < 0 && right > 0) || (r > 0 && right < 0))
+            r += right;
+        return r;
     }
 
     /// <summary>
