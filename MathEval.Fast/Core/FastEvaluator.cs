@@ -331,8 +331,7 @@ internal sealed class FastEvaluator {
             return EvalFunctionCall(identifierSpan);
         }
 
-        if (BuiltInConstants.TryGetValue(identifierSpan, out var constValue))
-            return constValue;
+        if (BuiltInConstants.TryGetValue(identifierSpan.ToString(), out var constValue)) return constValue;
 
         return LookupVariable(identifierSpan);
     }
