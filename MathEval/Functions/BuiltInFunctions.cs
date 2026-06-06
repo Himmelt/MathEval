@@ -4,15 +4,17 @@ using MathEval.Exceptions;
 namespace MathEval.Functions;
 
 /// <summary>
-/// 内置数学函数注册器
+/// 内置数学函数及常量注册器
 /// </summary>
 internal static class BuiltInFunctions {
     public static void Register(ExpressionContext context) {
 
+        // 常量
         context.Set("E", Math.E);
         context.Set("π", Math.PI);
         context.Set("PI", Math.PI);
 
+        // 三角函数
         context.SetFunction("sin", static (double x) => Math.Sin(x));
         context.SetFunction("cos", static (double x) => Math.Cos(x));
         context.SetFunction("tan", static (double x) => Math.Tan(x));
@@ -21,32 +23,34 @@ internal static class BuiltInFunctions {
         context.SetFunction("atan", static (double x) => Math.Atan(x));
         context.SetFunction("atan2", static (double y, double x) => Math.Atan2(y, x));
 
+        // 指数幂函数
         context.SetFunction("exp", static (double x) => Math.Exp(x));
         context.SetFunction("pow", static (double x, double y) => Math.Pow(x, y));
 
+        // 对数函数
         context.SetFunction("ln", static (double x) => Math.Log(x));
-        context.SetFunction("log", static (double x, double b) => Math.Log(x, b));
+        context.SetFunction("lg", static (double x) => Math.Log10(x));
+        context.SetFunction("log", Func("log", 1, 2, args => args.Length == 1 ? Math.Log(Convert.ToDouble(args[0])) : Math.Log(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
         context.SetFunction("log2", static (double x) => Math.Log2(x));
         context.SetFunction("log10", static (double x) => Math.Log10(x));
 
+        // 数值处理函数
         context.SetFunction("abs", static (double x) => Math.Abs(x));
         context.SetFunction("sqrt", static (double x) => Math.Sqrt(x));
         context.SetFunction("sign", static (double x) => Math.Sign(x));
+
+        // 取整函数
         context.SetFunction("ceil", static (double x) => Math.Ceiling(x));
         context.SetFunction("floor", static (double x) => Math.Floor(x));
         context.SetFunction("trunc", static (double x) => Math.Truncate(x));
-        context.SetFunction("round", static args => {
-            if (args.Length == 1) {
-                return Math.Round(Convert.ToDouble(args[0]));
-            } else if (args.Length == 2) {
-                var value = Convert.ToDouble(args[0]);
-                var digits = Convert.ToInt32(args[1]);
-                return Math.Round(value, digits);
-            }
-            throw new FunctionTypeMismatchException("round 需要 1 或 2 个参数");
-        });
+        context.SetFunction("round", Func("round", 1, 2, args => args.Length == 1 ? Math.Round(Convert.ToDouble(args[0])) : Math.Round(Convert.ToDouble(args[0]), Convert.ToInt32(args[1]))));
 
-        context.SetFunction("max", static args => args.Max(a => Convert.ToDouble(a)));
-        context.SetFunction("min", static args => args.Min(a => Convert.ToDouble(a)));
+        // 聚合函数
+        context.SetFunction("max", Func("max", 1, int.MaxValue, args => args.Max(a => Convert.ToDouble(a))));
+        context.SetFunction("min", Func("min", 1, int.MaxValue, args => args.Min(a => Convert.ToDouble(a))));
     }
+
+    private static ExpressionFunction Func(string name, int argCount, Func<object?[], object?> fn) => args => args.Length == argCount ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
+
+    private static ExpressionFunction Func(string name, int minArgs, int maxArgs, Func<object?[], object?> fn) => args => args.Length >= minArgs && args.Length <= maxArgs ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {minArgs}-{(maxArgs == int.MaxValue ? "∞" : maxArgs.ToString())} 个参数，但提供了 {args.Length} 个");
 }

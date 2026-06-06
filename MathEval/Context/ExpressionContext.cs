@@ -68,7 +68,7 @@ public class ExpressionContext {
         var argCount = parameters.Length;
 
         SetFunction(name, args => {
-            if (args.Length != argCount) throw new FunctionTypeMismatchException($"函数 '{name}' 需要 {argCount} 个参数，但提供了 {args.Length} 个");
+            if (args.Length != argCount) throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
 
             try {
                 var convertedArgs = new object?[argCount];
@@ -78,43 +78,43 @@ public class ExpressionContext {
                 var result = method.Invoke(func.Target, convertedArgs);
                 return result!;
             } catch (InvalidCastException) {
-                throw new FunctionTypeMismatchException($"函数 '{name}' 的参数类型不匹配");
+                throw new FunctionTypeMismatchException($"函数 {name} 参数类型不匹配");
             } catch (TargetInvocationException ex) {
-                throw new FunctionTypeMismatchException($"调用函数 '{name}' 时出错：{ex.InnerException?.Message}");
+                throw new FunctionTypeMismatchException($"调用函数 {name} 时出错：{ex.InnerException?.Message}");
             }
         });
     }
 
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, TResult>(string name, Func<T1, T2, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, TResult>(string name, Func<T1, T2, T3, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, T4, TResult>(string name, Func<T1, T2, T3, T4, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, TResult>(string name, Func<T1, T2, T3, T4, T5, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
     }
 
     public bool TryGetSymbol(string name, out object value) {
