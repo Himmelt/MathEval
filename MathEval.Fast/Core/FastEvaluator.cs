@@ -331,10 +331,8 @@ internal sealed class FastEvaluator {
             return EvalFunctionCall(identifierSpan);
         }
 
-        if (identifierSpan.SequenceEqual("true")) return BuiltInOperators.BoolToDouble(true);
-        if (identifierSpan.SequenceEqual("false")) return BuiltInOperators.BoolToDouble(false);
-        if (identifierSpan.SequenceEqual("NaN")) return double.NaN;
-        if (identifierSpan.SequenceEqual("INF")) return double.PositiveInfinity;
+        if (BuiltInConstants.TryGetValue(identifierSpan, out var constValue))
+            return constValue;
 
         return LookupVariable(identifierSpan);
     }
@@ -368,11 +366,6 @@ internal sealed class FastEvaluator {
                 if (name.SequenceEqual(kv.Key)) return kv.Value;
             }
         }
-
-        // 内置常量回退
-        if (name.SequenceEqual("PI")) return Math.PI;
-        if (name.SequenceEqual("E")) return Math.E;
-        if (name.SequenceEqual("π")) return Math.PI;
 
         throw new FastEvalException($"未定义的变量 '{name.ToString()}'");
     }
