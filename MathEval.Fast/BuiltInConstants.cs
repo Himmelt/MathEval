@@ -2,8 +2,6 @@ namespace MathEval.Fast;
 
 /// <summary>
 /// FastEval 内置常量表，包含数学常数和特殊值
-/// <br/>
-/// 键统一使用小写，查找时大小写不敏感
 /// </summary>
 internal static class BuiltInConstants
 {
@@ -11,11 +9,11 @@ internal static class BuiltInConstants
     {
         ["true"]  = 1.0,
         ["false"] = 0.0,
-        ["nan"]   = double.NaN,
-        ["inf"]   = double.PositiveInfinity,
-        ["pi"]    = Math.PI,
+        ["NaN"]   = double.NaN,
+        ["INF"]   = double.PositiveInfinity,
+        ["PI"]    = Math.PI,
         ["π"]     = Math.PI,
-        ["e"]     = Math.E,
+        ["E"]     = Math.E,
     };
 
     /// <summary>
