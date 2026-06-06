@@ -8,18 +8,10 @@ namespace MathEval.Fast.Core;
 /// <br/>
 /// 内部统一使用 double 运算，仅在最终返回时按需转换类型
 /// </summary>
-internal sealed class FastEvaluator {
+internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
 
     private bool _skipMode;
-    private FastScanner _scanner;
-    private readonly IReadOnlyDictionary<string, double>? _variables;
-
-    public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
-        if (string.IsNullOrEmpty(expression)) throw new FastEvalException("表达式不能为空", expression);
-
-        _scanner = new FastScanner(expression);
-        _variables = variables;
-    }
+    private readonly FastScanner _scanner = new(expression);
 
     public double Evaluate() {
         _scanner.SkipWhitespace();
@@ -44,7 +36,7 @@ internal sealed class FastEvaluator {
             if (BuiltInOperators.ConvertToBool(condition)) {
                 var trueValue = EvalExpression();
                 _scanner.SkipWhitespace();
-                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
+                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", expression);
                 _scanner.Read();
                 _skipMode = true;
                 EvalExpression();
@@ -55,7 +47,7 @@ internal sealed class FastEvaluator {
                 EvalExpression();
                 _skipMode = false;
                 _scanner.SkipWhitespace();
-                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'");
+                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", expression);
                 _scanner.Read();
                 var falseValue = EvalExpression();
                 return falseValue;
@@ -303,40 +295,34 @@ internal sealed class FastEvaluator {
         _scanner.SkipWhitespace();
         var ch = _scanner.Peek();
 
-        if (char.IsDigit(ch) || ch == '.') {
-            return _scanner.ReadNumber();
-        }
+        if (char.IsDigit(ch) || ch == '.') return _scanner.ReadNumber();
 
         if (ch == '(') {
             _scanner.Read();
             var result = EvalExpression();
             _scanner.SkipWhitespace();
-            if (_scanner.Peek() != ')') throw new FastEvalException("未闭合的括号", _scanner.Position);
+            if (_scanner.Peek() != ')') throw new FastEvalException("未闭合的括号", expression, _scanner.Position);
             _scanner.Read();
             return result;
         }
 
-        if (FastScanner.IsIdentifierStart(ch)) {
-            return EvalIdentifierOrFunction();
-        }
+        if (FastScanner.IsIdentifierStart(ch)) return EvalIdentifierOrFunction();
 
-        throw new FastEvalException($"意外的字符 '{ch}'", _scanner.Position);
+        throw new FastEvalException($"意外的字符 '{ch}'", expression, _scanner.Position);
     }
 
     private double EvalIdentifierOrFunction() {
         var identifierSpan = _scanner.ReadIdentifierSpan();
         _scanner.SkipWhitespace();
 
-        if (_scanner.Peek() == '(') {
-            return EvalFunctionCall(identifierSpan);
-        }
+        if (_scanner.Peek() == '(') return EvalFunctionCall(identifierSpan.ToString());
 
         if (BuiltInConstants.TryGetValue(identifierSpan.ToString(), out var constValue)) return constValue;
 
-        return LookupVariable(identifierSpan);
+        return LookupVariable(identifierSpan.ToString());
     }
 
-    private double EvalFunctionCall(ReadOnlySpan<char> name) {
+    private double EvalFunctionCall(string name) {
         _scanner.Read();
 
         var args = new List<double>();
@@ -352,31 +338,21 @@ internal sealed class FastEvaluator {
         }
 
         _scanner.SkipWhitespace();
-        if (_scanner.Peek() != ')') throw new FastEvalException("函数调用未闭合", _scanner.Position);
+        if (_scanner.Peek() != ')') throw new FastEvalException("函数调用未闭合", expression, _scanner.Position);
         _scanner.Read();
 
         return CallBuiltInFunction(name, args);
     }
 
-    private double LookupVariable(ReadOnlySpan<char> name) {
+    private double LookupVariable(string name) {
         if (_skipMode) return default;
-        if (_variables != null) {
-            foreach (var kv in _variables) {
-                if (name.SequenceEqual(kv.Key)) return kv.Value;
-            }
-        }
-
-        throw new FastEvalException($"未定义的变量 '{name.ToString()}'");
+        if (variables != null && variables.TryGetValue(name, out var value)) return value;
+        throw new FastEvalException($"未定义的变量 '{name}'", expression);
     }
 
-    private static double CallBuiltInFunction(ReadOnlySpan<char> name, List<double> args) {
-        var nameStr = name.ToString();
-
-        if (BuiltInFastFunctions.TryGetFunction(nameStr, out var func)) {
-            return func(args.ToArray());
-        }
-
-        throw new FastEvalException($"未知函数 '{nameStr}'");
+    private double CallBuiltInFunction(string name, List<double> args) {
+        if (BuiltInFastFunctions.TryGetFunction(name, out var func)) return func([.. args]);
+        throw new FastEvalException($"未知函数 '{name}'", expression);
     }
 
     private bool MatchKeyword(string keyword) {

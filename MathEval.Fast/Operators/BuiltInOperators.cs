@@ -37,8 +37,7 @@ internal static class BuiltInOperators {
     /// 将 double 转换为 long，如果非整数则抛出异常
     /// </summary>
     public static long ToInt64(double value, string operationName) {
-        if (!IsInteger(value))
-            throw new FastEvalException($"{operationName} 运算需要整数操作数");
+        if (!IsInteger(value)) throw new FastEvalException($"{operationName} 运算需要整数操作数");
         return (long)value;
     }
 
@@ -89,10 +88,6 @@ internal static class BuiltInOperators {
     /// 乘方运算 ^ 或 **
     /// </summary>
     public static double Power(double left, double right) {
-        if (left < 0 && right != Math.Floor(right))
-            throw new FastEvalException("不能对负数求非整数次幂");
-        if (left == 0 && right < 0)
-            throw new FastEvalException("零不能求负数次幂");
         return Math.Pow(left, right);
     }
 

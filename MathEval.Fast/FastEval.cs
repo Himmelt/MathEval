@@ -42,24 +42,19 @@ public static class FastEval {
     /// 求值表达式并返回指定类型结果
     /// </summary>
     public static T Eval<T>(string expression, IReadOnlyDictionary<string, object>? variables = null) where T : struct {
-        if (typeof(T) == typeof(double))
-            return (T)(object)EvalDouble(expression, ConvertObjectVariables(variables));
-        if (typeof(T) == typeof(long))
-            return (T)(object)EvalLong(expression, ConvertObjectVariables(variables));
-        if (typeof(T) == typeof(bool))
-            return (T)(object)EvalBool(expression, variables);
+        if (typeof(T) == typeof(double)) return (T)(object)EvalDouble(expression, ConvertObjectVariables(variables));
+        if (typeof(T) == typeof(long)) return (T)(object)EvalLong(expression, ConvertObjectVariables(variables));
+        if (typeof(T) == typeof(bool)) return (T)(object)EvalBool(expression, variables);
         if (typeof(T) == typeof(int)) {
             var result = EvalLong(expression, ConvertObjectVariables(variables));
-            if (result < int.MinValue || result > int.MaxValue)
-                throw new FastEvalException($"结果 {result} 超出 int 范围");
+            if (result < int.MinValue || result > int.MaxValue) throw new FastEvalException($"结果 {result} 超出 int 范围", expression);
             return (T)(object)(int)result;
         }
-        if (typeof(T) == typeof(float))
-            return (T)(object)(float)EvalDouble(expression, ConvertObjectVariables(variables));
-        throw new FastEvalException($"不支持的类型: {typeof(T).Name}");
+        if (typeof(T) == typeof(float)) return (T)(object)(float)EvalDouble(expression, ConvertObjectVariables(variables));
+        throw new FastEvalException($"不支持的类型: {typeof(T).Name}", expression);
     }
 
-    private static IReadOnlyDictionary<string, double>? ConvertObjectVariables(IReadOnlyDictionary<string, object>? variables) {
+    private static Dictionary<string, double>? ConvertObjectVariables(IReadOnlyDictionary<string, object>? variables) {
         if (variables == null) return null;
         var result = new Dictionary<string, double>(variables.Count);
         foreach (var kv in variables) {

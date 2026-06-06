@@ -1,6 +1,6 @@
 namespace MathEval.Fast.Exceptions;
 
-public class FastEvalException(string msg, string expr, int pos = -1) : Exception($"{msg}，[{expr}]@[{pos}]") {
+public class FastEvalException(string msg, string expr = "", int pos = -1) : Exception($"{msg}，[{expr}]@[{pos}]") {
     /// <summary>
     /// 出错的表达式
     /// </summary>

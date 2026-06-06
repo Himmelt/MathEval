@@ -5,9 +5,10 @@ namespace MathEval.Fast.Core;
 /// <summary>
 /// 快速字符扫描器，基于 ReadOnlySpan&lt;char&gt; 操作，零字符串分配
 /// </summary>
-internal struct FastScanner(string text) {
-    private readonly string _text = text ?? throw new ArgumentNullException(nameof(text));
+internal struct FastScanner(string expression) {
+
     private int _position = 0;
+    private readonly string _text = expression ?? throw new ArgumentNullException(nameof(expression));
 
     public readonly bool IsAtEnd => _position >= _text.Length;
 
@@ -28,8 +29,7 @@ internal struct FastScanner(string text) {
     }
 
     public void SkipWhitespace() {
-        while (_position < _text.Length && char.IsWhiteSpace(_text[_position]))
-            _position++;
+        while (_position < _text.Length && char.IsWhiteSpace(_text[_position])) _position++;
     }
 
     public void Advance(int count) {
@@ -38,8 +38,7 @@ internal struct FastScanner(string text) {
 
     public ReadOnlySpan<char> ReadIdentifierSpan() {
         var start = _position;
-        while (_position < _text.Length && IsIdentifierPart(_text[_position]))
-            _position++;
+        while (_position < _text.Length && IsIdentifierPart(_text[_position])) _position++;
         return _text.AsSpan(start, _position - start);
     }
 
@@ -60,8 +59,7 @@ internal struct FastScanner(string text) {
     }
 
     internal static bool IsIdentifierStart(char ch) {
-        return char.IsLetter(ch) || ch == '_'
-            || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherLetter;
+        return char.IsLetter(ch) || ch == '_' || char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherLetter;
     }
 
     internal static bool IsIdentifierPart(char ch) {
@@ -73,21 +71,17 @@ internal struct FastScanner(string text) {
     private double ReadDecimal() {
         var start = _position;
 
-        while (_position < _text.Length && char.IsDigit(_text[_position]))
-            _position++;
+        while (_position < _text.Length && char.IsDigit(_text[_position])) _position++;
 
         if (_position < _text.Length && _text[_position] == '.') {
             _position++;
-            while (_position < _text.Length && char.IsDigit(_text[_position]))
-                _position++;
+            while (_position < _text.Length && char.IsDigit(_text[_position])) _position++;
         }
 
         if (_position < _text.Length && (_text[_position] == 'e' || _text[_position] == 'E')) {
             _position++;
-            if (_position < _text.Length && (_text[_position] == '+' || _text[_position] == '-'))
-                _position++;
-            while (_position < _text.Length && char.IsDigit(_text[_position]))
-                _position++;
+            if (_position < _text.Length && (_text[_position] == '+' || _text[_position] == '-')) _position++;
+            while (_position < _text.Length && char.IsDigit(_text[_position])) _position++;
         }
 
         return double.Parse(_text.AsSpan(start, _position - start));
@@ -95,33 +89,26 @@ internal struct FastScanner(string text) {
 
     private double ReadHex() {
         var start = _position;
-        while (_position < _text.Length && IsHexDigit(_text[_position]))
-            _position++;
-        if (_position == start)
-            throw new FastEvalException("无效的十六进制数", _position);
-        return Convert.ToInt64(_text.Substring(start, _position - start), 16);
+        while (_position < _text.Length && IsHexDigit(_text[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的十六进制数", _text, _position);
+        return Convert.ToInt64(_text[start.._position], 16);
     }
 
     private double ReadOctal() {
         var start = _position;
-        while (_position < _text.Length && IsOctalDigit(_text[_position]))
-            _position++;
-        if (_position == start)
-            throw new FastEvalException("无效的八进制数", _position);
-        return Convert.ToInt64(_text.Substring(start, _position - start), 8);
+        while (_position < _text.Length && IsOctalDigit(_text[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的八进制数", _text, _position);
+        return Convert.ToInt64(_text[start.._position], 8);
     }
 
     private double ReadBinary() {
         var start = _position;
-        while (_position < _text.Length && IsBinaryDigit(_text[_position]))
-            _position++;
-        if (_position == start)
-            throw new FastEvalException("无效的二进制数", _position);
-        return Convert.ToInt64(_text.Substring(start, _position - start), 2);
+        while (_position < _text.Length && IsBinaryDigit(_text[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的二进制数", _text, _position);
+        return Convert.ToInt64(_text[start.._position], 2);
     }
 
-    private static bool IsHexDigit(char ch) =>
-        ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
+    private static bool IsHexDigit(char ch) => ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
 
     private static bool IsOctalDigit(char ch) => ch is >= '0' and <= '7';
 

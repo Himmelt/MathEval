@@ -58,7 +58,7 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
         }
 
         if (_context.TryGetFunction(expr.Name, out var func)) {
-            return func(args.ToArray());
+            return func([.. args]);
         }
 
         throw new FunctionNotFoundException(expr.Name);
