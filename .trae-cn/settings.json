@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell",
+            "args": ["-NoLogo", "-Command", "chcp 65001 > $null; powershell -NoLogo"]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell"
+}
