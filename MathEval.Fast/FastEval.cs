@@ -41,16 +41,39 @@ public static class FastEval {
     /// 求值表达式并返回指定类型结果
     /// </summary>
     public static T Eval<T>(string expression, IReadOnlyDictionary<string, object>? variables = null) where T : struct {
-        if (typeof(T) == typeof(double)) return (T)(object)EvalDouble(expression, ConvertObjectVariables(variables));
-        if (typeof(T) == typeof(long)) return (T)(object)EvalLong(expression, ConvertObjectVariables(variables));
+        var doubleVars = ConvertObjectVariables(variables);
+
+        // 浮点类型
+        if (typeof(T) == typeof(double)) return (T)(object)EvalDouble(expression, doubleVars);
+        if (typeof(T) == typeof(float)) return (T)(object)(float)EvalDouble(expression, doubleVars);
+        if (typeof(T) == typeof(decimal)) return (T)(object)(decimal)EvalDouble(expression, doubleVars);
+
+        // bool 类型
         if (typeof(T) == typeof(bool)) return (T)(object)EvalBool(expression, variables);
-        if (typeof(T) == typeof(int)) {
-            var result = EvalLong(expression, ConvertObjectVariables(variables));
-            if (result < int.MinValue || result > int.MaxValue) throw new FastEvalException($"结果 {result} 超出 int 范围", expression);
-            return (T)(object)(int)result;
+
+        // 整数类型
+        if (IsIntegerType<T>()) {
+            var result = EvalDouble(expression, doubleVars);
+            if (!BuiltInOperators.IsInteger(result)) throw new FastEvalException($"结果 {result} 不是整数，无法转换为 {typeof(T).Name}", expression);
+            return ConvertIntegerWithOverflowCheck<T>(result, expression);
         }
-        if (typeof(T) == typeof(float)) return (T)(object)(float)EvalDouble(expression, ConvertObjectVariables(variables));
+
         throw new FastEvalException($"不支持的类型: {typeof(T).Name}", expression);
+    }
+
+    private static bool IsIntegerType<T>() {
+        return typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+               typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+               typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+               typeof(T) == typeof(long) || typeof(T) == typeof(ulong);
+    }
+
+    private static T ConvertIntegerWithOverflowCheck<T>(double value, string expression) {
+        try {
+            return (T)Convert.ChangeType(value, typeof(T));
+        } catch (OverflowException) {
+            throw new FastEvalException($"结果 {value} 超出 {typeof(T).Name} 范围", expression);
+        }
     }
 
     private static Dictionary<string, double>? ConvertObjectVariables(IReadOnlyDictionary<string, object>? variables) {

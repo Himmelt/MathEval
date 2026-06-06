@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using MathEval.Fast.Exceptions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MathEval.Fast.BuiltIn;
 
