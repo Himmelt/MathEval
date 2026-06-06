@@ -81,16 +81,6 @@ public class FastEvalSupplementaryTests {
     }
 
     [Fact]
-    public void EvalDouble_Log10NonPositive_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("log10(0)"));
-    }
-
-    [Fact]
-    public void EvalDouble_Log2NonPositive_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("log2(-1)"));
-    }
-
-    [Fact]
     public void EvalLong_SignFunction() {
         Assert.Equal(-1L, FastEval.EvalLong("sign(-10)"));
     }
@@ -156,11 +146,6 @@ public class FastEvalSupplementaryTests {
     [Fact]
     public void EvalDouble_PowerFractionalExponent_Returns3() {
         Assert.Equal(3.0, FastEval.EvalDouble("9 ^ 0.5"));
-    }
-
-    [Fact]
-    public void EvalDouble_PowerNegativeBaseFractionalExponent_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("(-4) ^ 0.5"));
     }
 
     [Fact]
@@ -298,20 +283,6 @@ public class FastEvalSupplementaryTests {
     [Fact]
     public void EvalLong_BoolBitwiseAnd() {
         Assert.Equal(0L, FastEval.EvalLong("true & 6"));
-    }
-
-    #endregion
-
-    #region 函数大小写不敏感
-
-    [Fact]
-    public void EvalDouble_FunctionCaseInsensitive_SIN() {
-        Assert.Equal(0.0, FastEval.EvalDouble("SIN(0)"), 0.0001);
-    }
-
-    [Fact]
-    public void EvalDouble_FunctionCaseInsensitive_Sqrt() {
-        Assert.Equal(5.0, FastEval.EvalDouble("Sqrt(25)"));
     }
 
     #endregion

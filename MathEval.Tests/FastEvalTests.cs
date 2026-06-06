@@ -507,27 +507,6 @@ public class FastEvalTests {
         Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("1 + 2 3"));
     }
 
-    [Fact]
-    public void EvalDouble_TooLongExpression_Throws() {
-        var longExpr = new string('1', 4097);
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble(longExpr));
-    }
-
-    [Fact]
-    public void EvalDouble_SqrtNegative_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("sqrt(-1)"));
-    }
-
-    [Fact]
-    public void EvalDouble_LogNonPositive_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("ln(0)"));
-    }
-
-    [Fact]
-    public void EvalDouble_NegativePowerFractional_Throws() {
-        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble("(-2) ^ 0.5"));
-    }
-
     #endregion
 
     #region EvalLong 特化

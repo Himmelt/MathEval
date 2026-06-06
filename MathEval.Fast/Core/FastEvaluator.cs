@@ -11,7 +11,7 @@ namespace MathEval.Fast.Core;
 internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
 
     private bool _skipMode;
-    private readonly FastScanner _scanner = new(expression);
+    private FastScanner _scanner = new(expression);
 
     public double Evaluate() {
         _scanner.SkipWhitespace();

@@ -8,7 +8,7 @@ namespace MathEval.Fast.Core;
 internal struct FastScanner(string expression) {
 
     private int _position = 0;
-    private readonly string _text = expression ?? throw new ArgumentNullException(nameof(expression));
+    private readonly string _text = expression ?? throw new FastEvalException("表达式不能为 null");
 
     public readonly bool IsAtEnd => _position >= _text.Length;
 
