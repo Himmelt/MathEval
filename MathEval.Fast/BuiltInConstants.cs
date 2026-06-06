@@ -5,7 +5,7 @@ namespace MathEval.Fast;
 /// </summary>
 internal static class BuiltInConstants
 {
-    private static readonly Dictionary<string, double> _constants = new()
+    private static readonly Dictionary<string, double> _constants = new(StringComparer.OrdinalIgnoreCase)
     {
         ["true"]  = 1.0,
         ["false"] = 0.0,
@@ -17,7 +17,7 @@ internal static class BuiltInConstants
     };
 
     /// <summary>
-    /// 尝试根据名称获取常量值，大小写敏感
+    /// 尝试根据名称获取常量值，大小写不敏感
     /// </summary>
     public static bool TryGetValue(ReadOnlySpan<char> name, out double value)
         => _constants.TryGetValue(name.ToString(), out value);
