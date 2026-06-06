@@ -20,16 +20,5 @@ internal static class BuiltInConstants
     /// 尝试根据名称获取常量值，大小写不敏感
     /// </summary>
     public static bool TryGetValue(ReadOnlySpan<char> name, out double value)
-    {
-        foreach (var kv in _constants)
-        {
-            if (name.SequenceEqual(kv.Key))
-            {
-                value = kv.Value;
-                return true;
-            }
-        }
-        value = default;
-        return false;
-    }
+        => _constants.TryGetValue(name.ToString(), out value);
 }
