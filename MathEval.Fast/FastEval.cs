@@ -1,6 +1,6 @@
+using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Core;
 using MathEval.Fast.Exceptions;
-using MathEval.Fast.Operators;
 
 namespace MathEval.Fast;
 

@@ -1,6 +1,6 @@
 using MathEval.Fast.Exceptions;
 
-namespace MathEval.Fast.Operators;
+namespace MathEval.Fast.BuiltIn;
 
 /// <summary>
 /// 内置运算符实现
@@ -29,8 +29,7 @@ internal static class BuiltInOperators {
     /// 检查 double 值是否为数学整数（不含小数部分，且在 long 范围内）
     /// </summary>
     public static bool IsInteger(double value) {
-        return value == Math.Truncate(value) && !double.IsInfinity(value) && !double.IsNaN(value)
-            && value >= long.MinValue && value < 9223372036854775808.0;
+        return value == Math.Truncate(value) && !double.IsInfinity(value) && !double.IsNaN(value) && value >= long.MinValue && value < 9223372036854775808.0;
     }
 
     /// <summary>

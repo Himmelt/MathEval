@@ -1,6 +1,5 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
-using MathEval.Fast.Operators;
 
 namespace MathEval.Fast.Core;
 
@@ -352,7 +351,7 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     }
 
     private double CallBuiltInFunction(string name, List<double> args) {
-        if (BuiltInFastFunctions.TryGetFunction(name, out var func)) return func([.. args]);
+        if (BuiltInFunctions.TryGetFunction(name, out var func)) return func([.. args]);
         throw new FastEvalException($"未知函数 '{name}'", expression);
     }
 

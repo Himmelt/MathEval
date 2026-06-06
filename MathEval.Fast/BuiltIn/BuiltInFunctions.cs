@@ -5,8 +5,8 @@ namespace MathEval.Fast.BuiltIn;
 /// <summary>
 /// FastEval 内置函数表，硬编码常用数学函数
 /// </summary>
-internal static class BuiltInFastFunctions {
-    private static readonly Dictionary<string, Func<double[], double>> _functions = new(StringComparer.OrdinalIgnoreCase) {
+internal static class BuiltInFunctions {
+    private static readonly Dictionary<string, Func<double[], double>> _functions = new() {
         ["sin"] = args => Math.Sin(args[0]),
         ["cos"] = args => Math.Cos(args[0]),
         ["tan"] = args => Math.Tan(args[0]),
@@ -26,8 +26,8 @@ internal static class BuiltInFastFunctions {
         ["round"] = args => args.Length == 1 ? Math.Round(args[0]) : Math.Round(args[0], (int)args[1]),
         ["trunc"] = args => Math.Truncate(args[0]),
         ["sign"] = args => Math.Sign(args[0]),
-        ["max"] = args => Math.Max(args[0], args[1]),
-        ["min"] = args => Math.Min(args[0], args[1]),
+        ["max"] = args => args.Max(),
+        ["min"] = args => args.Min(),
         ["pow"] = args => Math.Pow(args[0], args[1]),
     };
 
