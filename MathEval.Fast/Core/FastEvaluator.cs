@@ -1,3 +1,4 @@
+using System.Globalization;
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
 
@@ -7,37 +8,138 @@ namespace MathEval.Fast.Core;
 /// 递归求值器，边扫描边求值，零 AST 中间层
 /// <br/>
 /// 内部统一使用 double 运算，仅在最终返回时按需转换类型
+/// <br/>
+/// 优化：ref struct 栈分配、Span 直接比较、stackalloc 参数、内联运算符、标识符统一解析
 /// </summary>
-internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
+internal ref struct FastEvaluator {
 
+    private readonly string _expression;
+    private int _position;
+    private readonly IReadOnlyDictionary<string, double>? _variables;
     private bool _skipMode;
-    private FastScanner _scanner = new(expression);
+
+    public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
+        _expression = expression ?? throw new FastEvalException("表达式不能为 null");
+        _position = 0;
+        _variables = variables;
+        _skipMode = false;
+    }
 
     public double Evaluate() {
-        _scanner.SkipWhitespace();
-        if (_scanner.IsAtEnd) throw new FastEvalException("表达式不能为空", expression);
+        SkipWhitespace();
+        if (IsAtEnd) throw new FastEvalException("表达式不能为空", _expression);
 
         var result = EvalExpression();
 
-        _scanner.SkipWhitespace();
-        if (!_scanner.IsAtEnd) throw new FastEvalException($"意外的字符 '{_scanner.Peek()}'，位置 {_scanner.Position}", expression);
+        SkipWhitespace();
+        if (!IsAtEnd) throw new FastEvalException($"意外的字符 '{Peek()}'，位置 {_position}", _expression);
 
         return result;
     }
+
+    #region Scanner（内联 FastScanner）
+
+    private readonly bool IsAtEnd => _position >= _expression.Length;
+
+    private readonly char Peek() => _position < _expression.Length ? _expression[_position] : '\0';
+
+    private readonly char PeekNext() => _position + 1 < _expression.Length ? _expression[_position + 1] : '\0';
+
+    private char Read() => _expression[_position++];
+
+    private void SkipWhitespace() {
+        while (_position < _expression.Length && char.IsWhiteSpace(_expression[_position])) _position++;
+    }
+
+    private ReadOnlySpan<char> ReadIdentifierSpan() {
+        var start = _position;
+        while (_position < _expression.Length && IsIdentifierPart(_expression[_position])) _position++;
+        return _expression.AsSpan(start, _position - start);
+    }
+
+    private double ReadNumber() {
+        if (Peek() == '0' && (PeekNext() == 'x' || PeekNext() == 'X')) {
+            _position += 2;
+            return ReadHex();
+        }
+        if (Peek() == '0' && (PeekNext() == 'o' || PeekNext() == 'O')) {
+            _position += 2;
+            return ReadOctal();
+        }
+        if (Peek() == '0' && (PeekNext() == 'b' || PeekNext() == 'B')) {
+            _position += 2;
+            return ReadBinary();
+        }
+        return ReadDecimal();
+    }
+
+    private double ReadDecimal() {
+        var start = _position;
+        while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
+        if (_position < _expression.Length && _expression[_position] == '.') {
+            _position++;
+            while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
+        }
+        if (_position < _expression.Length && (_expression[_position] == 'e' || _expression[_position] == 'E')) {
+            _position++;
+            if (_position < _expression.Length && (_expression[_position] == '+' || _expression[_position] == '-')) _position++;
+            while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
+        }
+        return double.Parse(_expression.AsSpan(start, _position - start), CultureInfo.InvariantCulture);
+    }
+
+    private double ReadHex() {
+        var start = _position;
+        while (_position < _expression.Length && IsHexDigit(_expression[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的十六进制数", _expression, _position);
+        return Convert.ToInt64(_expression.Substring(start, _position - start), 16);
+    }
+
+    private double ReadOctal() {
+        var start = _position;
+        while (_position < _expression.Length && IsOctalDigit(_expression[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的八进制数", _expression, _position);
+        return Convert.ToInt64(_expression.Substring(start, _position - start), 8);
+    }
+
+    private double ReadBinary() {
+        var start = _position;
+        while (_position < _expression.Length && IsBinaryDigit(_expression[_position])) _position++;
+        if (_position == start) throw new FastEvalException("无效的二进制数", _expression, _position);
+        return Convert.ToInt64(_expression.Substring(start, _position - start), 2);
+    }
+
+    internal static bool IsIdentifierStart(char ch) {
+        return char.IsLetter(ch) || ch == '_' || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherLetter;
+    }
+
+    internal static bool IsIdentifierPart(char ch) {
+        return char.IsLetterOrDigit(ch) || ch == '_'
+            || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherLetter
+            || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherNumber;
+    }
+
+    private static bool IsHexDigit(char ch) => ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
+    private static bool IsOctalDigit(char ch) => ch is >= '0' and <= '7';
+    private static bool IsBinaryDigit(char ch) => ch is '0' or '1';
+
+    #endregion
+
+    #region 求值方法
 
     private double EvalExpression() => EvalConditional();
 
     private double EvalConditional() {
         var condition = EvalLogicalOr();
-        _scanner.SkipWhitespace();
+        SkipWhitespace();
 
-        if (_scanner.Peek() == '?') {
-            _scanner.Read();
-            if (BuiltInOperators.ConvertToBool(condition)) {
+        if (Peek() == '?') {
+            Read();
+            if (ConvertToBool(condition)) {
                 var trueValue = EvalExpression();
-                _scanner.SkipWhitespace();
-                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", expression);
-                _scanner.Read();
+                SkipWhitespace();
+                if (Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", _expression);
+                Read();
                 _skipMode = true;
                 EvalExpression();
                 _skipMode = false;
@@ -46,9 +148,9 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
                 _skipMode = true;
                 EvalExpression();
                 _skipMode = false;
-                _scanner.SkipWhitespace();
-                if (_scanner.Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", expression);
-                _scanner.Read();
+                SkipWhitespace();
+                if (Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", _expression);
+                Read();
                 var falseValue = EvalExpression();
                 return falseValue;
             }
@@ -60,26 +162,26 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalLogicalOr() {
         var left = EvalLogicalAnd();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '|' && _scanner.PeekNext() == '|') {
-                _scanner.Read(); _scanner.Read();
-                if (!_skipMode && BuiltInOperators.ConvertToBool(left)) {
+            SkipWhitespace();
+            if (Peek() == '|' && PeekNext() == '|') {
+                Read(); Read();
+                if (!_skipMode && ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToDouble(true);
+                    return 1.0;
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
-            } else if (MatchKeyword("or")) {
-                if (!_skipMode && BuiltInOperators.ConvertToBool(left)) {
+                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
+            } else if (TryMatchKeyword("or")) {
+                if (!_skipMode && ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToDouble(true);
+                    return 1.0;
                 }
                 var right = EvalLogicalAnd();
-                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else break;
         }
         return left;
@@ -88,26 +190,26 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalLogicalAnd() {
         var left = EvalEquality();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '&' && _scanner.PeekNext() == '&') {
-                _scanner.Read(); _scanner.Read();
-                if (!_skipMode && !BuiltInOperators.ConvertToBool(left)) {
+            SkipWhitespace();
+            if (Peek() == '&' && PeekNext() == '&') {
+                Read(); Read();
+                if (!_skipMode && !ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToDouble(false);
+                    return 0.0;
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
-            } else if (MatchKeyword("and")) {
-                if (!_skipMode && !BuiltInOperators.ConvertToBool(left)) {
+                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
+            } else if (TryMatchKeyword("and")) {
+                if (!_skipMode && !ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return BuiltInOperators.BoolToDouble(false);
+                    return 0.0;
                 }
                 var right = EvalEquality();
-                left = _skipMode ? default : BuiltInOperators.BoolToDouble(BuiltInOperators.ConvertToBool(right));
+                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else break;
         }
         return left;
@@ -116,15 +218,15 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalEquality() {
         var left = EvalRelational();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '=' && _scanner.PeekNext() == '=') {
-                _scanner.Read(); _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '=' && PeekNext() == '=') {
+                Read(); Read();
                 var right = EvalRelational();
-                left = BuiltInOperators.Equal(left, right);
-            } else if (_scanner.Peek() == '!' && _scanner.PeekNext() == '=') {
-                _scanner.Read(); _scanner.Read();
+                left = Equal(left, right);
+            } else if (Peek() == '!' && PeekNext() == '=') {
+                Read(); Read();
                 var right = EvalRelational();
-                left = BuiltInOperators.NotEqual(left, right);
+                left = NotEqual(left, right);
             } else break;
         }
         return left;
@@ -133,23 +235,23 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalRelational() {
         var left = EvalBitwiseOr();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '<' && _scanner.PeekNext() == '=') {
-                _scanner.Read(); _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '<' && PeekNext() == '=') {
+                Read(); Read();
                 var right = EvalBitwiseOr();
-                left = BuiltInOperators.LessThanOrEqual(left, right);
-            } else if (_scanner.Peek() == '>' && _scanner.PeekNext() == '=') {
-                _scanner.Read(); _scanner.Read();
+                left = left <= right ? 1.0 : 0.0;
+            } else if (Peek() == '>' && PeekNext() == '=') {
+                Read(); Read();
                 var right = EvalBitwiseOr();
-                left = BuiltInOperators.GreaterThanOrEqual(left, right);
-            } else if (_scanner.Peek() == '<' && _scanner.PeekNext() != '<') {
-                _scanner.Read();
+                left = left >= right ? 1.0 : 0.0;
+            } else if (Peek() == '<' && PeekNext() != '<') {
+                Read();
                 var right = EvalBitwiseOr();
-                left = BuiltInOperators.LessThan(left, right);
-            } else if (_scanner.Peek() == '>' && _scanner.PeekNext() != '>') {
-                _scanner.Read();
+                left = left < right ? 1.0 : 0.0;
+            } else if (Peek() == '>' && PeekNext() != '>') {
+                Read();
                 var right = EvalBitwiseOr();
-                left = BuiltInOperators.GreaterThan(left, right);
+                left = left > right ? 1.0 : 0.0;
             } else break;
         }
         return left;
@@ -158,9 +260,9 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalBitwiseOr() {
         var left = EvalBitwiseXor();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '|' && _scanner.PeekNext() != '|') {
-                _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '|' && PeekNext() != '|') {
+                Read();
                 var right = EvalBitwiseXor();
                 left = BuiltInOperators.BitwiseOr(left, right);
             } else break;
@@ -171,8 +273,8 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalBitwiseXor() {
         var left = EvalBitwiseAnd();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (MatchKeyword("xor")) {
+            SkipWhitespace();
+            if (TryMatchKeyword("xor")) {
                 var right = EvalBitwiseAnd();
                 left = BuiltInOperators.BitwiseXor(left, right);
             } else break;
@@ -183,9 +285,9 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalBitwiseAnd() {
         var left = EvalShift();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '&' && _scanner.PeekNext() != '&') {
-                _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '&' && PeekNext() != '&') {
+                Read();
                 var right = EvalShift();
                 left = BuiltInOperators.BitwiseAnd(left, right);
             } else break;
@@ -196,13 +298,13 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalShift() {
         var left = EvalAdditive();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '<' && _scanner.PeekNext() == '<') {
-                _scanner.Read(); _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '<' && PeekNext() == '<') {
+                Read(); Read();
                 var right = EvalAdditive();
                 left = BuiltInOperators.LeftShift(left, right);
-            } else if (_scanner.Peek() == '>' && _scanner.PeekNext() == '>') {
-                _scanner.Read(); _scanner.Read();
+            } else if (Peek() == '>' && PeekNext() == '>') {
+                Read(); Read();
                 var right = EvalAdditive();
                 left = BuiltInOperators.RightShift(left, right);
             } else break;
@@ -213,15 +315,15 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalAdditive() {
         var left = EvalMultiplicative();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '+') {
-                _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '+') {
+                Read();
                 var right = EvalMultiplicative();
-                left = BuiltInOperators.Add(left, right);
-            } else if (_scanner.Peek() == '-') {
-                _scanner.Read();
+                left = left + right;
+            } else if (Peek() == '-') {
+                Read();
                 var right = EvalMultiplicative();
-                left = BuiltInOperators.Subtract(left, right);
+                left = left - right;
             } else break;
         }
         return left;
@@ -230,24 +332,24 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     private double EvalMultiplicative() {
         var left = EvalPower();
         while (true) {
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() == '*') {
-                _scanner.Read();
+            SkipWhitespace();
+            if (Peek() == '*') {
+                Read();
                 var right = EvalPower();
-                left = _skipMode ? default : BuiltInOperators.Multiply(left, right);
-            } else if (_scanner.Peek() == '/' && _scanner.PeekNext() == '/') {
-                _scanner.Read(); _scanner.Read();
+                left = _skipMode ? default : left * right;
+            } else if (Peek() == '/' && PeekNext() == '/') {
+                Read(); Read();
                 var right = EvalPower();
                 left = _skipMode ? default : BuiltInOperators.IntegerDivide(left, right);
-            } else if (_scanner.Peek() == '/') {
-                _scanner.Read();
+            } else if (Peek() == '/') {
+                Read();
                 var right = EvalPower();
-                left = _skipMode ? default : BuiltInOperators.Divide(left, right);
-            } else if (_scanner.Peek() == '%') {
-                _scanner.Read();
+                left = _skipMode ? default : left / right;
+            } else if (Peek() == '%') {
+                Read();
                 var right = EvalPower();
-                left = _skipMode ? default : BuiltInOperators.Remainder(left, right);
-            } else if (MatchKeyword("mod")) {
+                left = _skipMode ? default : left % right;
+            } else if (TryMatchKeyword("mod")) {
                 var right = EvalPower();
                 left = _skipMode ? default : BuiltInOperators.Modulo(left, right);
             } else break;
@@ -257,9 +359,9 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
 
     private double EvalPower() {
         var left = EvalUnary();
-        _scanner.SkipWhitespace();
-        if (_scanner.Peek() == '^') {
-            _scanner.Read();
+        SkipWhitespace();
+        if (Peek() == '^') {
+            Read();
             var right = EvalPower();
             return _skipMode ? default : BuiltInOperators.Power(left, right);
         }
@@ -267,111 +369,170 @@ internal sealed class FastEvaluator(string expression, IReadOnlyDictionary<strin
     }
 
     private double EvalUnary() {
-        _scanner.SkipWhitespace();
-        if (_scanner.Peek() == '+') {
-            _scanner.Read();
+        SkipWhitespace();
+        if (Peek() == '+') {
+            Read();
             return EvalUnary();
         }
-        if (_scanner.Peek() == '-') {
-            _scanner.Read();
+        if (Peek() == '-') {
+            Read();
             var operand = EvalUnary();
-            return BuiltInOperators.Negate(operand);
+            return -operand;
         }
-        if (MatchKeyword("not")) {
+        if (Peek() == '!' && PeekNext() != '=') {
+            Read();
             var operand = EvalUnary();
-            return BuiltInOperators.Not(operand);
+            return ConvertToBool(operand) ? 0.0 : 1.0;
         }
-        if (_scanner.Peek() == '!' && _scanner.PeekNext() != '=') {
-            _scanner.Read();
-            var operand = EvalUnary();
-            return BuiltInOperators.Not(operand);
-        }
-        if (_scanner.Peek() == '~') {
-            _scanner.Read();
+        if (Peek() == '~') {
+            Read();
             var operand = EvalUnary();
             return BuiltInOperators.BitwiseNot(operand);
         }
+        // not 关键字在 EvalPrimary 的标识符解析中处理
         return EvalPrimary();
     }
 
     private double EvalPrimary() {
-        _scanner.SkipWhitespace();
-        var ch = _scanner.Peek();
+        SkipWhitespace();
+        var ch = Peek();
 
-        if (char.IsDigit(ch) || ch == '.') return _scanner.ReadNumber();
+        if (char.IsDigit(ch) || ch == '.') return ReadNumber();
 
         if (ch == '(') {
-            _scanner.Read();
+            Read();
             var result = EvalExpression();
-            _scanner.SkipWhitespace();
-            if (_scanner.Peek() != ')') throw new FastEvalException("未闭合的括号", expression, _scanner.Position);
-            _scanner.Read();
+            SkipWhitespace();
+            if (Peek() != ')') throw new FastEvalException("未闭合的括号", _expression, _position);
+            Read();
             return result;
         }
 
-        if (FastScanner.IsIdentifierStart(ch)) return EvalIdentifierOrFunction();
+        if (IsIdentifierStart(ch)) return EvalIdentifierOrKeyword();
 
-        throw new FastEvalException($"意外的字符 '{ch}'", expression, _scanner.Position);
+        throw new FastEvalException($"意外的字符 '{ch}'", _expression, _position);
     }
 
-    private double EvalIdentifierOrFunction() {
-        var identifierSpan = _scanner.ReadIdentifierSpan();
-        _scanner.SkipWhitespace();
+    /// <summary>
+    /// 统一处理标识符：关键字(not) + 函数 + 常量 + 变量
+    /// and/or/xor/mod 作为中缀运算符在各自的 Eval* 方法中处理
+    /// </summary>
+    private double EvalIdentifierOrKeyword() {
+        var span = ReadIdentifierSpan();
 
-        if (_scanner.Peek() == '(') return EvalFunctionCall(identifierSpan.ToString());
+        // not 关键字作为前缀一元运算符
+        if (span.Length == 3 && EqualsLower(span, "not")) {
+            var operand = EvalUnary();
+            return ConvertToBool(operand) ? 0.0 : 1.0;
+        }
 
-        if (BuiltInConstants.TryGetValue(identifierSpan.ToString(), out var constValue)) return constValue;
+        // 函数调用
+        SkipWhitespace();
+        if (Peek() == '(') return EvalFunctionCall(span);
 
-        return LookupVariable(identifierSpan.ToString());
+        // 常量查找（Span 直接比较，无字符串分配）
+        if (BuiltInConstants.TryGetValue(span, out var constValue)) return constValue;
+
+        // 变量查找
+        return LookupVariable(span);
     }
 
-    private double EvalFunctionCall(string name) {
-        _scanner.Read();
+    private double EvalFunctionCall(ReadOnlySpan<char> name) {
+        Read(); // 消耗 '('
 
-        var args = new List<double>();
-        _scanner.SkipWhitespace();
-        if (_scanner.Peek() != ')') {
-            args.Add(EvalExpression());
+        Span<double> buffer = stackalloc double[8];
+        int count = 0;
+        SkipWhitespace();
+        if (Peek() != ')') {
+            if (count >= buffer.Length) buffer = GrowBuffer(buffer, ref count);
+            buffer[count++] = EvalExpression();
             while (true) {
-                _scanner.SkipWhitespace();
-                if (_scanner.Peek() != ',') break;
-                _scanner.Read();
-                args.Add(EvalExpression());
+                SkipWhitespace();
+                if (Peek() != ',') break;
+                Read();
+                if (count >= buffer.Length) buffer = GrowBuffer(buffer, ref count);
+                buffer[count++] = EvalExpression();
             }
         }
 
-        _scanner.SkipWhitespace();
-        if (_scanner.Peek() != ')') throw new FastEvalException("函数调用未闭合", expression, _scanner.Position);
-        _scanner.Read();
+        SkipWhitespace();
+        if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _position);
+        Read();
 
-        return CallBuiltInFunction(name, args);
+        return CallBuiltInFunction(name, buffer.Slice(0, count));
     }
 
-    private double LookupVariable(string name) {
+    private static Span<double> GrowBuffer(Span<double> buffer, ref int count) {
+        var newBuffer = new double[buffer.Length * 2];
+        buffer.CopyTo(newBuffer);
+        return newBuffer;
+    }
+
+    private double LookupVariable(ReadOnlySpan<char> name) {
         if (_skipMode) return default;
-        if (variables != null && variables.TryGetValue(name, out var value)) return value;
-        throw new FastEvalException($"未定义的变量 '{name}'", expression);
-    }
-
-    private double CallBuiltInFunction(string name, List<double> args) {
-        if (BuiltInFunctions.TryGetFunction(name, out var func)) return func([.. args]);
-        throw new FastEvalException($"未知函数 '{name}'", expression);
-    }
-
-    private bool MatchKeyword(string keyword) {
-        _scanner.SkipWhitespace();
-        var pos = _scanner.Position;
-        var text = _scanner.Text;
-
-        if (pos + keyword.Length > text.Length) return false;
-
-        for (int i = 0; i < keyword.Length; i++) {
-            if (char.ToLowerInvariant(text[pos + i]) != char.ToLowerInvariant(keyword[i])) return false;
+        if (_variables != null) {
+            // 变量查找仍需字符串 key（Dictionary 限制）
+            var nameStr = name.ToString();
+            if (_variables.TryGetValue(nameStr, out var value)) return value;
         }
+        throw new FastEvalException($"未定义的变量 '{name.ToString()}'", _expression);
+    }
 
-        if (pos + keyword.Length < text.Length && FastScanner.IsIdentifierPart(text[pos + keyword.Length])) return false;
+    private static double CallBuiltInFunction(ReadOnlySpan<char> name, ReadOnlySpan<double> args) {
+        if (BuiltInFunctions.TryGetFunction(name, out var func)) {
+            double[] arr = args.ToArray();
+            return func(arr);
+        }
+        throw new FastEvalException($"未知函数 '{name.ToString()}'", "");
+    }
 
-        _scanner.Advance(keyword.Length);
+    #endregion
+
+    #region 内联运算辅助
+
+    private static bool ConvertToBool(double value) => value != 0 && !double.IsNaN(value);
+
+    private static double Equal(double left, double right) {
+        if (double.IsNaN(left) || double.IsNaN(right)) return 0.0;
+        return left == right ? 1.0 : 0.0;
+    }
+
+    private static double NotEqual(double left, double right) {
+        if (double.IsNaN(left) || double.IsNaN(right)) return 1.0;
+        return left != right ? 1.0 : 0.0;
+    }
+
+    #endregion
+
+    #region Span 比较
+
+    private static bool EqualsLower(ReadOnlySpan<char> span, string keyword) {
+        if (span.Length != keyword.Length) return false;
+        for (int i = 0; i < keyword.Length; i++) {
+            if (char.ToLowerInvariant(span[i]) != char.ToLowerInvariant(keyword[i])) return false;
+        }
         return true;
     }
+
+    /// <summary>
+    /// 尝试在当前位置匹配关键字（大小写不敏感），匹配成功则推进位置
+    /// </summary>
+    private bool TryMatchKeyword(string keyword) {
+        SkipWhitespace();
+        var pos = _position;
+
+        if (pos + keyword.Length > _expression.Length) return false;
+
+        for (int i = 0; i < keyword.Length; i++) {
+            if (char.ToLowerInvariant(_expression[pos + i]) != char.ToLowerInvariant(keyword[i])) return false;
+        }
+
+        // 确保关键字后不是标识符字符
+        if (pos + keyword.Length < _expression.Length && IsIdentifierPart(_expression[pos + keyword.Length])) return false;
+
+        _position = pos + keyword.Length;
+        return true;
+    }
+
+    #endregion
 }
