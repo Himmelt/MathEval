@@ -1,6 +1,7 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Core;
 using MathEval.Fast.Exceptions;
+using MathEval.Fast.Jit;
 using MathEval.Fast.VM;
 
 namespace MathEval.Fast;
@@ -32,6 +33,22 @@ public static class FastEval {
     /// 清除指令缓存
     /// </summary>
     public static void ClearCache() => InstructionCache.Clear();
+
+    /// <summary>
+    /// 编译表达式为原生委托（不缓存）
+    /// 编译耗时约 2,000-5,000ns，编译后执行约 3-5ns
+    /// </summary>
+    public static Func<IReadOnlyDictionary<string, double>?, double> Compile(string expression) {
+        var instructions = InstructionCache.GetOrCompile(expression);
+        return JitCompiler.Compile(instructions);
+    }
+
+    /// <summary>
+    /// 编译并缓存，后续调用直接返回缓存的委托
+    /// </summary>
+    public static Func<IReadOnlyDictionary<string, double>?, double> CompileCached(string expression) {
+        return JitCache.GetOrCompileJit(expression);
+    }
 
     /// <summary>
     /// 设置缓存容量（会清除现有缓存）
