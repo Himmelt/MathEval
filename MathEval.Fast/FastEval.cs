@@ -1,6 +1,7 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Core;
 using MathEval.Fast.Exceptions;
+using MathEval.Fast.VM;
 
 namespace MathEval.Fast;
 
@@ -16,6 +17,26 @@ public static class FastEval {
     public static double EvalDouble(string expression, IReadOnlyDictionary<string, double>? variables = null) {
         return new FastEvaluator(expression, variables).Evaluate();
     }
+
+    /// <summary>
+    /// 缓存求值：首次解析生成指令序列并缓存，后续直接执行 VM 指令
+    /// <br/>
+    /// 适合同一表达式需要多次求值的场景，比 EvalDouble 更快
+    /// </summary>
+    public static double EvalDoubleCached(string expression, IReadOnlyDictionary<string, double>? variables = null) {
+        var instructions = InstructionCache.GetOrCompile(expression);
+        return BytecodeVM.Execute(instructions, variables);
+    }
+
+    /// <summary>
+    /// 清除指令缓存
+    /// </summary>
+    public static void ClearCache() => InstructionCache.Clear();
+
+    /// <summary>
+    /// 设置缓存容量（会清除现有缓存）
+    /// </summary>
+    public static void SetCacheCapacity(int capacity) => InstructionCache.SetCapacity(capacity);
 
     /// <summary>
     /// 求值表达式并返回 long 结果
