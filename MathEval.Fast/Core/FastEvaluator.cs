@@ -1,6 +1,5 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace MathEval.Fast.Core;
@@ -14,7 +13,7 @@ namespace MathEval.Fast.Core;
 /// </summary>
 internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
 
-    private int _position = 0;
+    private FastScanner _scanner = new(expression);
     private bool _skipMode = false;
     private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
 
@@ -25,96 +24,21 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
         var result = EvalExpression();
 
         SkipWhitespace();
-        if (!IsAtEnd) throw new FastEvalException($"意外的字符 '{Peek()}'，位置 {_position}", _expression);
+        if (!IsAtEnd) throw new FastEvalException($"意外的字符 '{Peek()}'，位置 {_scanner.Position}", _expression);
 
         return result;
     }
 
-    #region Scanner（内联 FastScanner）
+    #region Scanner（委托给 FastScanner）
 
-    private readonly bool IsAtEnd => _position >= _expression.Length;
-
-    private readonly char Peek() => _position < _expression.Length ? _expression[_position] : '\0';
-
-    private readonly char PeekNext() => _position + 1 < _expression.Length ? _expression[_position + 1] : '\0';
-
-    private char Read() => _expression[_position++];
-
-    private void SkipWhitespace() {
-        while (_position < _expression.Length && char.IsWhiteSpace(_expression[_position])) _position++;
-    }
-
-    private ReadOnlySpan<char> ReadIdentifierSpan() {
-        var start = _position;
-        while (_position < _expression.Length && IsIdentifierPart(_expression[_position])) _position++;
-        return _expression.AsSpan(start, _position - start);
-    }
-
-    private double ReadNumber() {
-        if (Peek() == '0' && (PeekNext() == 'x' || PeekNext() == 'X')) {
-            _position += 2;
-            return ReadHex();
-        }
-        if (Peek() == '0' && (PeekNext() == 'o' || PeekNext() == 'O')) {
-            _position += 2;
-            return ReadOctal();
-        }
-        if (Peek() == '0' && (PeekNext() == 'b' || PeekNext() == 'B')) {
-            _position += 2;
-            return ReadBinary();
-        }
-        return ReadDecimal();
-    }
-
-    private double ReadDecimal() {
-        var start = _position;
-        while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
-        if (_position < _expression.Length && _expression[_position] == '.') {
-            _position++;
-            while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
-        }
-        if (_position < _expression.Length && (_expression[_position] == 'e' || _expression[_position] == 'E')) {
-            _position++;
-            if (_position < _expression.Length && (_expression[_position] == '+' || _expression[_position] == '-')) _position++;
-            while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
-        }
-        return double.Parse(_expression.AsSpan(start, _position - start), CultureInfo.InvariantCulture);
-    }
-
-    private double ReadHex() {
-        var start = _position;
-        while (_position < _expression.Length && IsHexDigit(_expression[_position])) _position++;
-        if (_position == start) throw new FastEvalException("无效的十六进制数", _expression, _position);
-        return Convert.ToInt64(_expression[start.._position], 16);
-    }
-
-    private double ReadOctal() {
-        var start = _position;
-        while (_position < _expression.Length && IsOctalDigit(_expression[_position])) _position++;
-        if (_position == start) throw new FastEvalException("无效的八进制数", _expression, _position);
-        return Convert.ToInt64(_expression[start.._position], 8);
-    }
-
-    private double ReadBinary() {
-        var start = _position;
-        while (_position < _expression.Length && IsBinaryDigit(_expression[_position])) _position++;
-        if (_position == start) throw new FastEvalException("无效的二进制数", _expression, _position);
-        return Convert.ToInt64(_expression[start.._position], 2);
-    }
-
-    internal static bool IsIdentifierStart(char ch) {
-        return char.IsLetter(ch) || ch == '_' || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherLetter;
-    }
-
-    internal static bool IsIdentifierPart(char ch) {
-        return char.IsLetterOrDigit(ch) || ch == '_'
-            || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherLetter
-            || char.GetUnicodeCategory(ch) == UnicodeCategory.OtherNumber;
-    }
-
-    private static bool IsHexDigit(char ch) => ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
-    private static bool IsOctalDigit(char ch) => ch is >= '0' and <= '7';
-    private static bool IsBinaryDigit(char ch) => ch is '0' or '1';
+    private readonly bool IsAtEnd => _scanner.IsAtEnd;
+    private readonly char Peek() => _scanner.Peek();
+    private readonly char PeekNext() => _scanner.PeekNext();
+    private readonly char PeekNextNext() => _scanner.PeekNextNext();
+    private char Read() => _scanner.Read();
+    private void SkipWhitespace() => _scanner.SkipWhitespace();
+    private ReadOnlySpan<char> ReadIdentifierSpan() => _scanner.ReadIdentifierSpan();
+    private double ReadNumber() => _scanner.ReadNumber();
 
     #endregion
 
@@ -296,6 +220,10 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
                 Read(); Read();
                 var right = EvalAdditive();
                 left = BuiltInOperators.LeftShift(left, right);
+            } else if (Peek() == '>' && PeekNext() == '>' && PeekNextNext() == '>') {
+                Read(); Read(); Read();
+                var right = EvalAdditive();
+                left = BuiltInOperators.UnsignedRightShift(left, right);
             } else if (Peek() == '>' && PeekNext() == '>') {
                 Read(); Read();
                 var right = EvalAdditive();
@@ -397,14 +325,14 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
             Read();
             var result = EvalExpression();
             SkipWhitespace();
-            if (Peek() != ')') throw new FastEvalException("未闭合的括号", _expression, _position);
+            if (Peek() != ')') throw new FastEvalException("未闭合的括号", _expression, _scanner.Position);
             Read();
             return result;
         }
 
-        if (IsIdentifierStart(ch)) return EvalIdentifierOrKeyword();
+        if (FastScanner.IsIdentifierStart(ch)) return EvalIdentifierOrKeyword();
 
-        throw new FastEvalException($"意外的字符 '{ch}'", _expression, _position);
+        throw new FastEvalException($"意外的字符 '{ch}'", _expression, _scanner.Position);
     }
 
     /// <summary>
@@ -415,7 +343,7 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
         var span = ReadIdentifierSpan();
 
         // not 关键字作为前缀一元运算符
-        if (span.Length == 3 && EqualsLower(span, "not")) {
+        if (span.Length == 3 && FastScanner.EqualsLower(span, "not")) {
             var operand = EvalUnary();
             return ConvertToBool(operand) ? 0.0 : 1.0;
         }
@@ -450,7 +378,7 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
         }
 
         SkipWhitespace();
-        if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _position);
+        if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _scanner.Position);
         Read();
 
         return CallBuiltInFunction(name, buffer[..count]);
@@ -497,33 +425,13 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
 
     #region Span 比较
 
-    private static bool EqualsLower(ReadOnlySpan<char> span, string keyword) {
-        if (span.Length != keyword.Length) return false;
-        for (int i = 0; i < keyword.Length; i++) {
-            if (char.ToLowerInvariant(span[i]) != char.ToLowerInvariant(keyword[i])) return false;
-        }
-        return true;
-    }
+    private static bool EqualsLower(ReadOnlySpan<char> span, string keyword)
+        => FastScanner.EqualsLower(span, keyword);
 
     /// <summary>
     /// 尝试在当前位置匹配关键字（大小写不敏感），匹配成功则推进位置
     /// </summary>
-    private bool TryMatchKeyword(string keyword) {
-        SkipWhitespace();
-        var pos = _position;
-
-        if (pos + keyword.Length > _expression.Length) return false;
-
-        for (int i = 0; i < keyword.Length; i++) {
-            if (char.ToLowerInvariant(_expression[pos + i]) != char.ToLowerInvariant(keyword[i])) return false;
-        }
-
-        // 确保关键字后不是标识符字符
-        if (pos + keyword.Length < _expression.Length && IsIdentifierPart(_expression[pos + keyword.Length])) return false;
-
-        _position = pos + keyword.Length;
-        return true;
-    }
+    private bool TryMatchKeyword(string keyword) => _scanner.TryMatchKeyword(keyword);
 
     #endregion
 }

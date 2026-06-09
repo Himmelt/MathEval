@@ -40,6 +40,14 @@ internal static class BuiltInOperators {
         return (long)value;
     }
 
+    /// <summary>
+    /// 将 double 转换为 ulong，如果非整数则抛出异常
+    /// </summary>
+    public static ulong ToUInt64(double value, string operationName) {
+        if (!IsInteger(value) || value < 0) throw new FastEvalException($"{operationName} 运算需要非负整数操作数");
+        return (ulong)value;
+    }
+
     #endregion
 
     #region 算术运算
@@ -121,7 +129,7 @@ internal static class BuiltInOperators {
     }
 
     /// <summary>
-    /// 算术右移运算 &gt;&gt;
+    /// 算术右移运算 >>
     /// </summary>
     public static double RightShift(double left, double right) {
         var l1 = ToInt64(left, "右移");
@@ -129,6 +137,17 @@ internal static class BuiltInOperators {
         if (l2 < 0) throw new FastEvalException("移位量不能为负数");
         if (l2 >= 64) l2 %= 64;
         return l1 >> (int)l2;
+    }
+
+    /// <summary>
+    /// 无符号右移运算 >>>（逻辑移位，高位补 0）
+    /// </summary>
+    public static double UnsignedRightShift(double left, double right) {
+        var l1 = ToUInt64(left, "无符号右移");
+        var l2 = ToInt64(right, "无符号右移");
+        if (l2 < 0) throw new FastEvalException("移位量不能为负数");
+        if (l2 >= 64) l2 %= 64;
+        return (long)(l1 >> (int)l2);
     }
 
     #endregion

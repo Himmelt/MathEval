@@ -72,19 +72,19 @@ internal static class JitCompiler {
 
             switch (instr.OpCode) {
                 case VmOpCode.PushConst:
-                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_R8, instr.DoubleOperand);
+                    il.Emit(OpCodes.Ldc_R8, instr.DoubleOperand);
                     break;
 
                 case VmOpCode.LoadVar:
                     EmitLoadVar(il, instr.StringOperand!);
                     break;
 
-                case VmOpCode.Add: il.Emit(System.Reflection.Emit.OpCodes.Add); break;
-                case VmOpCode.Sub: il.Emit(System.Reflection.Emit.OpCodes.Sub); break;
-                case VmOpCode.Mul: il.Emit(System.Reflection.Emit.OpCodes.Mul); break;
-                case VmOpCode.Div: il.Emit(System.Reflection.Emit.OpCodes.Div); break;
-                case VmOpCode.Mod: il.Emit(System.Reflection.Emit.OpCodes.Rem); break;
-                case VmOpCode.Negate: il.Emit(System.Reflection.Emit.OpCodes.Neg); break;
+                case VmOpCode.Add: il.Emit(OpCodes.Add); break;
+                case VmOpCode.Sub: il.Emit(OpCodes.Sub); break;
+                case VmOpCode.Mul: il.Emit(OpCodes.Mul); break;
+                case VmOpCode.Div: il.Emit(OpCodes.Div); break;
+                case VmOpCode.Mod: il.Emit(OpCodes.Rem); break;
+                case VmOpCode.Negate: il.Emit(OpCodes.Neg); break;
 
                 case VmOpCode.IntDiv: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.IntegerDivide).Method); break;
                 case VmOpCode.MathMod: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Modulo).Method); break;
@@ -98,6 +98,7 @@ internal static class JitCompiler {
                 case VmOpCode.BitwiseXor: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseXor).Method); break;
                 case VmOpCode.LeftShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LeftShift).Method); break;
                 case VmOpCode.RightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.RightShift).Method); break;
+                case VmOpCode.UnsignedRightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.UnsignedRightShift).Method); break;
 
                 case VmOpCode.Equal: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Equal).Method); break;
                 case VmOpCode.NotEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.NotEqual).Method); break;
@@ -115,7 +116,7 @@ internal static class JitCompiler {
                     break;
 
                 case VmOpCode.Jump:
-                    il.Emit(System.Reflection.Emit.OpCodes.Br, labels[instr.IntOperand]);
+                    il.Emit(OpCodes.Br, labels[instr.IntOperand]);
                     break;
 
                 default:
@@ -125,7 +126,7 @@ internal static class JitCompiler {
 
         // 标记末尾标签（跳转目标 = instructions.Length 时跳到这里）
         il.MarkLabel(labels[instructions.Length]);
-        il.Emit(System.Reflection.Emit.OpCodes.Ret);
+        il.Emit(OpCodes.Ret);
 
         return method.CreateDelegate<Func<IReadOnlyDictionary<string, double>?, double>>();
     }
@@ -137,30 +138,30 @@ internal static class JitCompiler {
         var throwLabel = il.DefineLabel();
         var valLocal = il.DeclareLocal(typeof(double));
 
-        il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
-        il.Emit(System.Reflection.Emit.OpCodes.Brfalse_S, throwLabel);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Brfalse_S, throwLabel);
 
-        il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
-        il.Emit(System.Reflection.Emit.OpCodes.Ldstr, varName);
-        il.Emit(System.Reflection.Emit.OpCodes.Ldloca, valLocal);
-        il.Emit(System.Reflection.Emit.OpCodes.Callvirt, typeof(IReadOnlyDictionary<string, double>).GetMethod("TryGetValue")!);
-        il.Emit(System.Reflection.Emit.OpCodes.Brtrue_S, foundLabel);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldstr, varName);
+        il.Emit(OpCodes.Ldloca, valLocal);
+        il.Emit(OpCodes.Callvirt, typeof(IReadOnlyDictionary<string, double>).GetMethod("TryGetValue")!);
+        il.Emit(OpCodes.Brtrue_S, foundLabel);
 
         il.MarkLabel(throwLabel);
-        il.Emit(System.Reflection.Emit.OpCodes.Ldstr, varName);
-        il.Emit(System.Reflection.Emit.OpCodes.Call, typeof(JitCompiler).GetMethod(nameof(ThrowUndefinedVariable), BindingFlags.NonPublic | BindingFlags.Static)!);
-        il.Emit(System.Reflection.Emit.OpCodes.Throw);
+        il.Emit(OpCodes.Ldstr, varName);
+        il.Emit(OpCodes.Call, typeof(JitCompiler).GetMethod(nameof(ThrowUndefinedVariable), BindingFlags.NonPublic | BindingFlags.Static)!);
+        il.Emit(OpCodes.Throw);
 
         il.MarkLabel(foundLabel);
-        il.Emit(System.Reflection.Emit.OpCodes.Ldloc, valLocal);
+        il.Emit(OpCodes.Ldloc, valLocal);
     }
 
     private static void EmitBinaryCall(ILGenerator il, MethodInfo method) {
-        il.Emit(System.Reflection.Emit.OpCodes.Call, method);
+        il.Emit(OpCodes.Call, method);
     }
 
     private static void EmitUnaryCall(ILGenerator il, MethodInfo method) {
-        il.Emit(System.Reflection.Emit.OpCodes.Call, method);
+        il.Emit(OpCodes.Call, method);
     }
 
     /// <summary>
@@ -171,51 +172,45 @@ internal static class JitCompiler {
     private static void EmitCall(ILGenerator il, byte functionId, int argCount) {
         switch (functionId) {
             // 单参数 Math 方法
-            case 0: il.Emit(System.Reflection.Emit.OpCodes.Call, _sin); break;      // sin
-            case 1: il.Emit(System.Reflection.Emit.OpCodes.Call, _cos); break;      // cos
-            case 2: il.Emit(System.Reflection.Emit.OpCodes.Call, _tan); break;      // tan
-            case 3: il.Emit(System.Reflection.Emit.OpCodes.Call, _asin); break;     // asin
-            case 4: il.Emit(System.Reflection.Emit.OpCodes.Call, _acos); break;     // acos
-            case 5: il.Emit(System.Reflection.Emit.OpCodes.Call, _atan); break;     // atan
-            case 7: il.Emit(System.Reflection.Emit.OpCodes.Call, _exp); break;      // exp
-            case 9: il.Emit(System.Reflection.Emit.OpCodes.Call, _log); break;      // ln
-            case 10: il.Emit(System.Reflection.Emit.OpCodes.Call, _log10); break;    // lg
-            case 12: il.Emit(System.Reflection.Emit.OpCodes.Call, _log2); break;     // log2
-            case 13: il.Emit(System.Reflection.Emit.OpCodes.Call, _log10); break;    // log10
-            case 14: il.Emit(System.Reflection.Emit.OpCodes.Call, _abs); break;      // abs
-            case 15: il.Emit(System.Reflection.Emit.OpCodes.Call, _sqrt); break;     // sqrt
+            case 0: il.Emit(OpCodes.Call, _sin); break;      // sin
+            case 1: il.Emit(OpCodes.Call, _cos); break;      // cos
+            case 2: il.Emit(OpCodes.Call, _tan); break;      // tan
+            case 3: il.Emit(OpCodes.Call, _asin); break;     // asin
+            case 4: il.Emit(OpCodes.Call, _acos); break;     // acos
+            case 5: il.Emit(OpCodes.Call, _atan); break;     // atan
+            case 7: il.Emit(OpCodes.Call, _exp); break;      // exp
+            case 9: il.Emit(OpCodes.Call, _log); break;      // ln
+            case 10: il.Emit(OpCodes.Call, _log10); break;    // lg
+            case 12: il.Emit(OpCodes.Call, _log2); break;     // log2
+            case 13: il.Emit(OpCodes.Call, _log10); break;    // log10
+            case 14: il.Emit(OpCodes.Call, _abs); break;      // abs
+            case 15: il.Emit(OpCodes.Call, _sqrt); break;     // sqrt
             case 16: // sign → Math.Sign(double) 返回 int，需 Conv_R8 转为 double
-                il.Emit(System.Reflection.Emit.OpCodes.Call, _sign);
-                il.Emit(System.Reflection.Emit.OpCodes.Conv_R8);
+                il.Emit(OpCodes.Call, _sign);
+                il.Emit(OpCodes.Conv_R8);
                 break;
-            case 17: il.Emit(System.Reflection.Emit.OpCodes.Call, _ceiling); break;  // ceil
-            case 18: il.Emit(System.Reflection.Emit.OpCodes.Call, _floor); break;    // floor
-            case 19: il.Emit(System.Reflection.Emit.OpCodes.Call, _truncate); break; // trunc
+            case 17: il.Emit(OpCodes.Call, _ceiling); break;  // ceil
+            case 18: il.Emit(OpCodes.Call, _floor); break;    // floor
+            case 19: il.Emit(OpCodes.Call, _truncate); break; // trunc
 
             // 双参数 Math 方法
-            case 6: il.Emit(System.Reflection.Emit.OpCodes.Call, _atan2); break;    // atan2
-            case 8: il.Emit(System.Reflection.Emit.OpCodes.Call, _pow); break;      // pow
+            case 6: il.Emit(OpCodes.Call, _atan2); break;    // atan2
+            case 8: il.Emit(OpCodes.Call, _pow); break;      // pow
 
             // 可变参数函数
             case 11: // log: 1参数=自然对数, 2参数=指定底数
-                if (argCount == 1)
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _log);
-                else
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _logBase);
+                if (argCount == 1) il.Emit(OpCodes.Call, _log);
+                else il.Emit(OpCodes.Call, _logBase);
                 break;
             case 20: // round: 1参数=四舍五入, 2参数=指定小数位
-                if (argCount == 1)
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _round);
-                else
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _roundDigits);
+                if (argCount == 1) il.Emit(OpCodes.Call, _round);
+                else il.Emit(OpCodes.Call, _roundDigits);
                 break;
             case 21: // max: 链式调用 Math.Max（满足交换律和结合律）
-                for (int i = 1; i < argCount; i++)
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _max);
+                for (int i = 1; i < argCount; i++) il.Emit(OpCodes.Call, _max);
                 break;
             case 22: // min: 链式调用 Math.Min（满足交换律和结合律）
-                for (int i = 1; i < argCount; i++)
-                    il.Emit(System.Reflection.Emit.OpCodes.Call, _min);
+                for (int i = 1; i < argCount; i++) il.Emit(OpCodes.Call, _min);
                 break;
 
             default:
@@ -229,8 +224,8 @@ internal static class JitCompiler {
     private static double RoundWithDigits(double value, double digits) => Math.Round(value, (int)digits);
 
     private static void EmitJumpIfFalse(ILGenerator il, Label targetLabel) {
-        il.Emit(System.Reflection.Emit.OpCodes.Call, typeof(JitCompiler).GetMethod(nameof(ConvertToBool), BindingFlags.NonPublic | BindingFlags.Static)!);
-        il.Emit(System.Reflection.Emit.OpCodes.Brfalse, targetLabel);
+        il.Emit(OpCodes.Call, typeof(JitCompiler).GetMethod(nameof(ConvertToBool), BindingFlags.NonPublic | BindingFlags.Static)!);
+        il.Emit(OpCodes.Brfalse, targetLabel);
     }
 
     private static bool ConvertToBool(double value) => value != 0 && !double.IsNaN(value);
@@ -238,8 +233,7 @@ internal static class JitCompiler {
     /// <summary>
     /// 辅助方法：构造 FastEvalException（避免主构造函数反射问题）
     /// </summary>
-    private static FastEvalException ThrowUndefinedVariable(string varName) =>
-        new($"未定义的变量 '{varName}'");
+    private static FastEvalException ThrowUndefinedVariable(string varName) => new($"未定义的变量 '{varName}'");
 
     #endregion
 }

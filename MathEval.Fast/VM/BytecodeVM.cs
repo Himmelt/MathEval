@@ -49,6 +49,7 @@ internal static class BytecodeVM {
                 case OpCode.BitwiseXor: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.BitwiseXor(stack[sp - 1], r); break; }
                 case OpCode.LeftShift: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.LeftShift(stack[sp - 1], r); break; }
                 case OpCode.RightShift: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.RightShift(stack[sp - 1], r); break; }
+                case OpCode.UnsignedRightShift: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.UnsignedRightShift(stack[sp - 1], r); break; }
 
                 case OpCode.Equal: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.Equal(stack[sp - 1], r); break; }
                 case OpCode.NotEqual: { var r = stack[--sp]; stack[sp - 1] = BuiltInOperators.NotEqual(stack[sp - 1], r); break; }
