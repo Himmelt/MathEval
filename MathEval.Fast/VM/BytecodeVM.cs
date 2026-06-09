@@ -63,21 +63,21 @@ internal static class BytecodeVM {
                     throw new FastEvalException("内部错误：LogicalAnd/LogicalOr 不应由 VM 直接执行");
 
                 case OpCode.Call: {
-                    var func = BytecodeCompiler.FunctionTable.GetFunction(instr.FunctionId);
-                    var argCount = instr.IntOperand;
-                    var args = new double[argCount];
-                    for (int i = argCount - 1; i >= 0; i--) {
-                        args[i] = stack[--sp];
+                        var func = BytecodeCompiler.FunctionTable.GetFunction(instr.FunctionId);
+                        var argCount = instr.IntOperand;
+                        var args = new double[argCount];
+                        for (int i = argCount - 1; i >= 0; i--) {
+                            args[i] = stack[--sp];
+                        }
+                        stack[sp++] = func(args);
+                        break;
                     }
-                    stack[sp++] = func(args);
-                    break;
-                }
 
                 case OpCode.JumpIfFalse: {
-                    var val = stack[--sp];
-                    if (!ConvertToBool(val)) ip = instr.IntOperand;
-                    break;
-                }
+                        var val = stack[--sp];
+                        if (!ConvertToBool(val)) ip = instr.IntOperand;
+                        break;
+                    }
 
                 case OpCode.Jump:
                     ip = instr.IntOperand;

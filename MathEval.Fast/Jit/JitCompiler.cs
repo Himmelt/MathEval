@@ -1,8 +1,8 @@
-using System.Reflection;
-using System.Reflection.Emit;
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
 using MathEval.Fast.VM;
+using System.Reflection;
+using System.Reflection.Emit;
 using VmOpCode = MathEval.Fast.VM.OpCode;
 
 namespace MathEval.Fast.Jit;
@@ -171,14 +171,14 @@ internal static class JitCompiler {
     private static void EmitCall(ILGenerator il, byte functionId, int argCount) {
         switch (functionId) {
             // 单参数 Math 方法
-            case 0:  il.Emit(System.Reflection.Emit.OpCodes.Call, _sin); break;      // sin
-            case 1:  il.Emit(System.Reflection.Emit.OpCodes.Call, _cos); break;      // cos
-            case 2:  il.Emit(System.Reflection.Emit.OpCodes.Call, _tan); break;      // tan
-            case 3:  il.Emit(System.Reflection.Emit.OpCodes.Call, _asin); break;     // asin
-            case 4:  il.Emit(System.Reflection.Emit.OpCodes.Call, _acos); break;     // acos
-            case 5:  il.Emit(System.Reflection.Emit.OpCodes.Call, _atan); break;     // atan
-            case 7:  il.Emit(System.Reflection.Emit.OpCodes.Call, _exp); break;      // exp
-            case 9:  il.Emit(System.Reflection.Emit.OpCodes.Call, _log); break;      // ln
+            case 0: il.Emit(System.Reflection.Emit.OpCodes.Call, _sin); break;      // sin
+            case 1: il.Emit(System.Reflection.Emit.OpCodes.Call, _cos); break;      // cos
+            case 2: il.Emit(System.Reflection.Emit.OpCodes.Call, _tan); break;      // tan
+            case 3: il.Emit(System.Reflection.Emit.OpCodes.Call, _asin); break;     // asin
+            case 4: il.Emit(System.Reflection.Emit.OpCodes.Call, _acos); break;     // acos
+            case 5: il.Emit(System.Reflection.Emit.OpCodes.Call, _atan); break;     // atan
+            case 7: il.Emit(System.Reflection.Emit.OpCodes.Call, _exp); break;      // exp
+            case 9: il.Emit(System.Reflection.Emit.OpCodes.Call, _log); break;      // ln
             case 10: il.Emit(System.Reflection.Emit.OpCodes.Call, _log10); break;    // lg
             case 12: il.Emit(System.Reflection.Emit.OpCodes.Call, _log2); break;     // log2
             case 13: il.Emit(System.Reflection.Emit.OpCodes.Call, _log10); break;    // log10
@@ -193,8 +193,8 @@ internal static class JitCompiler {
             case 19: il.Emit(System.Reflection.Emit.OpCodes.Call, _truncate); break; // trunc
 
             // 双参数 Math 方法
-            case 6:  il.Emit(System.Reflection.Emit.OpCodes.Call, _atan2); break;    // atan2
-            case 8:  il.Emit(System.Reflection.Emit.OpCodes.Call, _pow); break;      // pow
+            case 6: il.Emit(System.Reflection.Emit.OpCodes.Call, _atan2); break;    // atan2
+            case 8: il.Emit(System.Reflection.Emit.OpCodes.Call, _pow); break;      // pow
 
             // 可变参数函数
             case 11: // log: 1参数=自然对数, 2参数=指定底数

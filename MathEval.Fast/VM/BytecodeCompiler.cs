@@ -1,6 +1,6 @@
-using System.Globalization;
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
+using System.Globalization;
 
 namespace MathEval.Fast.VM;
 
@@ -14,7 +14,7 @@ internal class BytecodeCompiler {
 
     private readonly string _expression;
     private int _position;
-    private readonly List<Instruction> _instructions = new();
+    private readonly List<Instruction> _instructions = [];
 
     public BytecodeCompiler(string expression) {
         _expression = expression ?? throw new FastEvalException("表达式不能为 null");
