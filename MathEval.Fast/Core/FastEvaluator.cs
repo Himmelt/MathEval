@@ -1,6 +1,7 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace MathEval.Fast.Core;
 
@@ -11,19 +12,11 @@ namespace MathEval.Fast.Core;
 /// <br/>
 /// 优化：ref struct 栈分配、Span 直接比较、stackalloc 参数、内联运算符、标识符统一解析
 /// </summary>
-internal ref struct FastEvaluator {
+internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
 
-    private readonly string _expression;
-    private int _position;
-    private readonly IReadOnlyDictionary<string, double>? _variables;
-    private bool _skipMode;
-
-    public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
-        _expression = expression ?? throw new FastEvalException("表达式不能为 null");
-        _position = 0;
-        _variables = variables;
-        _skipMode = false;
-    }
+    private int _position = 0;
+    private bool _skipMode = false;
+    private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
 
     public double Evaluate() {
         SkipWhitespace();
@@ -92,21 +85,21 @@ internal ref struct FastEvaluator {
         var start = _position;
         while (_position < _expression.Length && IsHexDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的十六进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 16);
+        return Convert.ToInt64(_expression[start.._position], 16);
     }
 
     private double ReadOctal() {
         var start = _position;
         while (_position < _expression.Length && IsOctalDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的八进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 8);
+        return Convert.ToInt64(_expression[start.._position], 8);
     }
 
     private double ReadBinary() {
         var start = _position;
         while (_position < _expression.Length && IsBinaryDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的二进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 2);
+        return Convert.ToInt64(_expression[start.._position], 2);
     }
 
     internal static bool IsIdentifierStart(char ch) {
@@ -319,11 +312,11 @@ internal ref struct FastEvaluator {
             if (Peek() == '+') {
                 Read();
                 var right = EvalMultiplicative();
-                left = left + right;
+                left += right;
             } else if (Peek() == '-') {
                 Read();
                 var right = EvalMultiplicative();
-                left = left - right;
+                left -= right;
             } else break;
         }
         return left;
@@ -444,13 +437,13 @@ internal ref struct FastEvaluator {
         int count = 0;
         SkipWhitespace();
         if (Peek() != ')') {
-            if (count >= buffer.Length) buffer = GrowBuffer(buffer, ref count);
+            if (count >= buffer.Length) buffer = GrowBuffer(buffer);
             buffer[count++] = EvalExpression();
             while (true) {
                 SkipWhitespace();
                 if (Peek() != ',') break;
                 Read();
-                if (count >= buffer.Length) buffer = GrowBuffer(buffer, ref count);
+                if (count >= buffer.Length) buffer = GrowBuffer(buffer);
                 buffer[count++] = EvalExpression();
             }
         }
@@ -459,23 +452,23 @@ internal ref struct FastEvaluator {
         if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _position);
         Read();
 
-        return CallBuiltInFunction(name, buffer.Slice(0, count));
+        return CallBuiltInFunction(name, buffer[..count]);
     }
 
-    private static Span<double> GrowBuffer(Span<double> buffer, ref int count) {
+    private static Span<double> GrowBuffer(Span<double> buffer) {
         var newBuffer = new double[buffer.Length * 2];
         buffer.CopyTo(newBuffer);
         return newBuffer;
     }
 
-    private double LookupVariable(ReadOnlySpan<char> name) {
+    private readonly double LookupVariable(ReadOnlySpan<char> name) {
         if (_skipMode) return default;
-        if (_variables != null) {
+        if (variables != null) {
             // 变量查找仍需字符串 key（Dictionary 限制）
             var nameStr = name.ToString();
-            if (_variables.TryGetValue(nameStr, out var value)) return value;
+            if (variables.TryGetValue(nameStr, out var value)) return value;
         }
-        throw new FastEvalException($"未定义的变量 '{name.ToString()}'", _expression);
+        throw new FastEvalException($"未定义的变量 '{name}'", _expression);
     }
 
     private static double CallBuiltInFunction(ReadOnlySpan<char> name, ReadOnlySpan<double> args) {
@@ -483,24 +476,21 @@ internal ref struct FastEvaluator {
             double[] arr = args.ToArray();
             return func(arr);
         }
-        throw new FastEvalException($"未知函数 '{name.ToString()}'", "");
+        throw new FastEvalException($"未知函数 '{name}'", "");
     }
 
     #endregion
 
     #region 内联运算辅助
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ConvertToBool(double value) => value != 0 && !double.IsNaN(value);
 
-    private static double Equal(double left, double right) {
-        if (double.IsNaN(left) || double.IsNaN(right)) return 0.0;
-        return left == right ? 1.0 : 0.0;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double Equal(double left, double right) => left == right ? 1.0 : 0.0;
 
-    private static double NotEqual(double left, double right) {
-        if (double.IsNaN(left) || double.IsNaN(right)) return 1.0;
-        return left != right ? 1.0 : 0.0;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double NotEqual(double left, double right) => left != right ? 1.0 : 0.0;
 
     #endregion
 

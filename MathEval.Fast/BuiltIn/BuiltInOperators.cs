@@ -45,42 +45,10 @@ internal static class BuiltInOperators {
     #region 算术运算
 
     /// <summary>
-    /// 加法运算 +
-    /// </summary>
-    public static double Add(double left, double right) => left + right;
-
-    /// <summary>
-    /// 减法运算 -
-    /// </summary>
-    public static double Subtract(double left, double right) => left - right;
-
-    /// <summary>
-    /// 乘法运算 *
-    /// </summary>
-    public static double Multiply(double left, double right) => left * right;
-
-    /// <summary>
-    /// 除法运算 /
-    /// </summary>
-    public static double Divide(double left, double right) {
-        return left / right;
-    }
-
-    /// <summary>
     /// 整除运算 //
     /// </summary>
     public static double IntegerDivide(double left, double right) {
-        // TODO 实现泛型版本，支持整数和浮点数的整除
         return Math.Truncate(left / right);
-    }
-
-    /// <summary>
-    /// 取余运算 %
-    /// <br/>
-    /// 结果符号与被除数（左操作数）相同，直接使用 C# 的 % 运算符
-    /// </summary>
-    public static double Remainder(double left, double right) {
-        return left % right;
     }
 
     /// <summary>
@@ -90,8 +58,7 @@ internal static class BuiltInOperators {
     /// </summary>
     public static double Modulo(double left, double right) {
         double r = left % right;
-        if ((r < 0 && right > 0) || (r > 0 && right < 0))
-            r += right;
+        if ((r < 0 && right > 0) || (r > 0 && right < 0)) r += right;
         return r;
     }
 
@@ -105,12 +72,6 @@ internal static class BuiltInOperators {
     #endregion
 
     #region 一元运算
-
-    /// <summary>
-    /// 一元负号 -
-    /// </summary>
-    public static double Negate(double operand) => -operand;
-
     /// <summary>
     /// 逻辑非运算 ! 或 not
     /// </summary>

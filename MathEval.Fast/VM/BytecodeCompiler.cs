@@ -106,21 +106,21 @@ internal class BytecodeCompiler {
         var start = _position;
         while (_position < _expression.Length && IsHexDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的十六进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 16);
+        return Convert.ToInt64(_expression[start.._position], 16);
     }
 
     private double ReadOctal() {
         var start = _position;
         while (_position < _expression.Length && IsOctalDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的八进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 8);
+        return Convert.ToInt64(_expression[start.._position], 8);
     }
 
     private double ReadBinary() {
         var start = _position;
         while (_position < _expression.Length && IsBinaryDigit(_expression[_position])) _position++;
         if (_position == start) throw new FastEvalException("无效的二进制数", _expression, _position);
-        return Convert.ToInt64(_expression.Substring(start, _position - start), 2);
+        return Convert.ToInt64(_expression[start.._position], 2);
     }
 
     private static bool IsIdentifierStart(char ch) {
@@ -468,7 +468,7 @@ internal class BytecodeCompiler {
 
         // 查找函数 ID
         if (!FunctionTable.TryGetId(name, out var funcId)) {
-            throw new FastEvalException($"未知函数 '{name.ToString()}'", _expression);
+            throw new FastEvalException($"未知函数 '{name}'", _expression);
         }
 
         Emit(Instruction.CallFunc(funcId, argCount));
