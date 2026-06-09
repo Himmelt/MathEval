@@ -3,6 +3,7 @@ using MathEval.Fast.Exceptions;
 using MathEval.Fast.VM;
 using System.Reflection;
 using System.Reflection.Emit;
+using VmOpCode = MathEval.Fast.VM.OpCode;
 
 namespace MathEval.Fast.Jit;
 
@@ -42,51 +43,51 @@ internal static class JitCompiler {
             il.MarkLabel(labels[ip]);
 
             switch (instr.OpCode) {
-                case OpCode.PushConst:
+                case VmOpCode.PushConst:
                     il.Emit(OpCodes.Ldc_R8, instr.DoubleOperand);
                     break;
 
-                case OpCode.LoadVar:
+                case VmOpCode.LoadVar:
                     EmitLoadVar(il, instr.StringOperand!);
                     break;
 
-                case OpCode.Add: il.Emit(OpCodes.Add); break;
-                case OpCode.Sub: il.Emit(OpCodes.Sub); break;
-                case OpCode.Mul: il.Emit(OpCodes.Mul); break;
-                case OpCode.Div: il.Emit(OpCodes.Div); break;
-                case OpCode.Mod: il.Emit(OpCodes.Rem); break;
-                case OpCode.Negate: il.Emit(OpCodes.Neg); break;
+                case VmOpCode.Add: il.Emit(OpCodes.Add); break;
+                case VmOpCode.Sub: il.Emit(OpCodes.Sub); break;
+                case VmOpCode.Mul: il.Emit(OpCodes.Mul); break;
+                case VmOpCode.Div: il.Emit(OpCodes.Div); break;
+                case VmOpCode.Mod: il.Emit(OpCodes.Rem); break;
+                case VmOpCode.Negate: il.Emit(OpCodes.Neg); break;
 
-                case OpCode.IntDiv: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.IntegerDivide).Method); break;
-                case OpCode.MathMod: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Modulo).Method); break;
-                case OpCode.Pow: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Power).Method); break;
+                case VmOpCode.IntDiv: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.IntegerDivide).Method); break;
+                case VmOpCode.MathMod: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Modulo).Method); break;
+                case VmOpCode.Pow: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Power).Method); break;
 
-                case OpCode.LogicalNot: EmitUnaryCall(il, ((Func<double, double>)BuiltInOperators.Not).Method); break;
-                case OpCode.BitwiseNot: EmitUnaryCall(il, ((Func<double, double>)BuiltInOperators.BitwiseNot).Method); break;
+                case VmOpCode.LogicalNot: EmitUnaryCall(il, ((Func<double, double>)BuiltInOperators.Not).Method); break;
+                case VmOpCode.BitwiseNot: EmitUnaryCall(il, ((Func<double, double>)BuiltInOperators.BitwiseNot).Method); break;
 
-                case OpCode.BitwiseOr: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseOr).Method); break;
-                case OpCode.BitwiseAnd: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseAnd).Method); break;
-                case OpCode.BitwiseXor: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseXor).Method); break;
-                case OpCode.LeftShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LeftShift).Method); break;
-                case OpCode.RightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.RightShift).Method); break;
-                case OpCode.UnsignedRightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.UnsignedRightShift).Method); break;
+                case VmOpCode.BitwiseOr: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseOr).Method); break;
+                case VmOpCode.BitwiseAnd: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseAnd).Method); break;
+                case VmOpCode.BitwiseXor: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.BitwiseXor).Method); break;
+                case VmOpCode.LeftShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LeftShift).Method); break;
+                case VmOpCode.RightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.RightShift).Method); break;
+                case VmOpCode.UnsignedRightShift: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.UnsignedRightShift).Method); break;
 
-                case OpCode.Equal: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Equal).Method); break;
-                case OpCode.NotEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.NotEqual).Method); break;
-                case OpCode.LessThan: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LessThan).Method); break;
-                case OpCode.LessOrEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LessThanOrEqual).Method); break;
-                case OpCode.GreaterThan: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.GreaterThan).Method); break;
-                case OpCode.GreaterOrEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.GreaterThanOrEqual).Method); break;
+                case VmOpCode.Equal: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.Equal).Method); break;
+                case VmOpCode.NotEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.NotEqual).Method); break;
+                case VmOpCode.LessThan: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LessThan).Method); break;
+                case VmOpCode.LessOrEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.LessThanOrEqual).Method); break;
+                case VmOpCode.GreaterThan: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.GreaterThan).Method); break;
+                case VmOpCode.GreaterOrEqual: EmitBinaryCall(il, ((Func<double, double, double>)BuiltInOperators.GreaterThanOrEqual).Method); break;
 
-                case OpCode.Call:
+                case VmOpCode.Call:
                     EmitCall(il, instr.FunctionId, instr.IntOperand);
                     break;
 
-                case OpCode.JumpIfFalse:
+                case VmOpCode.JumpIfFalse:
                     EmitJumpIfFalse(il, labels[instr.IntOperand]);
                     break;
 
-                case OpCode.Jump:
+                case VmOpCode.Jump:
                     il.Emit(OpCodes.Br, labels[instr.IntOperand]);
                     break;
 
