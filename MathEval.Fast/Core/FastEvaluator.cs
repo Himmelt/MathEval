@@ -326,7 +326,7 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
         var left = EvalPower();
         while (true) {
             SkipWhitespace();
-            if (Peek() == '*') {
+            if (Peek() == '*' && PeekNext() != '*') {
                 Read();
                 var right = EvalPower();
                 left = _skipMode ? default : left * right;
@@ -353,8 +353,9 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
     private double EvalPower() {
         var left = EvalUnary();
         SkipWhitespace();
-        if (Peek() == '^') {
+        if (Peek() == '^' || (Peek() == '*' && PeekNext() == '*')) {
             Read();
+            if (Peek() == '*') Read(); // 消耗第二个 *
             var right = EvalPower();
             return _skipMode ? default : BuiltInOperators.Power(left, right);
         }
