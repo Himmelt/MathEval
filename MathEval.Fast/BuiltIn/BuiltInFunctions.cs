@@ -41,10 +41,10 @@ internal static class BuiltInFunctions {
         new("exp",   1, 1, args => Math.Exp(args[0]),  M1(Math.Exp)),
         new("pow",   2, 2, args => Math.Pow(args[0], args[1]), JitMethod2: M2(Math.Pow)),
         // 对数函数
-        new("ln",    1, 1, args => Math.Log(args[0]),  M1((Func<double, double>)Math.Log)),
+        new("ln",    1, 1, args => Math.Log(args[0]),  M1(Math.Log)),
         new("lg",    1, 1, args => Math.Log10(args[0]), M1(Math.Log10)),
         new("log",   1, 2, args => args.Length == 1 ? Math.Log(args[0]) : Math.Log(args[0], args[1]),
-            M1((Func<double, double>)Math.Log), M2((Func<double, double, double>)Math.Log)),
+            M1(Math.Log), M2(Math.Log)),
         new("log2",  1, 1, args => Math.Log2(args[0]), M1(Math.Log2)),
         new("log10", 1, 1, args => Math.Log10(args[0]), M1(Math.Log10)),
         // 数值处理函数
@@ -55,8 +55,7 @@ internal static class BuiltInFunctions {
         new("ceil",  1, 1, args => Math.Ceiling(args[0]), M1(Math.Ceiling)),
         new("floor", 1, 1, args => Math.Floor(args[0]),  M1(Math.Floor)),
         new("trunc", 1, 1, args => Math.Truncate(args[0]), M1(Math.Truncate)),
-        new("round", 1, 2, args => args.Length == 1 ? Math.Round(args[0]) : Math.Round(args[0], (int)args[1]),
-            M1((Func<double, double>)Math.Round), M2(RoundWithDigits)),
+        new("round", 1, 2, args => args.Length == 1 ? Math.Round(args[0]) : Math.Round(args[0], (int)args[1]), M1(Math.Round), M2(RoundWithDigits)),
         // 聚合函数
         new("max",   1, int.MaxValue, args => args.Max(), JitMethod2: M2(Math.Max)),
         new("min",   1, int.MaxValue, args => args.Min(), JitMethod2: M2(Math.Min)),

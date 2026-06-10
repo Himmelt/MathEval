@@ -235,7 +235,7 @@ public class FastEvalJitTests {
     [Fact]
     public void Compile_BitwiseNot() {
         var fn = FastEval.Compile("~0");
-        Assert.Equal((double)(~0L), fn(null));
+        Assert.Equal(~0L, fn(null));
     }
 
     [Fact]

@@ -295,7 +295,7 @@ public class Parser {
             } else {
                 value = long.Parse(text);
             }
-            return (double)value;
+            return value;
         } catch (FormatException ex) {
             throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
         } catch (System.OverflowException) {
