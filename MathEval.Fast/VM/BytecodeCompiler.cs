@@ -391,9 +391,14 @@ internal class BytecodeCompiler(string expression) {
         if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _scanner.Position);
         Read();
 
-        // 查找函数 ID
-        if (!FunctionTable.TryGetId(name, out var funcId)) {
+        // 查找函数定义并校验参数数量
+        if (!BuiltInFunctions.TryGetId(name, out var funcId)) {
             throw new FastEvalException($"未知函数 '{name}'", _expression);
+        }
+        var def = BuiltInFunctions.GetById(funcId);
+        if (argCount < def.MinArgs || argCount > def.MaxArgs) {
+            var maxLabel = def.MaxArgs == int.MaxValue ? "N" : def.MaxArgs.ToString();
+            throw new FastEvalException($"函数 {def.Name} 需要 {def.MinArgs}-{maxLabel} 个参数，但提供了 {argCount} 个", _expression);
         }
 
         Emit(Instruction.CallFunc(funcId, argCount));
@@ -413,115 +418,4 @@ internal class BytecodeCompiler(string expression) {
 
     #endregion
 
-    #region 函数 ID 映射表
-
-    /// <summary>
-    /// 内置函数名称到 byte ID 的映射，供编译器和 VM 共用
-    /// </summary>
-    internal static class FunctionTable {
-        private static readonly Dictionary<string, byte> _nameToId = new(StringComparer.OrdinalIgnoreCase) {
-            ["sin"] = 0,
-            ["cos"] = 1,
-            ["tan"] = 2,
-            ["asin"] = 3,
-            ["acos"] = 4,
-            ["atan"] = 5,
-            ["atan2"] = 6,
-            ["exp"] = 7,
-            ["pow"] = 8,
-            ["ln"] = 9,
-            ["lg"] = 10,
-            ["log"] = 11,
-            ["log2"] = 12,
-            ["log10"] = 13,
-            ["abs"] = 14,
-            ["sqrt"] = 15,
-            ["sign"] = 16,
-            ["ceil"] = 17,
-            ["floor"] = 18,
-            ["trunc"] = 19,
-            ["round"] = 20,
-            ["max"] = 21,
-            ["min"] = 22,
-        };
-
-        private static readonly Func<double[], double>[] _functions = [
-            args => Math.Sin(args[0]),                    // 0: sin
-            args => Math.Cos(args[0]),                    // 1: cos
-            args => Math.Tan(args[0]),                    // 2: tan
-            args => Math.Asin(args[0]),                   // 3: asin
-            args => Math.Acos(args[0]),                   // 4: acos
-            args => Math.Atan(args[0]),                   // 5: atan
-            args => Math.Atan2(args[0], args[1]),         // 6: atan2
-            args => Math.Exp(args[0]),                    // 7: exp
-            args => Math.Pow(args[0], args[1]),           // 8: pow
-            args => Math.Log(args[0]),                    // 9: ln
-            args => Math.Log10(args[0]),                  // 10: lg
-            args => args.Length == 1 ? Math.Log(args[0]) : Math.Log(args[0], args[1]), // 11: log
-            args => Math.Log2(args[0]),                   // 12: log2
-            args => Math.Log10(args[0]),                  // 13: log10
-            args => Math.Abs(args[0]),                    // 14: abs
-            args => Math.Sqrt(args[0]),                   // 15: sqrt
-            args => Math.Sign(args[0]),                   // 16: sign
-            args => Math.Ceiling(args[0]),                // 17: ceil
-            args => Math.Floor(args[0]),                  // 18: floor
-            args => Math.Truncate(args[0]),               // 19: trunc
-            args => args.Length == 1 ? Math.Round(args[0]) : Math.Round(args[0], (int)args[1]), // 20: round
-            args => args.Max(),                           // 21: max
-            args => args.Min(),                           // 22: min
-        ];
-
-        public static bool TryGetId(ReadOnlySpan<char> name, out byte id) {
-            // 按长度分组快速匹配，与 BuiltInFunctions 一致
-            switch (name.Length) {
-                case 2:
-                    if (EqualsLower(name, "ln")) { id = 9; return true; }
-                    if (EqualsLower(name, "lg")) { id = 10; return true; }
-                    break;
-                case 3:
-                    if (EqualsLower(name, "sin")) { id = 0; return true; }
-                    if (EqualsLower(name, "cos")) { id = 1; return true; }
-                    if (EqualsLower(name, "tan")) { id = 2; return true; }
-                    if (EqualsLower(name, "exp")) { id = 7; return true; }
-                    if (EqualsLower(name, "pow")) { id = 8; return true; }
-                    if (EqualsLower(name, "abs")) { id = 14; return true; }
-                    if (EqualsLower(name, "log")) { id = 11; return true; }
-                    if (EqualsLower(name, "max")) { id = 21; return true; }
-                    if (EqualsLower(name, "min")) { id = 22; return true; }
-                    break;
-                case 4:
-                    if (EqualsLower(name, "asin")) { id = 3; return true; }
-                    if (EqualsLower(name, "acos")) { id = 4; return true; }
-                    if (EqualsLower(name, "atan")) { id = 5; return true; }
-                    if (EqualsLower(name, "sqrt")) { id = 15; return true; }
-                    if (EqualsLower(name, "sign")) { id = 16; return true; }
-                    if (EqualsLower(name, "ceil")) { id = 17; return true; }
-                    if (EqualsLower(name, "log2")) { id = 12; return true; }
-                    break;
-                case 5:
-                    if (EqualsLower(name, "atan2")) { id = 6; return true; }
-                    if (EqualsLower(name, "floor")) { id = 18; return true; }
-                    if (EqualsLower(name, "trunc")) { id = 19; return true; }
-                    if (EqualsLower(name, "round")) { id = 20; return true; }
-                    if (EqualsLower(name, "log10")) { id = 13; return true; }
-                    break;
-            }
-            id = 0;
-            return false;
-        }
-
-        public static bool TryGetId(string name, out byte id) => _nameToId.TryGetValue(name, out id);
-
-        public static Func<double[], double> GetFunction(byte id) => _functions[id];
-
-        private static bool EqualsLower(ReadOnlySpan<char> span, string keyword) {
-            if (span.Length != keyword.Length) return false;
-            for (int i = 0; i < keyword.Length; i++) {
-                if (char.ToLowerInvariant(span[i]) != char.ToLowerInvariant(keyword[i])) return false;
-            }
-            return true;
-        }
-    }
-
-    #endregion
 }
