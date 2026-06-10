@@ -144,6 +144,12 @@ internal static class JitCompiler {
     private static void EmitCall(ILGenerator il, byte functionId, int argCount) {
         var def = BuiltInFunctions.GetById(functionId);
 
+        // 编译期校验参数数量
+        if (argCount < def.MinArgs || argCount > def.MaxArgs) {
+            var maxLabel = def.MaxArgs == int.MaxValue ? "N" : def.MaxArgs.ToString();
+            throw new FastEvalException($"函数 {def.Name} 需要 {def.MinArgs}-{maxLabel} 个参数，但提供了 {argCount} 个");
+        }
+
         // 链式调用模式（max/min）：argCount >= 2 时链式调用 JitMethod2
         if (def.MaxArgs == int.MaxValue && def.JitMethod2 != null) {
             for (int i = 1; i < argCount; i++) il.Emit(OpCodes.Call, def.JitMethod2);

@@ -391,9 +391,14 @@ internal class BytecodeCompiler(string expression) {
         if (Peek() != ')') throw new FastEvalException("函数调用未闭合", _expression, _scanner.Position);
         Read();
 
-        // 查找函数 ID
+        // 查找函数定义并校验参数数量
         if (!BuiltInFunctions.TryGetId(name, out var funcId)) {
             throw new FastEvalException($"未知函数 '{name}'", _expression);
+        }
+        var def = BuiltInFunctions.GetById(funcId);
+        if (argCount < def.MinArgs || argCount > def.MaxArgs) {
+            var maxLabel = def.MaxArgs == int.MaxValue ? "N" : def.MaxArgs.ToString();
+            throw new FastEvalException($"函数 {def.Name} 需要 {def.MinArgs}-{maxLabel} 个参数，但提供了 {argCount} 个", _expression);
         }
 
         Emit(Instruction.CallFunc(funcId, argCount));
