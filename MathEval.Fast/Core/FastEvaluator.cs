@@ -1,5 +1,6 @@
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 
 namespace MathEval.Fast.Core;
@@ -11,11 +12,22 @@ namespace MathEval.Fast.Core;
 /// <br/>
 /// 优化：ref struct 栈分配、Span 直接比较、stackalloc 参数、内联运算符、标识符统一解析
 /// </summary>
-internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) {
+internal ref struct FastEvaluator(string expression) {
 
     private FastScanner _scanner = new(expression);
     private bool _skipMode = false;
     private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
+
+    // 变量查找：FrozenDictionary + AlternateLookup<ReadOnlySpan<char>>，零字符串分配
+    private readonly FrozenDictionary<string, double>? _frozenVars;
+    private readonly FrozenDictionary<string, double>.AlternateLookup<ReadOnlySpan<char>> _varLookup;
+
+    public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) : this(expression) {
+        if (variables != null) {
+            _frozenVars = variables.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+            _varLookup = _frozenVars.GetAlternateLookup<ReadOnlySpan<char>>();
+        }
+    }
 
     public double Evaluate() {
         SkipWhitespace();
@@ -392,11 +404,7 @@ internal ref struct FastEvaluator(string expression, IReadOnlyDictionary<string,
 
     private readonly double LookupVariable(ReadOnlySpan<char> name) {
         if (_skipMode) return default;
-        if (variables != null) {
-            // 变量查找仍需字符串 key（Dictionary 限制）
-            var nameStr = name.ToString();
-            if (variables.TryGetValue(nameStr, out var value)) return value;
-        }
+        if (_frozenVars != null && _varLookup.TryGetValue(name, out var value)) return value;
         throw new FastEvalException($"未定义的变量 '{name}'", _expression);
     }
 
