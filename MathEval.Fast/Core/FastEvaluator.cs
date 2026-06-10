@@ -14,8 +14,8 @@ namespace MathEval.Fast.Core;
 /// </summary>
 internal ref struct FastEvaluator(string expression) {
 
-    private FastScanner _scanner = new(expression);
     private bool _skipMode = false;
+    private FastScanner _scanner = new(expression);
     private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
 
     // 变量查找：FrozenDictionary + AlternateLookup<ReadOnlySpan<char>>，零字符串分配
@@ -24,7 +24,7 @@ internal ref struct FastEvaluator(string expression) {
 
     public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) : this(expression) {
         if (variables != null) {
-            _frozenVars = variables.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+            _frozenVars = variables.ToFrozenDictionary();
             _varLookup = _frozenVars.GetAlternateLookup<ReadOnlySpan<char>>();
         }
     }

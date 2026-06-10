@@ -1,5 +1,5 @@
-using System.Globalization;
 using MathEval.Fast.Exceptions;
+using System.Globalization;
 
 namespace MathEval.Fast.Core;
 
