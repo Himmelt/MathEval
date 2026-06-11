@@ -2,6 +2,9 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using MathEval.Context;
 using MathEval.Fast;
+using NFun;
+using MathEvaluation.Context;
+using MathEvaluation.Extensions;
 
 BenchmarkRunner.Run<ComparisonBenchmarks>(args: args);
 
@@ -19,6 +22,9 @@ public class ComparisonBenchmarks {
 
     // MathEval 上下文
     private ExpressionContext? _mathEvalContext;
+
+    // MathEvaluator 上下文
+    private readonly IMathContext _mathEvaluatorContext = new ScientificMathContext();
 
     // 用于生成唯一表达式的计数器
     private int _counter;
@@ -52,11 +58,25 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(SimpleArithmetic));
     }
 
+    [Benchmark(Description = "NFun: 简单算术")]
+    [BenchmarkCategory("SimpleArithmetic")]
+    public object NFun_SimpleArithmetic() {
+        // NFun 使用 ** 作为幂运算符
+        var expr = MakeUnique(SimpleArithmetic).Replace("^", "**");
+        return Funny.Calc<double>(expr);
+    }
+
     [Benchmark(Description = "NCalc: 简单算术")]
     [BenchmarkCategory("SimpleArithmetic")]
     public object? NCalc_SimpleArithmetic() {
         var expr = new NCalc.Expression(MakeUnique(SimpleArithmetic), NCalc.EvaluateOptions.NoCache);
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 简单算术")]
+    [BenchmarkCategory("SimpleArithmetic")]
+    public double MathEvaluator_SimpleArithmetic() {
+        return MakeUnique(SimpleArithmetic).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -75,11 +95,24 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(ComplexArithmetic));
     }
 
+    [Benchmark(Description = "NFun: 复杂算术")]
+    [BenchmarkCategory("ComplexArithmetic")]
+    public object NFun_ComplexArithmetic() {
+        var expr = MakeUnique(ComplexArithmetic).Replace("^", "**");
+        return Funny.Calc<double>(expr);
+    }
+
     [Benchmark(Description = "NCalc: 复杂算术")]
     [BenchmarkCategory("ComplexArithmetic")]
     public object? NCalc_ComplexArithmetic() {
         var expr = new NCalc.Expression(MakeUnique(ComplexArithmetic), NCalc.EvaluateOptions.NoCache);
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 复杂算术")]
+    [BenchmarkCategory("ComplexArithmetic")]
+    public double MathEvaluator_ComplexArithmetic() {
+        return MakeUnique(ComplexArithmetic).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -98,6 +131,13 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(FunctionCall));
     }
 
+    [Benchmark(Description = "NFun: 函数调用")]
+    [BenchmarkCategory("FunctionCall")]
+    public object NFun_FunctionCall() {
+        var expr = MakeUnique(FunctionCall);
+        return Funny.Calc<double>(expr);
+    }
+
     [Benchmark(Description = "NCalc: 函数调用")]
     [BenchmarkCategory("FunctionCall")]
     public object? NCalc_FunctionCall() {
@@ -109,6 +149,12 @@ public class ComparisonBenchmarks {
             else if (name == "abs") args.Result = Math.Abs(Convert.ToDouble(args.Parameters[0].Evaluate()));
         };
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 函数调用")]
+    [BenchmarkCategory("FunctionCall")]
+    public double MathEvaluator_FunctionCall() {
+        return MakeUnique(FunctionCall).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -127,6 +173,23 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(NestedFunction));
     }
 
+    [Benchmark(Description = "NFun: 嵌套函数")]
+    [BenchmarkCategory("NestedFunction")]
+    public object NFun_NestedFunction() {
+        // NFun: pow(x, y) -> x ** y
+        var expr = MakeUnique(NestedFunction);
+        // 替换 pow(sin(x), 2) 为 (sin(x)**2)
+        expr = System.Text.RegularExpressions.Regex.Replace(expr, "pow\\(sin\\([^)]+\\), 2\\)", m => {
+            var inner = m.Value.Replace("pow(", "").Replace(", 2)", "");
+            return $"({inner}**2)";
+        });
+        expr = System.Text.RegularExpressions.Regex.Replace(expr, "pow\\(cos\\([^)]+\\), 2\\)", m => {
+            var inner = m.Value.Replace("pow(", "").Replace(", 2)", "");
+            return $"({inner}**2)";
+        });
+        return Funny.Calc<double>(expr);
+    }
+
     [Benchmark(Description = "NCalc: 嵌套函数")]
     [BenchmarkCategory("NestedFunction")]
     public object? NCalc_NestedFunction() {
@@ -138,6 +201,12 @@ public class ComparisonBenchmarks {
             else if (name == "cos") args.Result = Math.Cos(Convert.ToDouble(args.Parameters[0].Evaluate()));
         };
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 嵌套函数")]
+    [BenchmarkCategory("NestedFunction")]
+    public double MathEvaluator_NestedFunction() {
+        return MakeUnique(NestedFunction).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -156,11 +225,30 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(Conditional));
     }
 
+    [Benchmark(Description = "NFun: 三元运算")]
+    [BenchmarkCategory("Conditional")]
+    public object NFun_Conditional() {
+        // NFun 使用 if(condition, true, false) 格式
+        var expr = MakeUnique(Conditional);
+        var parts = expr.Split('?');
+        var condition = parts[0].Trim();
+        var rest = parts[1].Split(':');
+        var trueVal = rest[0].Trim();
+        var falseVal = rest[1].Trim();
+        return Funny.Calc<double>($"if({condition}, {trueVal}, {falseVal})");
+    }
+
     [Benchmark(Description = "NCalc: 三元运算")]
     [BenchmarkCategory("Conditional")]
     public object? NCalc_Conditional() {
         var expr = new NCalc.Expression(MakeUnique(Conditional), NCalc.EvaluateOptions.NoCache);
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 三元运算")]
+    [BenchmarkCategory("Conditional")]
+    public double MathEvaluator_Conditional() {
+        return MakeUnique(Conditional).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -179,11 +267,30 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(Logical));
     }
 
+    [Benchmark(Description = "NFun: 逻辑运算")]
+    [BenchmarkCategory("Logical")]
+    public object NFun_Logical() {
+        // NFun 使用 if(condition, true, false) 格式
+        var expr = MakeUnique(Logical);
+        var parts = expr.Split('?');
+        var condition = parts[0].Trim();
+        var rest = parts[1].Split(':');
+        var trueVal = rest[0].Trim();
+        var falseVal = rest[1].Trim();
+        return Funny.Calc<double>($"if({condition}, {trueVal}, {falseVal})");
+    }
+
     [Benchmark(Description = "NCalc: 逻辑运算")]
     [BenchmarkCategory("Logical")]
     public object? NCalc_Logical() {
         var expr = new NCalc.Expression(MakeUnique(Logical), NCalc.EvaluateOptions.NoCache);
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 逻辑运算")]
+    [BenchmarkCategory("Logical")]
+    public double MathEvaluator_Logical() {
+        return MakeUnique(Logical).Evaluate(_mathEvaluatorContext);
     }
 
     // ============================================================
@@ -202,6 +309,18 @@ public class ComparisonBenchmarks {
         return FastEval.EvalDouble(MakeUnique(LogExpression));
     }
 
+    [Benchmark(Description = "NFun: 对数")]
+    [BenchmarkCategory("Log")]
+    public object NFun_Log() {
+        // NFun: log10(x) 是常用对数，log(x) 是自然对数
+        var expr = MakeUnique(LogExpression);
+        // log(100) -> log10(100), ln -> log, log(8,2) -> log(8)/log(2)
+        expr = expr.Replace("log(100)", "log10(100)");
+        expr = expr.Replace("ln(", "log(");
+        expr = expr.Replace("log(8, 2)", "(log(8)/log(2))");
+        return Funny.Calc<double>(expr);
+    }
+
     [Benchmark(Description = "NCalc: 对数")]
     [BenchmarkCategory("Log")]
     public object? NCalc_Log() {
@@ -218,5 +337,11 @@ public class ComparisonBenchmarks {
             }
         };
         return expr.Evaluate();
+    }
+
+    [Benchmark(Description = "MathEvaluator: 对数")]
+    [BenchmarkCategory("Log")]
+    public double MathEvaluator_Log() {
+        return MakeUnique(LogExpression).Evaluate(_mathEvaluatorContext);
     }
 }
