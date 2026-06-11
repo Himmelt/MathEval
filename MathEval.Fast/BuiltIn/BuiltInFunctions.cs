@@ -67,11 +67,9 @@ internal static class BuiltInFunctions {
 
     // 按名称查找（含参数校验）
     private static readonly FrozenDictionary<string, Func<double[], double>> _functions;
-    private static readonly FrozenDictionary<string, Func<double[], double>>.AlternateLookup<ReadOnlySpan<char>> _spanLookup;
 
     // 按名称查 ID
     private static readonly FrozenDictionary<string, byte> _nameToId;
-    private static readonly FrozenDictionary<string, byte>.AlternateLookup<ReadOnlySpan<char>> _nameToIdSpan;
 
     static BuiltInFunctions() {
         // 构建带参数校验的函数字典
@@ -80,7 +78,6 @@ internal static class BuiltInFunctions {
             dict[def.Name] = CreateValidated(def);
         }
         _functions = dict.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-        _spanLookup = _functions.GetAlternateLookup<ReadOnlySpan<char>>();
 
         // 构建名称 → ID 映射
         var idDict = new Dictionary<string, byte>(_defs.Length, StringComparer.OrdinalIgnoreCase);
@@ -88,7 +85,6 @@ internal static class BuiltInFunctions {
             idDict[_defs[i].Name] = i;
         }
         _nameToId = idDict.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-        _nameToIdSpan = _nameToId.GetAlternateLookup<ReadOnlySpan<char>>();
     }
 
     #endregion
@@ -102,18 +98,18 @@ internal static class BuiltInFunctions {
         => _functions.TryGetValue(name, out func);
 
     /// <summary>
-    /// Span 版本函数查找，零字符串分配
+    /// Span 版本函数查找（.NET 8 兼容版本）
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGetFunction(ReadOnlySpan<char> name, [NotNullWhen(true)] out Func<double[], double>? func)
-        => _spanLookup.TryGetValue(name, out func);
+        => _functions.TryGetValue(name.ToString(), out func);
 
     /// <summary>
     /// 按名称查找函数 ID，供 BytecodeCompiler 使用
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryGetId(ReadOnlySpan<char> name, out byte id)
-        => _nameToIdSpan.TryGetValue(name, out id);
+        => _nameToId.TryGetValue(name.ToString(), out id);
 
     /// <summary>
     /// 按名称查找函数 ID（string 版本）

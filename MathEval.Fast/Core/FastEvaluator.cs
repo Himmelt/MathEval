@@ -18,14 +18,12 @@ internal ref struct FastEvaluator(string expression) {
     private FastScanner _scanner = new(expression);
     private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
 
-    // 变量查找：FrozenDictionary + AlternateLookup<ReadOnlySpan<char>>，零字符串分配
+    // 变量查找：FrozenDictionary（.NET 8 兼容版本）
     private readonly FrozenDictionary<string, double>? _frozenVars;
-    private readonly FrozenDictionary<string, double>.AlternateLookup<ReadOnlySpan<char>> _varLookup;
 
     public FastEvaluator(string expression, IReadOnlyDictionary<string, double>? variables = null) : this(expression) {
         if (variables != null) {
             _frozenVars = variables.ToFrozenDictionary();
-            _varLookup = _frozenVars.GetAlternateLookup<ReadOnlySpan<char>>();
         }
     }
 
@@ -404,7 +402,7 @@ internal ref struct FastEvaluator(string expression) {
 
     private readonly double LookupVariable(ReadOnlySpan<char> name) {
         if (_skipMode) return default;
-        if (_frozenVars != null && _varLookup.TryGetValue(name, out var value)) return value;
+        if (_frozenVars != null && _frozenVars.TryGetValue(name.ToString(), out var value)) return value;
         throw new FastEvalException($"未定义的变量 '{name}'", _expression);
     }
 

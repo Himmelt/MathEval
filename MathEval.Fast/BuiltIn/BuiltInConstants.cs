@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Runtime.CompilerServices;
 
 namespace MathEval.Fast.BuiltIn;
 
@@ -18,13 +17,13 @@ internal static class BuiltInConstants {
         ["false"] = 0.0,
     }.ToFrozenDictionary();
 
-    private static readonly FrozenDictionary<string, double>.AlternateLookup<ReadOnlySpan<char>> _spanLookup = _constants.GetAlternateLookup<ReadOnlySpan<char>>();
-
     public static bool TryGetValue(string name, out double value) => _constants.TryGetValue(name, out value);
 
     /// <summary>
-    /// Span 版本常量查找，零字符串分配
+    /// Span 版本常量查找（.NET 8 兼容版本）
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryGetValue(ReadOnlySpan<char> name, out double value) => _spanLookup.TryGetValue(name, out value);
+    public static bool TryGetValue(ReadOnlySpan<char> name, out double value) {
+        // .NET 8 需要将 Span 转换为 string
+        return _constants.TryGetValue(name.ToString(), out value);
+    }
 }
