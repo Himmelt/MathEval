@@ -425,6 +425,77 @@ public class CrossValidationTests {
 
     #endregion
 
+    #region Bug 回归测试: FastEvaluator skipMode 嵌套三元运算符
+
+    [Fact]
+    public void NestedTernary_InSkippedBranch_DoesNotEvaluateUndefinedVar() {
+        // true ? 1 : (false ? 2 : undefinedVar)
+        // 外层 false 分支应完全跳过，内层不应求值 undefinedVar
+        Assert.Equal(1.0, FastEval.EvalDouble("true ? 1 : (false ? 2 : undefinedVar)"));
+    }
+
+    [Fact]
+    public void NestedTernary_InSkippedBranch_DoesNotDivideByZero() {
+        // true ? 1 : (true ? 2 : 1/0)
+        // 外层 false 分支应完全跳过，内层不应求值 1/0
+        Assert.Equal(1.0, FastEval.EvalDouble("true ? 1 : (true ? 2 : 1/0)"));
+    }
+
+    [Fact]
+    public void NestedTernary_DeepNesting_SkipModePreserved() {
+        // 深层嵌套三元运算符在跳过分支中
+        Assert.Equal(1.0, FastEval.EvalDouble("true ? 1 : (true ? (false ? 3 : 4) : 5)"));
+    }
+
+    [Fact]
+    public void NestedTernary_FalseBranch_SkipModePreserved() {
+        // false ? (true ? undefinedVar : 0) : 2
+        // true 分支完全跳过，内层不应求值 undefinedVar
+        Assert.Equal(2.0, FastEval.EvalDouble("false ? (true ? undefinedVar : 0) : 2"));
+    }
+
+    #endregion
+
+    #region Bug 回归测试: TypeHelper 负无穷特殊值处理
+
+    [Fact]
+    public void INF_TimesNegative2_CrossValidation() {
+        // INF * (-2) 应返回 -INF，而非 INF
+        AssertDoubleConsistent("INF * -2");
+    }
+
+    [Fact]
+    public void NegativeINF_PlusINF_CrossValidation() {
+        // (-INF) + INF 应返回 NaN
+        AssertDoubleConsistent("-INF + INF");
+    }
+
+    [Fact]
+    public void NegativeINF_DividedByINF_CrossValidation() {
+        // (-INF) / INF 应返回 NaN，而非 0
+        AssertDoubleConsistent("-INF / INF");
+    }
+
+    [Fact]
+    public void INF_DividedByNegativeINF_CrossValidation() {
+        // INF / (-INF) 应返回 NaN，而非 INF
+        AssertDoubleConsistent("INF / -INF");
+    }
+
+    [Fact]
+    public void NegativeINF_Times2_CrossValidation() {
+        // (-INF) * 2 应返回 -INF
+        AssertDoubleConsistent("-INF * 2");
+    }
+
+    [Fact]
+    public void NegativeINF_RemainderINF_CrossValidation() {
+        // (-INF) % INF 应返回 NaN
+        AssertDoubleConsistent("-INF % INF");
+    }
+
+    #endregion
+
     #region 综合表达式交叉验证
 
     [Theory]

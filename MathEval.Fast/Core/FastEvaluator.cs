@@ -69,14 +69,16 @@ internal ref struct FastEvaluator(string expression) {
                 SkipWhitespace();
                 if (Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", _expression);
                 Read();
+                var savedSkipMode = _skipMode;
                 _skipMode = true;
                 EvalExpression();
-                _skipMode = false;
+                _skipMode = savedSkipMode;
                 return trueValue;
             } else {
+                var savedSkipMode = _skipMode;
                 _skipMode = true;
                 EvalExpression();
-                _skipMode = false;
+                _skipMode = savedSkipMode;
                 SkipWhitespace();
                 if (Peek() != ':') throw new FastEvalException("三元运算符缺少 ':'", _expression);
                 Read();
