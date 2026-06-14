@@ -7,14 +7,9 @@ namespace MathEval.Fast.Core;
 /// 高性能扫描器，供 FastEvaluator 和 BytecodeCompiler 复用
 /// ref struct 零堆分配，JIT 可内联跨 struct 调用
 /// </summary>
-internal struct FastScanner {
-    private int _position;
-    private readonly string _expression;
-
-    public FastScanner(string expression) {
-        _position = 0;
-        _expression = expression ?? throw new FastEvalException("表达式不能为 null");
-    }
+internal struct FastScanner(string expression) {
+    private int _position = 0;
+    private readonly string _expression = expression ?? throw new FastEvalException("表达式不能为 null");
 
     // 供错误消息使用
     public readonly int Position => _position;

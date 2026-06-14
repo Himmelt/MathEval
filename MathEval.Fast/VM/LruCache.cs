@@ -1,18 +1,12 @@
 namespace MathEval.Fast.VM;
 
-internal class LruCache<TKey, TValue> where TKey : notnull {
-    private readonly int _capacity;
-    private readonly Dictionary<TKey, LinkedListNode<CacheItem>> _map;
-    private readonly LinkedList<CacheItem> _list;
-    private readonly object _lock = new();
+internal class LruCache<TKey, TValue>(int capacity) where TKey : notnull {
+
+    private readonly Lock _lock = new();
+    private readonly LinkedList<CacheItem> _list = new();
+    private readonly Dictionary<TKey, LinkedListNode<CacheItem>> _map = new(capacity);
 
     private record CacheItem(TKey Key, TValue Value);
-
-    public LruCache(int capacity) {
-        _capacity = capacity;
-        _map = new Dictionary<TKey, LinkedListNode<CacheItem>>(capacity);
-        _list = new LinkedList<CacheItem>();
-    }
 
     public bool TryGet(TKey key, out TValue? value) {
         lock (_lock) {
@@ -34,7 +28,7 @@ internal class LruCache<TKey, TValue> where TKey : notnull {
                 _list.AddFirst(node);
                 node.Value = new CacheItem(key, value);
             } else {
-                if (_map.Count >= _capacity) {
+                if (_map.Count >= capacity) {
                     var last = _list.Last!;
                     _map.Remove(last.Value.Key);
                     _list.RemoveLast();

@@ -1,6 +1,6 @@
-using System.Buffers;
 using MathEval.Fast.BuiltIn;
 using MathEval.Fast.Exceptions;
+using System.Buffers;
 
 namespace MathEval.Fast.VM;
 
@@ -28,8 +28,7 @@ internal static class BytecodeVM {
 
                     case OpCode.LoadVar:
                         EnsureStack(ref stack, sp);
-                        if (variables == null || !variables.TryGetValue(instr.StringOperand!, out var varVal))
-                            throw new FastEvalException($"未定义的变量 '{instr.StringOperand}'");
+                        if (variables == null || !variables.TryGetValue(instr.StringOperand!, out var varVal)) throw new FastEvalException($"未定义的变量 '{instr.StringOperand}'");
                         stack[sp++] = varVal;
                         break;
 
