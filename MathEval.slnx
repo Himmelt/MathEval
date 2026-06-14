@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="MathEval/MathEval.csproj" />
+  <Project Path="MathEval.ComparisonBenchmarks/MathEval.ComparisonBenchmarks.csproj" />
   <Project Path="MathEval.Fast/MathEval.Fast.csproj" />
   <Project Path="MathEval.Tests/MathEval.Tests.csproj" />
   <Project Path="MathEval.Benchmarks/MathEval.Benchmarks.csproj" />

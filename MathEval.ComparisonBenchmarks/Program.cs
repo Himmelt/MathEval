@@ -1,16 +1,17 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using MathEval.Context;
 using MathEval.Fast;
-using NFun;
 using MathEvaluation.Context;
 using MathEvaluation.Extensions;
+using NCalc;
+using NFun;
+using System.Text.RegularExpressions;
 
 BenchmarkRunner.Run<ComparisonBenchmarks>(args: args);
 
 [MemoryDiagnoser]
 [RankColumn]
-public class ComparisonBenchmarks {
+public partial class ComparisonBenchmarks {
     // 测试表达式
     private const string SimpleArithmetic = "1 + 2 * 3 - 4 / 2";
     private const string ComplexArithmetic = "(3.14 + 2.72) * (1.41 - 0.58) / (3.67 + 1.23) + 2 ^ 3";
@@ -21,17 +22,22 @@ public class ComparisonBenchmarks {
     private const string LogExpression = "log(100) + ln(2.718) + log(8, 2)";
 
     // MathEval 上下文
-    private ExpressionContext? _mathEvalContext;
+    private MathEval.Context.ExpressionContext? _mathEvalContext;
 
     // MathEvaluator 上下文
-    private readonly IMathContext _mathEvaluatorContext = new ScientificMathContext();
+    private readonly MathContext _mathEvaluatorContext = new ScientificMathContext();
+
+    // NCalc 上下文（v6 使用 ExpressionContext）
+    private readonly ExpressionContext _ncalcContext = new() {
+        Options = ExpressionOptions.IgnoreCaseAtBuiltInFunctions | ExpressionOptions.NoCache
+    };
 
     // 用于生成唯一表达式的计数器
     private int _counter;
 
     [GlobalSetup]
     public void Setup() {
-        _mathEvalContext = new ExpressionContext();
+        _mathEvalContext = new MathEval.Context.ExpressionContext();
     }
 
     [IterationSetup]
@@ -69,7 +75,7 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NCalc: 简单算术")]
     [BenchmarkCategory("SimpleArithmetic")]
     public object? NCalc_SimpleArithmetic() {
-        var expr = new NCalc.Expression(MakeUnique(SimpleArithmetic), NCalc.EvaluateOptions.NoCache);
+        var expr = new Expression(MakeUnique(SimpleArithmetic), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -105,7 +111,7 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NCalc: 复杂算术")]
     [BenchmarkCategory("ComplexArithmetic")]
     public object? NCalc_ComplexArithmetic() {
-        var expr = new NCalc.Expression(MakeUnique(ComplexArithmetic), NCalc.EvaluateOptions.NoCache);
+        var expr = new Expression(MakeUnique(ComplexArithmetic), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -141,13 +147,8 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NCalc: 函数调用")]
     [BenchmarkCategory("FunctionCall")]
     public object? NCalc_FunctionCall() {
-        var expr = new NCalc.Expression(MakeUnique(FunctionCall), NCalc.EvaluateOptions.NoCache);
-        expr.EvaluateFunction += (name, args) => {
-            if (name == "sin") args.Result = Math.Sin(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            else if (name == "cos") args.Result = Math.Cos(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            else if (name == "sqrt") args.Result = Math.Sqrt(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            else if (name == "abs") args.Result = Math.Abs(Convert.ToDouble(args.Parameters[0].Evaluate()));
-        };
+        // NCalc v6 内置 Sin, Cos, Sqrt, Abs 等数学函数（IgnoreCaseAtBuiltInFunctions 支持小写）
+        var expr = new Expression(MakeUnique(FunctionCall), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -179,11 +180,11 @@ public class ComparisonBenchmarks {
         // NFun: pow(x, y) -> x ** y
         var expr = MakeUnique(NestedFunction);
         // 替换 pow(sin(x), 2) 为 (sin(x)**2)
-        expr = System.Text.RegularExpressions.Regex.Replace(expr, "pow\\(sin\\([^)]+\\), 2\\)", m => {
+        expr = MyRegex().Replace(expr, m => {
             var inner = m.Value.Replace("pow(", "").Replace(", 2)", "");
             return $"({inner}**2)";
         });
-        expr = System.Text.RegularExpressions.Regex.Replace(expr, "pow\\(cos\\([^)]+\\), 2\\)", m => {
+        expr = MyRegex1().Replace(expr, m => {
             var inner = m.Value.Replace("pow(", "").Replace(", 2)", "");
             return $"({inner}**2)";
         });
@@ -193,13 +194,8 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NCalc: 嵌套函数")]
     [BenchmarkCategory("NestedFunction")]
     public object? NCalc_NestedFunction() {
-        var expr = new NCalc.Expression(MakeUnique(NestedFunction), NCalc.EvaluateOptions.NoCache);
-        expr.EvaluateFunction += (name, args) => {
-            if (name == "sqrt") args.Result = Math.Sqrt(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            else if (name == "pow") args.Result = Math.Pow(Convert.ToDouble(args.Parameters[0].Evaluate()), Convert.ToDouble(args.Parameters[1].Evaluate()));
-            else if (name == "sin") args.Result = Math.Sin(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            else if (name == "cos") args.Result = Math.Cos(Convert.ToDouble(args.Parameters[0].Evaluate()));
-        };
+        // NCalc v6 内置 Sqrt, Pow, Sin, Cos 等函数
+        var expr = new Expression(MakeUnique(NestedFunction), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -228,20 +224,21 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NFun: 三元运算")]
     [BenchmarkCategory("Conditional")]
     public object NFun_Conditional() {
-        // NFun 使用 if(condition, true, false) 格式
+        // NFun 使用 if condition then trueVal else falseVal 表达式
         var expr = MakeUnique(Conditional);
         var parts = expr.Split('?');
         var condition = parts[0].Trim();
         var rest = parts[1].Split(':');
         var trueVal = rest[0].Trim();
         var falseVal = rest[1].Trim();
-        return Funny.Calc<double>($"if({condition}, {trueVal}, {falseVal})");
+        return Funny.Calc<double>($"if {condition} then {trueVal} else {falseVal}");
     }
 
     [Benchmark(Description = "NCalc: 三元运算")]
     [BenchmarkCategory("Conditional")]
     public object? NCalc_Conditional() {
-        var expr = new NCalc.Expression(MakeUnique(Conditional), NCalc.EvaluateOptions.NoCache);
+        // NCalc v6 原生支持三元运算符 ? :
+        var expr = new Expression(MakeUnique(Conditional), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -270,20 +267,21 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NFun: 逻辑运算")]
     [BenchmarkCategory("Logical")]
     public object NFun_Logical() {
-        // NFun 使用 if(condition, true, false) 格式
+        // NFun 使用 if condition then trueVal else falseVal 表达式
         var expr = MakeUnique(Logical);
         var parts = expr.Split('?');
         var condition = parts[0].Trim();
         var rest = parts[1].Split(':');
         var trueVal = rest[0].Trim();
         var falseVal = rest[1].Trim();
-        return Funny.Calc<double>($"if({condition}, {trueVal}, {falseVal})");
+        return Funny.Calc<double>($"if {condition} then {trueVal} else {falseVal}");
     }
 
     [Benchmark(Description = "NCalc: 逻辑运算")]
     [BenchmarkCategory("Logical")]
     public object? NCalc_Logical() {
-        var expr = new NCalc.Expression(MakeUnique(Logical), NCalc.EvaluateOptions.NoCache);
+        // NCalc v6 支持 and/or 逻辑运算符和三元表达式
+        var expr = new Expression(MakeUnique(Logical), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -324,18 +322,8 @@ public class ComparisonBenchmarks {
     [Benchmark(Description = "NCalc: 对数")]
     [BenchmarkCategory("Log")]
     public object? NCalc_Log() {
-        var expr = new NCalc.Expression(MakeUnique(LogExpression), NCalc.EvaluateOptions.NoCache);
-        expr.EvaluateFunction += (name, args) => {
-            if (name == "log") {
-                if (args.Parameters.Length == 1)
-                    args.Result = Math.Log10(Convert.ToDouble(args.Parameters[0].Evaluate()));
-                else
-                    args.Result = Math.Log(Convert.ToDouble(args.Parameters[0].Evaluate()), Convert.ToDouble(args.Parameters[1].Evaluate()));
-            }
-            else if (name == "ln") {
-                args.Result = Math.Log(Convert.ToDouble(args.Parameters[0].Evaluate()));
-            }
-        };
+        // NCalc v6 内置 Log(x, base), Ln(x), Log10(x) 函数
+        var expr = new Expression(MakeUnique(LogExpression), _ncalcContext);
         return expr.Evaluate();
     }
 
@@ -344,4 +332,9 @@ public class ComparisonBenchmarks {
     public double MathEvaluator_Log() {
         return MakeUnique(LogExpression).Evaluate(_mathEvaluatorContext);
     }
+
+    [GeneratedRegex("pow\\(sin\\([^)]+\\), 2\\)")]
+    private static partial Regex MyRegex();
+    [GeneratedRegex("pow\\(cos\\([^)]+\\), 2\\)")]
+    private static partial Regex MyRegex1();
 }
