@@ -3,6 +3,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Parser;
 using MathEval.TypeSystem;
+using System.Collections;
 
 namespace MathEval.Visitors;
 
@@ -87,5 +88,24 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
             return expr.TrueExpression.Accept(this);
         else
             return expr.FalseExpression.Accept(this);
+    }
+
+    public object Visit(ArrayIndexExpression expr) {
+        if (!_context.TryGetSymbol(expr.ArrayName, out var array)) {
+            throw new SymbolNotFoundException(expr.ArrayName);
+        }
+
+        if (array is not IList arr) {
+            throw new TypeMismatchException("索引操作需要数组类型", "array", array?.GetType().Name ?? "null");
+        }
+
+        var indexValue = expr.Index.Accept(this);
+        var intIndex = TypeHelper.ToInteger(indexValue, "数组索引");
+
+        if (intIndex < 0 || intIndex >= arr.Count) {
+            throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Count})");
+        }
+
+        return arr[(int)intIndex]!;
     }
 }

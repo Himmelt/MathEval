@@ -319,6 +319,12 @@ public class Parser {
             Expect(Lexer.TokenType.RightParenthesis);
             return new FunctionCall(name, arguments);
         }
+        if (CurrentToken.Type == Lexer.TokenType.LeftBracket) {
+            MoveNext();
+            var index = ParseExpression();
+            Expect(Lexer.TokenType.RightBracket);
+            return new ArrayIndexExpression(name, index);
+        }
         return new Identifier(name);
     }
 

@@ -435,6 +435,12 @@ public class Lexer {
             case ',':
                 CurrentToken = new Token(TokenType.Comma, ",", _startPosition, _startLine, _startColumn);
                 break;
+            case '[':
+                CurrentToken = new Token(TokenType.LeftBracket, "[", _startPosition, _startLine, _startColumn);
+                break;
+            case ']':
+                CurrentToken = new Token(TokenType.RightBracket, "]", _startPosition, _startLine, _startColumn);
+                break;
             case '/':
                 if (Peek() == '/') {
                     Read();

@@ -58,6 +58,8 @@ public enum TokenType {
     // 分隔符
     LeftParenthesis,
     RightParenthesis,
+    LeftBracket,
+    RightBracket,
     Comma,
 
     // 字符串插值

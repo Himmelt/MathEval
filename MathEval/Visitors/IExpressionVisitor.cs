@@ -40,4 +40,9 @@ public interface IExpressionVisitor {
     /// 访问条件表达式节点
     /// </summary>
     void Visit(ConditionalExpression expr);
+
+    /// <summary>
+    /// 访问数组索引表达式节点
+    /// </summary>
+    void Visit(ArrayIndexExpression expr);
 }

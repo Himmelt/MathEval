@@ -9,36 +9,37 @@ public static class TypeHelper {
     }
 
     public static (double, double) PromoteToDouble(object left, object right) {
-        double leftDouble = left switch {
-            bool b => BoolToNumber(b),
-            long l => l,
-            double d => d,
-            _ => throw new TypeMismatchException("期望数值类型", "number", left?.GetType().Name ?? "null")
-        };
-
-        double rightDouble = right switch {
-            bool b => BoolToNumber(b),
-            long l => l,
-            double d => d,
-            _ => throw new TypeMismatchException("期望数值类型", "number", right?.GetType().Name ?? "null")
-        };
-
+        double leftDouble = ToDouble(left);
+        double rightDouble = ToDouble(right);
         return (leftDouble, rightDouble);
     }
 
     public static double ToDouble(object value) {
         return value switch {
             bool b => BoolToNumber(b),
+            sbyte sb => sb,
+            byte bt => bt,
+            short s => s,
+            ushort us => us,
+            int i => i,
+            uint ui => ui,
             long l => l,
+            ulong ul => ul,
+            float f => f,
             double d => d,
+            decimal m => (double)m,
             _ => throw new TypeMismatchException("期望数值类型", "number", value?.GetType().Name ?? "null")
         };
     }
 
     public static void RequireInteger(object value, string operationName) {
-        if (value is long) return;
+        if (value is sbyte or byte or short or ushort or int or uint or long or ulong) return;
         if (value is double d) {
             if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d) && d >= long.MinValue && d <= long.MaxValue)
+                return;
+        }
+        if (value is float f) {
+            if (f == Math.Truncate(f) && !float.IsInfinity(f) && !float.IsNaN(f) && f >= long.MinValue && f <= long.MaxValue)
                 return;
         }
         throw new TypeMismatchException($"{operationName} 运算需要整数操作数", "integer", value?.GetType().Name ?? "null");
@@ -46,9 +47,19 @@ public static class TypeHelper {
 
     public static long ToInteger(object value, string operationName) {
         RequireInteger(value, operationName);
-        if (value is long l) return l;
-        if (value is double d) return (long)d;
-        throw new TypeMismatchException($"{operationName} 运算需要整数操作数", "integer", value?.GetType().Name ?? "null");
+        return value switch {
+            sbyte sb => sb,
+            byte bt => bt,
+            short s => s,
+            ushort us => us,
+            int i => i,
+            uint ui => ui,
+            long l => l,
+            ulong ul => (long)ul,
+            double d => (long)d,
+            float f => (long)f,
+            _ => throw new TypeMismatchException($"{operationName} 运算需要整数操作数", "integer", value?.GetType().Name ?? "null")
+        };
     }
 
     public static string ToString(object value) {

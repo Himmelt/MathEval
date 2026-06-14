@@ -21,6 +21,8 @@ public static class ConstantFolder {
                 return FoldFunction(funcCall);
             case ConditionalExpression condExpr:
                 return FoldConditional(condExpr);
+            case ArrayIndexExpression arrExpr:
+                return FoldArrayIndex(arrExpr);
             default:
                 return node;
         }
@@ -86,5 +88,10 @@ public static class ConstantFolder {
         }
 
         return new ConditionalExpression(condition, trueExpr, falseExpr);
+    }
+
+    private static LogicalExpression FoldArrayIndex(ArrayIndexExpression expr) {
+        var foldedIndex = FoldNode(expr.Index);
+        return new ArrayIndexExpression(expr.ArrayName, foldedIndex);
     }
 }
