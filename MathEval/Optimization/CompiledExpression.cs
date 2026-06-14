@@ -47,8 +47,11 @@ public class CompiledExpression(LogicalExpression ast) {
     /// <summary>
     /// 编译常量值节点
     /// </summary>
-    private static ConstantExpression CompileValueExpression(ValueExpression expr) {
-        return LinqExpression.Constant(expr.Value);
+    private static LinqExpression CompileValueExpression(ValueExpression expr) {
+        var constant = LinqExpression.Constant(expr.Value);
+        // 值类型需要显式 Convert(object) 才能在表达式树中作为 object 使用
+        if (expr.Value != null && expr.Value.GetType().IsValueType) return LinqExpression.Convert(constant, typeof(object));
+        return constant;
     }
 
     /// <summary>
@@ -69,10 +72,7 @@ public class CompiledExpression(LogicalExpression ast) {
 
         var body = LinqExpression.Block(
             [resultVar],
-            LinqExpression.IfThen(
-                LinqExpression.Not(tryGetCall),
-                throwExpr
-            ),
+            LinqExpression.IfThen(LinqExpression.Not(tryGetCall), throwExpr),
             resultVar
         );
 
@@ -121,7 +121,7 @@ public class CompiledExpression(LogicalExpression ast) {
     /// 编译函数调用
     /// </summary>
     private static BlockExpression CompileFunctionCall(FunctionCall expr, ParameterExpression contextParam) {
-        var argsExpr = expr.Arguments.Select(arg => CompileNode(arg, contextParam)).ToArray();
+        var argsExpr = expr.Arguments.Select(arg => LinqExpression.Convert(CompileNode(arg, contextParam), typeof(object))).ToArray();
         var argsArrayVar = LinqExpression.Variable(typeof(object[]), "args");
         var initArray = LinqExpression.NewArrayInit(typeof(object), argsExpr);
         var assignArray = LinqExpression.Assign(argsArrayVar, initArray);
@@ -143,10 +143,7 @@ public class CompiledExpression(LogicalExpression ast) {
         var body = LinqExpression.Block(
             [argsArrayVar, funcVar],
             assignArray,
-            LinqExpression.IfThen(
-                LinqExpression.Not(tryGetCall),
-                throwFuncNotFound
-            ),
+            LinqExpression.IfThen(LinqExpression.Not(tryGetCall), throwFuncNotFound),
             invokeExpr
         );
 
@@ -170,7 +167,10 @@ public class CompiledExpression(LogicalExpression ast) {
 
         var conditionBool = LinqExpression.Convert(conditionVar, typeof(bool));
 
-        var conditional = LinqExpression.Condition(conditionBool, trueExpr, falseExpr, typeof(object));
+        var trueExprObj = LinqExpression.Convert(CompileNode(expr.TrueExpression, contextParam), typeof(object));
+        var falseExprObj = LinqExpression.Convert(CompileNode(expr.FalseExpression, contextParam), typeof(object));
+
+        var conditional = LinqExpression.Condition(conditionBool, trueExprObj, falseExprObj);
 
         return LinqExpression.Block([conditionVar], assignCondition, checkBool, conditional);
     }
@@ -213,9 +213,7 @@ public class CompiledExpression(LogicalExpression ast) {
 
         var toStringCallFinal = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString))!);
 
-        var allExpressions = new List<LinqExpression> {
-            assignSb
-        };
+        var allExpressions = new List<LinqExpression> { assignSb };
         allExpressions.AddRange(appendExpressions);
         allExpressions.Add(toStringCallFinal);
 
