@@ -1,0 +1,32 @@
+# Tasks
+- [x] Task 1: Lexer 改造 — 新增 LeftBracket / RightBracket Token 类型
+  - [x] SubTask 1.1: 在 TokenType 枚举中新增 LeftBracket 和 RightBracket
+  - [x] SubTask 1.2: 在 ScanOperator 方法中为 [ 和 ] 添加 case 分支
+- [x] Task 2: AST 扩展 — 新增 ArrayIndexExpression 节点
+  - [x] SubTask 2.1: 创建 ArrayIndexExpression 类
+  - [x] SubTask 2.2: 扩展 IExpressionVisitor 接口
+  - [x] SubTask 2.3: 更新现有 Visitor 实现（EvaluationVisitor 等）
+- [x] Task 3: Parser 改造 — 解析数组索引表达式
+  - [x] SubTask 3.1: 在 ParseIdentifierOrFunction 中增加 [ 检测和索引解析
+- [x] Task 4: EvaluationVisitor 改造 — 数组索引求值
+  - [x] SubTask 4.1: 实现 Visit(ArrayIndexExpression) 方法
+- [x] Task 5: TypeHelper 扩展 — 数组类型判断
+  - [x] SubTask 5.1: 扩展 ToString 等方法支持数组元素类型
+- [x] Task 6: 编写单元测试
+  - [x] SubTask 6.1: 常量索引测试
+  - [x] SubTask 6.2: 变量索引测试
+  - [x] SubTask 6.3: 表达式索引测试
+  - [x] SubTask 6.4: 数组元素参与运算测试
+  - [x] SubTask 6.5: 异常场景测试（越界、非数组、负索引等）
+  - [x] SubTask 6.6: 不同数组类型测试（double[], int[], long[], List 等）
+- [x] Task 7: 运行测试并确保通过
+- [x] Task 8: 提交 PR
+
+# Task Dependencies
+- [Task 2] depends on [Task 1]
+- [Task 3] depends on [Task 1] and [Task 2]
+- [Task 4] depends on [Task 2]
+- [Task 5] depends on [Task 2]
+- [Task 6] depends on [Task 1] through [Task 5]
+- [Task 7] depends on [Task 6]
+- [Task 8] depends on [Task 7]

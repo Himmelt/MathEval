@@ -1,0 +1,9 @@
+- [x] Lexer 新增 LeftBracket / RightBracket Token 类型，ScanOperator 支持 [ ]
+- [x] AST 新增 ArrayIndexExpression 节点类
+- [x] IExpressionVisitor 接口扩展 Visit(ArrayIndexExpression)
+- [x] Parser 在 ParseIdentifierOrFunction 中支持 [index] 解析
+- [x] EvaluationVisitor 实现 Visit(ArrayIndexExpression) 求值逻辑
+- [x] TypeHelper 扩展支持数组元素类型
+- [x] 单元测试覆盖常量索引、变量索引、表达式索引、运算、异常场景
+- [x] 所有单元测试通过
+- [x] PR 已提交
