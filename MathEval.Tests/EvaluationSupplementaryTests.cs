@@ -281,6 +281,42 @@ public class EvaluationSupplementaryTests {
         Assert.True(double.IsNegativeInfinity(Expression.Eval<double>("-INF")));
     }
 
+    [Fact]
+    public void SpecialValues_INFTimesNegative_ReturnsNegativeINF() {
+        // INF * (-2) 应返回 -INF
+        Assert.True(double.IsNegativeInfinity(Expression.Eval<double>("INF * -2")));
+    }
+
+    [Fact]
+    public void SpecialValues_NegativeINFPlusINF_ReturnsNaN() {
+        // (-INF) + INF 应返回 NaN
+        Assert.True(double.IsNaN(Expression.Eval<double>("-INF + INF")));
+    }
+
+    [Fact]
+    public void SpecialValues_NegativeINFTimes2_ReturnsNegativeINF() {
+        // (-INF) * 2 应返回 -INF
+        Assert.True(double.IsNegativeInfinity(Expression.Eval<double>("-INF * 2")));
+    }
+
+    [Fact]
+    public void SpecialValues_NegativeINFDividedByINF_ReturnsNaN() {
+        // (-INF) / INF 应返回 NaN
+        Assert.True(double.IsNaN(Expression.Eval<double>("-INF / INF")));
+    }
+
+    [Fact]
+    public void SpecialValues_INFDividedByNegativeINF_ReturnsNaN() {
+        // INF / (-INF) 应返回 NaN
+        Assert.True(double.IsNaN(Expression.Eval<double>("INF / -INF")));
+    }
+
+    [Fact]
+    public void SpecialValues_NegativeINFRemainderINF_ReturnsNaN() {
+        // (-INF) % INF 应返回 NaN
+        Assert.True(double.IsNaN(Expression.Eval<double>("-INF % INF")));
+    }
+
     #endregion
 
     #region 上下文补充

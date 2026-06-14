@@ -94,7 +94,7 @@ public static class TypeHelper {
     }
 
     private static bool IsNaN(object value) => value is double d && double.IsNaN(d);
-    private static bool IsINF(object value) => value is double d && double.IsPositiveInfinity(d);
+    private static bool IsINF(object value) => value is double d && double.IsInfinity(d);
 
     public static object EvaluateBinary(BinaryExpressionType type, object left, object right) {
         if (type == BinaryExpressionType.Plus) {
@@ -130,42 +130,16 @@ public static class TypeHelper {
 
     private static double EvaluatePlus(object left, object right) {
         var (d1, d2) = PromoteToDouble(left, right);
-
-        if (double.IsNaN(d1) || double.IsNaN(d2))
-            return double.NaN;
-        if (double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2))
-            return double.PositiveInfinity;
-
         return d1 + d2;
     }
 
     private static double EvaluateMinus(object left, object right) {
         var (d1, d2) = PromoteToDouble(left, right);
-
-        if (double.IsNaN(d1) || double.IsNaN(d2))
-            return double.NaN;
-        if (double.IsPositiveInfinity(d1) && double.IsPositiveInfinity(d2))
-            return double.NaN;
-        if (double.IsPositiveInfinity(d1))
-            return double.PositiveInfinity;
-        if (double.IsPositiveInfinity(d2))
-            return double.NegativeInfinity;
-
         return d1 - d2;
     }
 
     private static double EvaluateMultiply(object left, object right) {
         var (d1, d2) = PromoteToDouble(left, right);
-
-        if (double.IsNaN(d1) || double.IsNaN(d2))
-            return double.NaN;
-        if (double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2)) {
-            var other = double.IsPositiveInfinity(d1) ? d2 : d1;
-            if (other == 0)
-                return double.NaN;
-            return double.PositiveInfinity;
-        }
-
         return d1 * d2;
     }
 
@@ -173,11 +147,9 @@ public static class TypeHelper {
         var (d1, d2) = PromoteToDouble(left, right);
 
         if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-
-        if (double.IsPositiveInfinity(d1)) return double.IsPositiveInfinity(d2) ? double.NaN : double.PositiveInfinity;
-
-        if (double.IsPositiveInfinity(d2)) return 0.0;
-
+        if (double.IsInfinity(d1) && double.IsInfinity(d2)) return double.NaN;
+        if (double.IsInfinity(d1)) return d1 > 0 ? double.PositiveInfinity : double.NegativeInfinity;
+        if (double.IsInfinity(d2)) return 0.0;
         if (d2 == 0) throw new DivisionByZeroException();
 
         return d1 / d2;
@@ -186,9 +158,8 @@ public static class TypeHelper {
     private static long EvaluateIntegerDivide(object left, object right) {
         var (d1, d2) = PromoteToDouble(left, right);
 
-        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsPositiveInfinity(d1) || double.IsPositiveInfinity(d2))
+        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsInfinity(d1) || double.IsInfinity(d2))
             throw new EvaluateException("整除运算不支持 NaN 或 INF");
-
         if (d2 == 0) throw new DivisionByZeroException();
 
         return (long)(d1 / d2);
@@ -198,11 +169,8 @@ public static class TypeHelper {
         var (d1, d2) = PromoteToDouble(left, right);
 
         if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-
-        if (double.IsPositiveInfinity(d1)) return double.NaN;
-
-        if (double.IsPositiveInfinity(d2)) return d1;
-
+        if (double.IsInfinity(d1)) return double.NaN;
+        if (double.IsInfinity(d2)) return d1;
         if (d2 == 0) throw new DivisionByZeroException();
 
         return d1 % d2;
@@ -213,9 +181,9 @@ public static class TypeHelper {
 
         if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
 
-        if (double.IsPositiveInfinity(d1)) return double.NaN;
+        if (double.IsInfinity(d1)) return double.NaN;
 
-        if (double.IsPositiveInfinity(d2)) return d1;
+        if (double.IsInfinity(d2)) return d1;
 
         if (d2 == 0) throw new DivisionByZeroException();
 
