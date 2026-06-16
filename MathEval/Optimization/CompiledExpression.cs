@@ -39,7 +39,8 @@ public class CompiledExpression(LogicalExpression ast) {
             AST.UnaryExpression unaryExpr => CompileUnaryExpression(unaryExpr, contextParam),
             FunctionCall functionCall => CompileFunctionCall(functionCall, contextParam),
             AST.ConditionalExpression condExpr => CompileConditionalExpression(condExpr, contextParam),
-            InterpolatedString interpolated => CompileInterpolatedString(interpolated, contextParam),
+            ArrayLiteralExpression arrExpr => CompileArrayLiteral(arrExpr, contextParam),
+            ArrayIndexExpression idxExpr => CompileArrayIndex(idxExpr, contextParam),
             _ => throw new System.InvalidOperationException($"不支持的节点类型：{node.GetType().Name}")
         };
     }
@@ -153,70 +154,65 @@ public class CompiledExpression(LogicalExpression ast) {
     /// <summary>
     /// 编译条件表达式
     /// </summary>
-    private static BlockExpression CompileConditionalExpression(AST.ConditionalExpression expr, ParameterExpression contextParam) {
+    private static LinqExpression CompileConditionalExpression(AST.ConditionalExpression expr, ParameterExpression contextParam) {
         var conditionExpr = CompileNode(expr.Condition, contextParam);
-        var trueExpr = CompileNode(expr.TrueExpression, contextParam);
-        var falseExpr = CompileNode(expr.FalseExpression, contextParam);
 
         var conditionVar = LinqExpression.Variable(typeof(object), "condition");
         var assignCondition = LinqExpression.Assign(conditionVar, conditionExpr);
 
-        var requireBoolMethod = ((Action<object>)TypeHelper.RequireBool).Method;
-
-        var checkBool = LinqExpression.Call(requireBoolMethod, conditionVar);
-
-        var conditionBool = LinqExpression.Convert(conditionVar, typeof(bool));
+        var toDoubleMethod = ((Func<object, double>)TypeHelper.ToDouble).Method;
+        var toDoubleCall = LinqExpression.Call(toDoubleMethod, conditionVar);
+        var conditionBool = LinqExpression.NotEqual(toDoubleCall, LinqExpression.Constant(0.0));
 
         var trueExprObj = LinqExpression.Convert(CompileNode(expr.TrueExpression, contextParam), typeof(object));
         var falseExprObj = LinqExpression.Convert(CompileNode(expr.FalseExpression, contextParam), typeof(object));
 
         var conditional = LinqExpression.Condition(conditionBool, trueExprObj, falseExprObj);
 
-        return LinqExpression.Block([conditionVar], assignCondition, checkBool, conditional);
+        return LinqExpression.Block([conditionVar], assignCondition, conditional);
     }
 
     /// <summary>
-    /// 编译插值字符串
+    /// 编译数组常量表达式
     /// </summary>
-    private static BlockExpression CompileInterpolatedString(InterpolatedString expr, ParameterExpression contextParam) {
-        var sbVar = LinqExpression.Variable(typeof(StringBuilder), "sb");
-        var newSb = LinqExpression.New(typeof(StringBuilder).GetConstructor(Type.EmptyTypes)!);
-        var assignSb = LinqExpression.Assign(sbVar, newSb);
+    private static LinqExpression CompileArrayLiteral(ArrayLiteralExpression expr, ParameterExpression contextParam) {
+        var elementExprs = expr.Elements.Select(e => CompileNode(e, contextParam)).ToArray();
+        // Convert each element to double using TypeHelper.ToDouble
+        var toDoubleMethod = ((Func<object, double>)TypeHelper.ToDouble).Method;
+        var conversions = elementExprs.Select(e =>
+            LinqExpression.Call(toDoubleMethod, e)).ToArray();
+        return LinqExpression.NewArrayInit(typeof(double), conversions);
+    }
 
-        var appendExpressions = new List<LinqExpression>();
+    /// <summary>
+    /// 编译数组索引表达式
+    /// </summary>
+    private static LinqExpression CompileArrayIndex(ArrayIndexExpression expr, ParameterExpression contextParam) {
+        var arrayExpr = CompileNode(expr.Array, contextParam);
+        var indexExpr = CompileNode(expr.Index, contextParam);
 
-        foreach (var segment in expr.Segments) {
-            if (segment is TextSegment textSeg) {
-                var appendText = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, LinqExpression.Constant(textSeg.Text));
-                appendExpressions.Add(appendText);
-            } else if (segment is ExpressionSegment exprSeg) {
-                var valueExpr = CompileNode(exprSeg.Expression, contextParam);
-                var valueVar = LinqExpression.Variable(typeof(object), "value");
-                var assignValue = LinqExpression.Assign(valueVar, valueExpr);
+        // Get index as int
+        var toIntMethod = typeof(TypeHelper).GetMethod("ToInteger", new[] { typeof(object), typeof(string) })!;
+        var indexCall = LinqExpression.Call(toIntMethod,
+            LinqExpression.Convert(indexExpr, typeof(object)),
+            LinqExpression.Constant("数组索引"));
+        var intIndex = LinqExpression.Convert(indexCall, typeof(int));
 
-                LinqExpression appendExpr;
+        // Handle both array and scalar (for index pushdown optimization)
+        var arrayVar = LinqExpression.Variable(typeof(object), "array");
+        var assignArray = LinqExpression.Assign(arrayVar, arrayExpr);
 
-                if (exprSeg.FormatSpec != null) {
-                    var formatMethod = ((Func<object, string, string>)TypeHelper.Format).Method;
-                    var formatCall = LinqExpression.Call(formatMethod, valueVar, LinqExpression.Constant(exprSeg.FormatSpec));
-                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, formatCall);
-                } else {
-                    var toStringMethod = ((Func<object, string>)TypeHelper.ToString).Method;
-                    var toStringCall = LinqExpression.Call(toStringMethod, valueVar);
-                    appendExpr = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)])!, toStringCall);
-                }
+        var isArray = LinqExpression.TypeIs(arrayVar, typeof(double[]));
+        var arrayAccess = LinqExpression.ArrayIndex(
+            LinqExpression.Convert(arrayVar, typeof(double[])),
+            intIndex);
+        var arrayResult = LinqExpression.Convert(arrayAccess, typeof(object));
 
-                var block = LinqExpression.Block([valueVar], assignValue, appendExpr);
-                appendExpressions.Add(block);
-            }
-        }
+        // If scalar, return the scalar itself
+        var scalarResult = arrayVar;
 
-        var toStringCallFinal = LinqExpression.Call(sbVar, typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString))!);
+        var condition = LinqExpression.Condition(isArray, arrayResult, scalarResult, typeof(object));
 
-        var allExpressions = new List<LinqExpression> { assignSb };
-        allExpressions.AddRange(appendExpressions);
-        allExpressions.Add(toStringCallFinal);
-
-        return LinqExpression.Block([sbVar], allExpressions);
+        return LinqExpression.Block([arrayVar], assignArray, condition);
     }
 }

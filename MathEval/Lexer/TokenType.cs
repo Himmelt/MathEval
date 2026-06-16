@@ -5,10 +5,7 @@ namespace MathEval.Lexer;
 /// </summary>
 public enum TokenType {
     // 字面量
-    Integer,
-    Float,
-    String,
-    Boolean,
+    Number,
     NaN,
     INF,
 
@@ -58,10 +55,9 @@ public enum TokenType {
     // 分隔符
     LeftParenthesis,
     RightParenthesis,
+    LeftBracket,
+    RightBracket,
     Comma,
-
-    // 字符串插值
-    InterpolatedString,
 
     // 结束
     EOF

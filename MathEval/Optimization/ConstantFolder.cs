@@ -21,6 +21,10 @@ public static class ConstantFolder {
                 return FoldFunction(funcCall);
             case ConditionalExpression condExpr:
                 return FoldConditional(condExpr);
+            case ArrayLiteralExpression arrExpr:
+                return FoldArrayLiteral(arrExpr);
+            case ArrayIndexExpression idxExpr:
+                return FoldArrayIndex(idxExpr);
             default:
                 return node;
         }
@@ -81,10 +85,29 @@ public static class ConstantFolder {
         var falseExpr = FoldNode(expr.FalseExpression);
 
         // 如果条件是常量值，直接返回对应的分支
-        if (condition is ValueExpression condVal && condVal.Value is bool b) {
-            return b ? trueExpr : falseExpr;
+        if (condition is ValueExpression condVal && condVal.Value is double d) {
+            return d != 0 ? trueExpr : falseExpr;
         }
 
         return new ConditionalExpression(condition, trueExpr, falseExpr);
+    }
+
+    private static LogicalExpression FoldArrayLiteral(ArrayLiteralExpression expr) {
+        var folded = expr.Elements.Select(FoldNode).ToList();
+        return new ArrayLiteralExpression(folded);
+    }
+
+    private static LogicalExpression FoldArrayIndex(ArrayIndexExpression expr) {
+        var foldedArray = FoldNode(expr.Array);
+        var foldedIndex = FoldNode(expr.Index);
+
+        // If array is a constant literal and index is a constant, we can pre-compute
+        if (foldedArray is ArrayLiteralExpression lit && foldedIndex is ValueExpression val) {
+            var idx = TypeHelper.ToInteger(val.Value, "数组索引");
+            if (idx >= 0 && idx < lit.Elements.Count)
+                return lit.Elements[(int)idx];
+        }
+
+        return new ArrayIndexExpression(foldedArray, foldedIndex);
     }
 }

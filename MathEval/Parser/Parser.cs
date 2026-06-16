@@ -1,3 +1,4 @@
+using System.Globalization;
 using MathEval.AST;
 using MathEval.Exceptions;
 
@@ -226,81 +227,66 @@ public class Parser {
     private LogicalExpression ParsePrimary() {
         CheckDepth();
 
+        LogicalExpression expr;
         switch (CurrentToken.Type) {
-            case Lexer.TokenType.Integer:
-                var intValue = ParseIntegerAsDouble(CurrentToken.Text);
+            case Lexer.TokenType.Number:
+                var numText = CurrentToken.Text;
+                double numValue;
+                if (numText.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    numValue = Convert.ToInt64(numText[2..], 16);
+                else if (numText.StartsWith("0o", StringComparison.OrdinalIgnoreCase))
+                    numValue = Convert.ToInt64(numText[2..], 8);
+                else if (numText.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
+                    numValue = Convert.ToInt64(numText[2..], 2);
+                else
+                    numValue = double.Parse(numText, CultureInfo.InvariantCulture);
                 MoveNext();
                 _depth--;
-                return new ValueExpression(intValue);
-
-            case Lexer.TokenType.Float:
-                var floatValue = double.Parse(CurrentToken.Text);
-                MoveNext();
-                _depth--;
-                return new ValueExpression(floatValue);
-
-            case Lexer.TokenType.String:
-                var stringValue = CurrentToken.Text;
-                MoveNext();
-                _depth--;
-                return new ValueExpression(stringValue);
-
-            case Lexer.TokenType.Boolean:
-                var boolValue = CurrentToken.Text.Equals("true", StringComparison.OrdinalIgnoreCase);
-                MoveNext();
-                _depth--;
-                return new ValueExpression(boolValue);
+                expr = new ValueExpression(numValue);
+                break;
 
             case Lexer.TokenType.NaN:
                 MoveNext();
                 _depth--;
-                return new ValueExpression(double.NaN);
+                expr = new ValueExpression(double.NaN);
+                break;
 
             case Lexer.TokenType.INF:
                 MoveNext();
                 _depth--;
-                return new ValueExpression(double.PositiveInfinity);
+                expr = new ValueExpression(double.PositiveInfinity);
+                break;
 
             case Lexer.TokenType.Identifier:
                 _depth--;
-                return ParseIdentifierOrFunction();
+                expr = ParseIdentifierOrFunction();
+                break;
 
             case Lexer.TokenType.LeftParenthesis:
                 MoveNext();
-                var expr = ParseExpression();
+                expr = ParseExpression();
                 Expect(Lexer.TokenType.RightParenthesis);
                 _depth--;
-                return expr;
+                break;
 
-            case Lexer.TokenType.InterpolatedString:
-                var interpolated = ParseInterpolatedString(CurrentToken.Text);
-                MoveNext();
+            case Lexer.TokenType.LeftBracket:
                 _depth--;
-                return interpolated;
+                expr = ParseArrayLiteral();
+                break;
 
             default:
                 throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
         }
-    }
 
-    private double ParseIntegerAsDouble(string text) {
-        try {
-            long value;
-            if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
-                value = Convert.ToInt64(text[2..], 16);
-            } else if (text.StartsWith("0o", StringComparison.OrdinalIgnoreCase)) {
-                value = Convert.ToInt64(text[2..], 8);
-            } else if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) {
-                value = Convert.ToInt64(text[2..], 2);
-            } else {
-                value = long.Parse(text);
-            }
-            return value;
-        } catch (FormatException ex) {
-            throw new ParseException($"无效的数字格式：{text}", CurrentToken.Line, CurrentToken.Column, ex);
-        } catch (System.OverflowException) {
-            throw new Exceptions.OverflowException($"数字 '{text}' 过大");
+        // Postfix array indexing: supports arr[i], (expr)[i], [1,2,3][i]
+        while (CurrentToken.Type == Lexer.TokenType.LeftBracket) {
+            MoveNext();
+            var index = ParseExpression();
+            Expect(Lexer.TokenType.RightBracket);
+            expr = new ArrayIndexExpression(expr, index);
         }
+
+        return expr;
     }
 
     private LogicalExpression ParseIdentifierOrFunction() {
@@ -322,157 +308,18 @@ public class Parser {
         return new Identifier(name);
     }
 
-    /// <summary>
-    /// 解析插值字符串 Token 文本，构建 InterpolatedString AST 节点。
-    /// Token 文本格式：$"content" 或 $'content'，包含 {{ }} 转义和 {expr:format} 插值
-    /// </summary>
-    private InterpolatedString ParseInterpolatedString(string rawText) {
-        // 跳过 $" 或 $' 前缀
-        int pos = 2;
-        char quote = rawText[1];
-        var segments = new List<InterpolationSegment>();
-        var textBuilder = new StringBuilder();
-
-        while (pos < rawText.Length) {
-            char ch = rawText[pos];
-
-            if (ch == quote) {
-                break;
+    private LogicalExpression ParseArrayLiteral() {
+        MoveNext(); // skip [
+        var elements = new List<LogicalExpression>();
+        if (CurrentToken.Type != Lexer.TokenType.RightBracket) {
+            elements.Add(ParseExpression());
+            while (CurrentToken.Type == Lexer.TokenType.Comma) {
+                MoveNext();
+                elements.Add(ParseExpression());
             }
-
-            if (ch == '{') {
-                if (pos + 1 < rawText.Length && rawText[pos + 1] == '{') {
-                    textBuilder.Append('{');
-                    pos += 2;
-                    continue;
-                }
-
-                if (textBuilder.Length > 0) {
-                    segments.Add(new TextSegment(textBuilder.ToString()));
-                    textBuilder.Clear();
-                }
-
-                pos++;
-                var (expression, formatSpec, newPos) = ParseInterpolationExpression(rawText, pos);
-                segments.Add(new ExpressionSegment(expression, formatSpec));
-                pos = newPos;
-                continue;
-            }
-
-            if (ch == '}') {
-                if (pos + 1 < rawText.Length && rawText[pos + 1] == '}') {
-                    textBuilder.Append('}');
-                    pos += 2;
-                    continue;
-                }
-            }
-
-            textBuilder.Append(ch);
-            pos++;
         }
-
-        if (textBuilder.Length > 0) {
-            segments.Add(new TextSegment(textBuilder.ToString()));
-        }
-
-        if (segments.Count == 0) {
-            segments.Add(new TextSegment(""));
-        }
-
-        return new InterpolatedString(segments);
-    }
-
-    /// <summary>
-    /// 解析插值表达式 {expr:format}，返回表达式AST、格式说明符和结束位置
-    /// </summary>
-    private static (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos) {
-        var exprBuilder = new StringBuilder();
-        int depth = 1;
-        int pos = startPos;
-
-        while (pos < rawText.Length && depth > 0) {
-            char ch = rawText[pos];
-            if (ch == '{') {
-                depth++;
-                exprBuilder.Append(ch);
-            } else if (ch == '}') {
-                depth--;
-                if (depth > 0)
-                    exprBuilder.Append(ch);
-            } else if (ch == '\'' || ch == '"') {
-                exprBuilder.Append(ch);
-                pos++;
-                while (pos < rawText.Length && rawText[pos] != ch) {
-                    if (rawText[pos] == '\\') {
-                        exprBuilder.Append(rawText[pos]);
-                        pos++;
-                        if (pos < rawText.Length) {
-                            exprBuilder.Append(rawText[pos]);
-                        }
-                    } else {
-                        exprBuilder.Append(rawText[pos]);
-                    }
-                    pos++;
-                }
-                if (pos < rawText.Length) {
-                    exprBuilder.Append(rawText[pos]);
-                }
-            } else {
-                exprBuilder.Append(ch);
-            }
-            pos++;
-        }
-
-        var exprText = exprBuilder.ToString().Trim();
-
-        string? formatSpec = null;
-        var colonIndex = FindFormatColon(exprText);
-        if (colonIndex >= 0) {
-            formatSpec = exprText[(colonIndex + 1)..].Trim();
-            exprText = exprText[..colonIndex].Trim();
-        }
-
-        var innerLexer = new Lexer.Lexer(exprText);
-        var innerParser = new Parser(innerLexer);
-        var expression = innerParser.Parse();
-
-        return (expression, formatSpec, pos);
-    }
-
-    /// <summary>
-    /// 查找格式说明符的冒号位置，跳过嵌套的括号和字符串
-    /// </summary>
-    private static int FindFormatColon(string text) {
-        int depth = 0;
-        bool inString = false;
-        char stringQuote = '\0';
-
-        for (int i = 0; i < text.Length; i++) {
-            char ch = text[i];
-
-            if (inString) {
-                if (ch == '\\') {
-                    i++;
-                    continue;
-                }
-                if (ch == stringQuote)
-                    inString = false;
-                continue;
-            }
-
-            if (ch == '\'' || ch == '"') {
-                inString = true;
-                stringQuote = ch;
-                continue;
-            }
-
-            if (ch == '(') depth++;
-            else if (ch == ')') depth--;
-            else if (ch == ':' && depth == 0)
-                return i;
-        }
-
-        return -1;
+        Expect(Lexer.TokenType.RightBracket);
+        return new ArrayLiteralExpression(elements);
     }
 
     private void CheckDepth() {

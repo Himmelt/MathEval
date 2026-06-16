@@ -96,68 +96,13 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void StringConcat_TwoStrings_ReturnsHelloWorld() {
-        Assert.Equal("hello world", Expression.Eval<string>("'hello' + ' ' + 'world'"));
-    }
-
-    [Fact]
-    public void StringConcat_StringAndInt_ReturnsValue42() {
-        Assert.Equal("value: 42", Expression.Eval<string>("'value: ' + 42"));
-    }
-
-    [Fact]
-    public void StringConcat_DoubleAndString_Returns3_14IsPi() {
-        Assert.Equal("3.14 is pi", Expression.Eval<string>("3.14 + ' is pi'"));
-    }
-
-    [Fact]
-    public void StringConcat_StringAndBool_ReturnsFlagTrue() {
-        Assert.Equal("flag: True", Expression.Eval<string>("'flag: ' + true"));
-    }
-
-    [Fact]
-    public void StringConcat_BoolAndString_ReturnsTrueBang() {
-        Assert.Equal("True!", Expression.Eval<string>("true + '!'"));
-    }
-
-    [Fact]
-    public void StringConcat_IntAndBool_Returns6() {
-        Assert.Equal(6L, Expression.Eval<long>("5 + true"));
-    }
-
-    [Fact]
-    public void StringConcat_BoolAndBool_Returns2() {
-        Assert.Equal(2L, Expression.Eval<long>("true + true"));
-    }
-
-    [Fact]
-    public void StringConcat_StringMinusInt_ThrowsTypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("'hello' - 1"));
-    }
-
-    [Fact]
     public void Comparison_GreaterThan_ReturnsTrue() {
         Assert.True(Expression.Eval<bool>("3 > 2"));
     }
 
     [Fact]
-    public void Comparison_StringLessThan_ReturnsTrue() {
-        Assert.True(Expression.Eval<bool>("'abc' < 'abd'"));
-    }
-
-    [Fact]
-    public void Comparison_StringCaseSensitive_NotEqual() {
-        Assert.False(Expression.Eval<bool>("'A' == 'a'"));
-    }
-
-    [Fact]
     public void Comparison_CrossTypeNumeric_Equal() {
         Assert.True(Expression.Eval<bool>("1.0 == 1"));
-    }
-
-    [Fact]
-    public void Comparison_StringEqual_ReturnsTrue() {
-        Assert.True(Expression.Eval<bool>("'hello' == 'hello'"));
     }
 
     [Fact]
@@ -168,21 +113,6 @@ public class EvaluationTests {
     [Fact]
     public void Comparison_BoolNotEqual_ReturnsTrue() {
         Assert.True(Expression.Eval<bool>("true != false"));
-    }
-
-    [Fact]
-    public void Comparison_IntAndString_NotEqual() {
-        Assert.False(Expression.Eval<bool>("1 == '1'"));
-    }
-
-    [Fact]
-    public void Comparison_IntAndString_NotEqualOp() {
-        Assert.True(Expression.Eval<bool>("1 != '1'"));
-    }
-
-    [Fact]
-    public void Comparison_IntGreaterThanString_ThrowsTypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 > '1'"));
     }
 
     [Fact]
@@ -223,8 +153,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Logical_IntAnd_ThrowsTypeMismatch() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 and 2"));
+    public void Logical_IntAnd_Returns1() {
+        Assert.Equal(1.0, Expression.Eval<double>("1 and 2"));
     }
 
     [Fact]
@@ -238,13 +168,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Unary_MinusString_ThrowsTypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("-'hello'"));
-    }
-
-    [Fact]
-    public void Unary_NotInt_ThrowsTypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("not 1"));
+    public void Unary_NotInt_Returns0() {
+        Assert.Equal(0.0, Expression.Eval<double>("not 1"));
     }
 
     [Fact]
@@ -263,9 +188,9 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Bitwise_BoolAndInt_ThrowsTypeMismatch() {
-        // 按位运算现在要求整数操作数，布尔值不再有效
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("true & 6"));
+    public void Bitwise_BoolAndInt_Returns0() {
+        // true=1, 1 & 6 = 0 (001 & 110 = 000)
+        Assert.Equal(0.0, Expression.Eval<double>("true & 6"));
     }
 
     [Fact]
@@ -345,8 +270,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Ternary_IntCondition_ThrowsTypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 ? 2 : 3"));
+    public void Ternary_IntCondition_Returns2() {
+        Assert.Equal(2.0, Expression.Eval<double>("1 ? 2 : 3"));
     }
 
     [Fact]
@@ -412,13 +337,6 @@ public class EvaluationTests {
         var ctx = new ExpressionContext();
         ctx.Set("x", 5L);
         Assert.Equal(5L, Expression.Eval<long>("x > 0 ? x : -x", ctx));
-    }
-
-    [Fact]
-    public void Context_VariableRangeCheck_ReturnsValid() {
-        var ctx = new ExpressionContext();
-        ctx.Set("x", 5L);
-        Assert.Equal("valid", Expression.Eval<string>("x > 0 and x < 10 ? 'valid' : 'invalid'", ctx));
     }
 
     [Fact]
