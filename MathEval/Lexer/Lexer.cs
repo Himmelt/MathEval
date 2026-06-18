@@ -16,8 +16,8 @@ public class Lexer {
 
     private static readonly Dictionary<string, TokenType> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "true", TokenType.Boolean },
-        { "false", TokenType.Boolean },
+        { "true", TokenType.Number },
+        { "false", TokenType.Number },
         { "and", TokenType.AndKeyword },
         { "or", TokenType.OrKeyword },
         { "not", TokenType.NotKeyword },
@@ -65,14 +65,10 @@ public class Lexer {
 
         char ch = Peek();
 
-        if (ch == '$' && (PeekNext() == '\'' || PeekNext() == '"')) {
-            ScanInterpolatedString();
-        } else if (char.IsDigit(ch)) {
+        if (char.IsDigit(ch)) {
             ScanNumber();
         } else if (IsIdentifierStart(ch)) {
             ScanIdentifier();
-        } else if (ch == '\'' || ch == '"') {
-            ScanString();
         } else {
             ScanOperator();
         }
@@ -136,7 +132,7 @@ public class Lexer {
         if (sb.Length == 2)
             throw new ParseException("无效的十六进制数：'0x' 后缺少数字", _startLine, _startColumn);
 
-        CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
+        CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanOctalNumber() {
@@ -147,7 +143,7 @@ public class Lexer {
         if (sb.Length == 2)
             throw new ParseException("无效的八进制数：'0o' 后缺少数字", _startLine, _startColumn);
 
-        CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
+        CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanBinaryNumber() {
@@ -158,7 +154,7 @@ public class Lexer {
         if (sb.Length == 2)
             throw new ParseException("无效的二进制数：'0b' 后缺少数字", _startLine, _startColumn);
 
-        CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
+        CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanDecimalNumber() {
@@ -172,21 +168,21 @@ public class Lexer {
             while (!IsAtEnd() && char.IsDigit(Peek())) {
                 sb.Append(Read());
             }
-            CurrentToken = new Token(TokenType.Float, sb.ToString(), _startPosition, _startLine, _startColumn);
-        } else if (Peek() == 'e' || Peek() == 'E') {
+        }
+
+        if (Peek() == 'e' || Peek() == 'E') {
             sb.Append(Read());
             if (Peek() == '+' || Peek() == '-')
                 sb.Append(Read());
             if (!IsAtEnd() && char.IsDigit(Peek())) {
                 while (!IsAtEnd() && char.IsDigit(Peek()))
                     sb.Append(Read());
-                CurrentToken = new Token(TokenType.Float, sb.ToString(), _startPosition, _startLine, _startColumn);
             } else {
                 throw new ParseException("无效的数字：指数后缺少数字", _startLine, _startColumn);
             }
-        } else {
-            CurrentToken = new Token(TokenType.Integer, sb.ToString(), _startPosition, _startLine, _startColumn);
         }
+
+        CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanIdentifier() {
@@ -197,142 +193,15 @@ public class Lexer {
 
         var text = sb.ToString();
         if (Keywords.TryGetValue(text, out var type)) {
-            CurrentToken = new Token(type, text, _startPosition, _startLine, _startColumn);
+            if (type == TokenType.Number) {
+                var numberText = text.Equals("true", StringComparison.OrdinalIgnoreCase) ? "1" : "0";
+                CurrentToken = new Token(TokenType.Number, numberText, _startPosition, _startLine, _startColumn);
+            } else {
+                CurrentToken = new Token(type, text, _startPosition, _startLine, _startColumn);
+            }
         } else {
             CurrentToken = new Token(TokenType.Identifier, text, _startPosition, _startLine, _startColumn);
         }
-    }
-
-    private void ScanString() {
-        char quote = Read();
-        var sb = new StringBuilder();
-        while (!IsAtEnd() && Peek() != quote) {
-            if (Peek() == '\\') {
-                Read();
-                if (IsAtEnd())
-                    throw new ParseException("字符串意外结束", _line, _column);
-                char escaped = Read();
-                switch (escaped) {
-                    case 'n': sb.Append('\n'); break;
-                    case 'r': sb.Append('\r'); break;
-                    case 't': sb.Append('\t'); break;
-                    case 'b': sb.Append('\b'); break;
-                    case 'f': sb.Append('\f'); break;
-                    case '0': sb.Append('\0'); break;
-                    case '\\': sb.Append('\\'); break;
-                    case '\'': sb.Append('\''); break;
-                    case '"': sb.Append('"'); break;
-                    case 'x':
-                        if (_position + 2 > _text.Length)
-                            throw new ParseException("无效的十六进制转义序列", _line, _column);
-                        var hex = new string([Read(), Read()]);
-                        sb.Append((char)Convert.ToInt32(hex, 16));
-                        break;
-                    case 'u':
-                        if (_position + 4 > _text.Length)
-                            throw new ParseException("无效的 Unicode 转义序列", _line, _column);
-                        var uni = new string([Read(), Read(), Read(), Read()]);
-                        sb.Append((char)Convert.ToInt32(uni, 16));
-                        break;
-                    default:
-                        throw new ParseException($"Invalid escape sequence '\\{escaped}'", _line, _column);
-                }
-            } else {
-                sb.Append(Read());
-            }
-        }
-
-        if (IsAtEnd())
-            throw new ParseException("未终止的字符串字面量", _line, _column);
-
-        Read();
-        CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
-    }
-
-    /// <summary>
-    /// 扫描插值字符串，读取完整原始文本（包含 $ 前缀和引号），
-    /// 产出 InterpolatedString 类型的 Token，由 Parser 负责解析插值段。
-    /// </summary>
-    private void ScanInterpolatedString() {
-        // 读取 $ 前缀和开引号
-        Read(); // '$'
-        char quote = Read(); // '\'' or '"'
-
-        var sb = new StringBuilder();
-        sb.Append('$');
-        sb.Append(quote);
-
-        var depthStack = new Stack<int>();
-
-        while (!IsAtEnd()) {
-            char ch = Peek();
-
-            if (ch == quote && depthStack.Count == 0) {
-                break;
-            }
-
-            if (ch == '{') {
-                if (PeekNext() == '{') {
-                    // {{ 转义为字面量 {
-                    sb.Append(Read());
-                    sb.Append(Read());
-                } else {
-                    sb.Append(Read());
-                    depthStack.Push(0);
-                }
-            } else if (ch == '}') {
-                if (depthStack.Count > 0) {
-                    sb.Append(Read());
-                    depthStack.Pop();
-                } else if (PeekNext() == '}') {
-                    // }} 转义为字面量 }
-                    sb.Append(Read());
-                    sb.Append(Read());
-                } else {
-                    // 在顶层遇到未匹配的 }，报错
-                    throw new ParseException("插值字符串中存在未匹配的 '}'", _line, _column);
-                }
-            } else if (ch == '\'' || ch == '"') {
-                // 插值表达式内的嵌套字符串，需要完整跳过
-                sb.Append(Read());
-                ScanNestedStringContent(sb, ch);
-            } else {
-                sb.Append(Read());
-            }
-        }
-
-        if (IsAtEnd())
-            throw new ParseException("未终止的插值字符串", _line, _column);
-
-        // 读取闭引号
-        sb.Append(Read());
-
-        if (depthStack.Count > 0)
-            throw new ParseException("插值字符串中存在未匹配的 '{'", _startLine, _startColumn);
-
-        CurrentToken = new Token(TokenType.InterpolatedString, sb.ToString(), _startPosition, _startLine, _startColumn);
-    }
-
-    /// <summary>
-    /// 扫描插值表达式内嵌套的字符串字面量内容，将原始字符追加到 sb
-    /// </summary>
-    private void ScanNestedStringContent(StringBuilder sb, char quote) {
-        while (!IsAtEnd() && Peek() != quote) {
-            if (Peek() == '\\') {
-                sb.Append(Read());
-                if (IsAtEnd())
-                    throw new ParseException("插值表达式中字符串意外结束", _line, _column);
-                sb.Append(Read());
-            } else {
-                sb.Append(Read());
-            }
-        }
-
-        if (IsAtEnd())
-            throw new ParseException("插值表达式中存在未终止的字符串", _line, _column);
-
-        // 读取闭引号
-        sb.Append(Read());
     }
 
     private void ScanOperator() {
@@ -431,6 +300,12 @@ public class Lexer {
                 break;
             case ')':
                 CurrentToken = new Token(TokenType.RightParenthesis, ")", _startPosition, _startLine, _startColumn);
+                break;
+            case '[':
+                CurrentToken = new Token(TokenType.LeftBracket, "[", _startPosition, _startLine, _startColumn);
+                break;
+            case ']':
+                CurrentToken = new Token(TokenType.RightBracket, "]", _startPosition, _startLine, _startColumn);
                 break;
             case ',':
                 CurrentToken = new Token(TokenType.Comma, ",", _startPosition, _startLine, _startColumn);

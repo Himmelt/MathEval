@@ -1,0 +1,54 @@
+# Tasks
+- [ ] Task 1: Lexer 改造
+  - [ ] 1.1 合并 TokenType: Integer/Float/Boolean → Number, 新增 LeftBracket/RightBracket, 移除 String/InterpolatedString
+  - [ ] 1.2 修改 Lexer: ScanDecimalNumber/ScanHex/Octal/Binary 统一产出 Number, true/false → Number, 移除 ScanString/ScanInterpolatedString/ScanNestedStringContent, 新增 [ ] 支持
+- [ ] Task 2: AST 改造
+  - [ ] 2.1 删除 InterpolatedString.cs, InterpolationSegment.cs, TextSegment.cs, ExpressionSegment.cs
+  - [ ] 2.2 新增 ArrayLiteralExpression.cs, ArrayIndexExpression.cs
+  - [ ] 2.3 修改 IExpressionVisitor / IExpressionVisitor<T>: 移除 Visit(InterpolatedString), 新增 Visit(ArrayLiteralExpression) / Visit(ArrayIndexExpression)
+- [ ] Task 3: Parser 改造
+  - [ ] 3.1 修改 ParsePrimary: 统一 Number 处理, 移除 String/InterpolatedString 分支, 新增 LeftBracket 分支
+  - [ ] 3.2 新增 ParseArrayLiteral 方法
+  - [ ] 3.3 修改 ParseIdentifierOrFunction: 新增 [index] 后缀索引
+  - [ ] 3.4 新增后缀索引 while 循环 (支持 (expr)[i])
+  - [ ] 3.5 删除 ParseInterpolatedString / ParseInterpolationExpression / FindFormatColon
+- [ ] Task 4: TypeHelper 重写
+  - [ ] 4.1 删除 ToString/Format/RequireBool/BoolToNumber, 移除所有 is string/is long 分支
+  - [ ] 4.2 简化 ToDouble/ToInteger/PromoteToDouble
+  - [ ] 4.3 重写 EvaluateBinary: 标量 double 运算 + 数组运算分发
+  - [ ] 4.4 新增 EvaluateBinaryArray: 数组逐元素运算 (广播)
+  - [ ] 4.5 重写 EvaluateUnary: 标量 + 数组一元运算
+  - [ ] 4.6 比较运算返回 double (1.0/0.0)
+- [ ] Task 5: EvaluationVisitor 改造
+  - [ ] 5.1 删除 Visit(InterpolatedString)
+  - [ ] 5.2 修改 And/Or 短路逻辑: bool → double 判断
+  - [ ] 5.3 新增 Visit(ArrayLiteralExpression): 数组常量求值
+  - [ ] 5.4 新增 Visit(ArrayIndexExpression): 数组索引求值
+  - [ ] 5.5 修改 Visit(FunctionCall): 函数数组广播
+- [ ] Task 6: Calculator 改造
+  - [ ] 6.1 修改 ConvertResult<T>: 适配 double/double[] 返回, 兼容 bool
+- [ ] Task 7: CompiledExpression 改造
+  - [ ] 7.1 删除 CompileInterpolatedString
+  - [ ] 7.2 新增 CompileArrayLiteral / CompileArrayIndex
+  - [ ] 7.3 修改 CompileNode switch
+- [ ] Task 8: ConstantFolder 改造
+  - [ ] 8.1 新增 ArrayLiteralExpression / ArrayIndexExpression 折叠
+- [ ] Task 9: IndexPushdownOptimizer 新增
+  - [ ] 9.1 创建 IndexPushdownOptimizer 类
+  - [ ] 9.2 集成到 Calculator 求值流程
+- [ ] Task 10: 编写单元测试
+- [ ] Task 11: 运行测试并确保通过
+- [ ] Task 12: 提交 PR
+
+# Task Dependencies
+- Task 2 depends on Task 1
+- Task 3 depends on Task 1 and Task 2
+- Task 4 independent (can parallel with Task 1-3)
+- Task 5 depends on Task 2 and Task 4
+- Task 6 depends on Task 4
+- Task 7 depends on Task 2
+- Task 8 depends on Task 2
+- Task 9 depends on Task 2 and Task 3
+- Task 10 depends on all above
+- Task 11 depends on Task 10
+- Task 12 depends on Task 11

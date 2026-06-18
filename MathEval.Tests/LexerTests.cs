@@ -16,92 +16,64 @@ public class LexerTests {
     [Fact]
     public void DecimalInteger() {
         var token = GetSingleToken("42");
-        Assert.Equal(TokenType.Integer, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("42", token.Text);
     }
 
     [Fact]
     public void DecimalFloat() {
         var token = GetSingleToken("3.14");
-        Assert.Equal(TokenType.Float, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("3.14", token.Text);
     }
 
     [Fact]
     public void ScientificNotation_PositiveExponent() {
         var token = GetSingleToken("1e5");
-        Assert.Equal(TokenType.Float, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("1e5", token.Text);
     }
 
     [Fact]
     public void ScientificNotation_NegativeExponent() {
         var token = GetSingleToken("1e-5");
-        Assert.Equal(TokenType.Float, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("1e-5", token.Text);
     }
 
     [Fact]
     public void HexNumber() {
         var token = GetSingleToken("0xFF");
-        Assert.Equal(TokenType.Integer, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("0xFF", token.Text);
     }
 
     [Fact]
     public void OctalNumber() {
         var token = GetSingleToken("0o77");
-        Assert.Equal(TokenType.Integer, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("0o77", token.Text);
     }
 
     [Fact]
     public void BinaryNumber() {
         var token = GetSingleToken("0b1010");
-        Assert.Equal(TokenType.Integer, token.Type);
+        Assert.Equal(TokenType.Number, token.Type);
         Assert.Equal("0b1010", token.Text);
-    }
-
-    [Fact]
-    public void StringSingleQuote() {
-        var token = GetSingleToken("'hello'");
-        Assert.Equal(TokenType.String, token.Type);
-        Assert.Equal("hello", token.Text);
-    }
-
-    [Fact]
-    public void StringDoubleQuote() {
-        var token = GetSingleToken("\"world\"");
-        Assert.Equal(TokenType.String, token.Type);
-        Assert.Equal("world", token.Text);
-    }
-
-    [Fact]
-    public void StringEscape_Newline() {
-        var token = GetSingleToken("'\\n'");
-        Assert.Equal(TokenType.String, token.Type);
-        Assert.Equal("\n", token.Text);
-    }
-
-    [Fact]
-    public void StringEscape_Hex() {
-        var token = GetSingleToken("'\\x41'");
-        Assert.Equal(TokenType.String, token.Type);
-        Assert.Equal("A", token.Text);
     }
 
     [Fact]
     public void BooleanTrue() {
         var token = GetSingleToken("true");
-        Assert.Equal(TokenType.Boolean, token.Type);
-        Assert.Equal("true", token.Text);
+        Assert.Equal(TokenType.Number, token.Type);
+        Assert.Equal("1", token.Text);
     }
 
     [Fact]
     public void BooleanFalse() {
         var token = GetSingleToken("false");
-        Assert.Equal(TokenType.Boolean, token.Type);
-        Assert.Equal("false", token.Text);
+        Assert.Equal(TokenType.Number, token.Type);
+        Assert.Equal("0", token.Text);
     }
 
     [Fact]
@@ -227,12 +199,6 @@ public class LexerTests {
     }
 
     [Fact]
-    public void InterpolatedString() {
-        var token = GetSingleToken("$\"Hello {name}!\"");
-        Assert.Equal(TokenType.InterpolatedString, token.Type);
-    }
-
-    [Fact]
     public void Error_ExponentWithoutDigits() {
         Assert.Throws<ParseException>(() => GetSingleToken("2e"));
     }
@@ -243,19 +209,23 @@ public class LexerTests {
     }
 
     [Fact]
-    public void Error_UnterminatedString() {
-        Assert.Throws<ParseException>(() => GetSingleToken("'unterminated"));
-    }
-
-    [Fact]
-    public void Error_InvalidEscape() {
-        Assert.Throws<ParseException>(() => GetSingleToken("'\\z'"));
-    }
-
-    [Fact]
     public void Error_ExpressionExceedsMaxLength() {
         var longText = new string('1', 4097);
         Assert.Throws<ParseException>(() => new Lexer.Lexer(longText));
+    }
+
+    [Fact]
+    public void LeftBracket() {
+        var token = GetSingleToken("[");
+        Assert.Equal(TokenType.LeftBracket, token.Type);
+        Assert.Equal("[", token.Text);
+    }
+
+    [Fact]
+    public void RightBracket() {
+        var token = GetSingleToken("]");
+        Assert.Equal(TokenType.RightBracket, token.Type);
+        Assert.Equal("]", token.Text);
     }
 
     [Fact]
@@ -263,9 +233,9 @@ public class LexerTests {
         var lexer = new Lexer.Lexer("1 + 2");
         var tokens = lexer.TokenizeAll();
         Assert.Equal(4, tokens.Count);
-        Assert.Equal(TokenType.Integer, tokens[0].Type);
+        Assert.Equal(TokenType.Number, tokens[0].Type);
         Assert.Equal(TokenType.Plus, tokens[1].Type);
-        Assert.Equal(TokenType.Integer, tokens[2].Type);
+        Assert.Equal(TokenType.Number, tokens[2].Type);
         Assert.Equal(TokenType.EOF, tokens[3].Type);
     }
 

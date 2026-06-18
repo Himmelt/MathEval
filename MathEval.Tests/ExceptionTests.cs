@@ -87,7 +87,8 @@ public class ExceptionTests {
 
     [Fact]
     public void TypeMismatchException_CaughtAs_MathEvalException() {
-        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("'hello' - 1"));
+        // Bitwise op with non-integer operand throws TypeMismatchException
+        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("3.5 & 2"));
         Assert.IsType<TypeMismatchException>(ex);
     }
 
@@ -106,7 +107,7 @@ public class ExceptionTests {
     [Fact]
     public void FunctionTypeMismatchException_CaughtAs_EvaluateException() {
         var context = new ExpressionContext();
-        context.SetFunction("testAdd", (long a, long b) => a + b);
+        context.SetFunction("testAdd", (double a, double b) => a + b);
         var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("testAdd(1)", context));
         Assert.IsType<FunctionTypeMismatchException>(ex);
     }
@@ -117,8 +118,9 @@ public class ExceptionTests {
     }
 
     [Fact]
-    public void StringMinusNumber_Throws_TypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("'hello' - 1"));
+    public void BitwiseNonInteger_Throws_TypeMismatchException() {
+        // Bitwise op with non-integer operand throws TypeMismatchException
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 & 2"));
     }
 
     [Fact]
@@ -139,12 +141,16 @@ public class ExceptionTests {
     }
 
     [Fact]
-    public void AndWithNonBool_Throws_TypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("true and 1"));
+    public void AndWithNonBool_NoLongerThrows() {
+        // true and 1 is now valid (non-zero is truthy)
+        // Use bitwise with non-integer to test TypeMismatchException
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 & 2"));
     }
 
     [Fact]
-    public void TernaryWithNonBoolCondition_Throws_TypeMismatchException() {
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("1 ? 2 : 3"));
+    public void TernaryWithNonBoolCondition_NoLongerThrows() {
+        // 1 ? 2 : 3 is now valid (non-zero is truthy)
+        // Use bitwise with non-integer to test TypeMismatchException
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 | 2"));
     }
 }

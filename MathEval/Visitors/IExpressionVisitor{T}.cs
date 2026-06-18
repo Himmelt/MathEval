@@ -33,12 +33,17 @@ public interface IExpressionVisitor<out T> {
     T Visit(FunctionCall expr);
 
     /// <summary>
-    /// 访问插值字符串节点
-    /// </summary>
-    T Visit(InterpolatedString expr);
-
-    /// <summary>
     /// 访问条件表达式节点
     /// </summary>
     T Visit(ConditionalExpression expr);
+
+    /// <summary>
+    /// 访问数组常量表达式节点
+    /// </summary>
+    T Visit(ArrayLiteralExpression expr);
+
+    /// <summary>
+    /// 访问数组索引表达式节点
+    /// </summary>
+    T Visit(ArrayIndexExpression expr);
 }

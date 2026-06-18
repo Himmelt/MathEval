@@ -35,56 +35,41 @@ public class Calculator(string expression, ExpressionContext context, Expression
     }
 
     private static T ConvertResult<T>(object result) {
-        var targetType = typeof(T);
-
         if (result is T typedResult) return typedResult;
+
+        var targetType = typeof(T);
 
         if (result is double d) {
             if (targetType == typeof(double)) return (T)(object)d;
             if (targetType == typeof(float)) return (T)(object)(float)d;
+            if (targetType == typeof(bool)) return (T)(object)(d != 0);
+            if (targetType == typeof(string)) return (T)(object)d.ToString();
+            if (targetType == typeof(int)) return (T)(object)(int)d;
+            if (targetType == typeof(long)) return (T)(object)(long)d;
             if (targetType == typeof(decimal)) return (T)(object)(decimal)d;
-
-            if (IsIntegerType(targetType)) {
-                if (!IsMathematicalInteger(d)) {
-                    throw new TypeMismatchException(
-                        $"无法将非整数 {d} 转换为整数类型 {targetType.Name}",
-                        targetType.Name, "double");
-                }
-
-                try {
-                    return (T)Convert.ChangeType(d, targetType);
-                } catch (System.OverflowException) {
-                    throw new Exceptions.OverflowException(
-                        $"值 {d} 超出 {targetType.Name} 类型的范围");
-                }
-            }
+            if (targetType == typeof(sbyte)) return (T)(object)(sbyte)d;
+            if (targetType == typeof(byte)) return (T)(object)(byte)d;
+            if (targetType == typeof(short)) return (T)(object)(short)d;
+            if (targetType == typeof(ushort)) return (T)(object)(ushort)d;
+            if (targetType == typeof(uint)) return (T)(object)(uint)d;
+            if (targetType == typeof(ulong)) return (T)(object)(ulong)d;
         }
 
-        if (result is bool b && targetType == typeof(bool)) return (T)(object)b;
-        if (result is string s && targetType == typeof(string)) return (T)(object)s;
-
-        try {
-            return (T)Convert.ChangeType(result, targetType);
-        } catch (InvalidCastException) {
-            throw new TypeMismatchException(
-                $"无法将结果转换为类型 {targetType.Name}",
-                targetType.Name, result?.GetType().Name ?? "null");
-        } catch (System.OverflowException) {
-            throw new Exceptions.OverflowException(
-                $"值超出 {targetType.Name} 类型的范围");
+        if (result is double[] arr) {
+            if (targetType == typeof(double[])) return (T)(object)arr;
+            if (targetType == typeof(List<double>)) return (T)(object)arr.ToList();
         }
-    }
 
-    private static bool IsIntegerType(Type type) {
-        return type == typeof(byte) || type == typeof(sbyte) ||
-               type == typeof(short) || type == typeof(ushort) ||
-               type == typeof(int) || type == typeof(uint) ||
-               type == typeof(long) || type == typeof(ulong);
-    }
+        // Handle non-double numeric types from context variables
+        if (result is IConvertible conv) {
+            try {
+                return (T)Convert.ChangeType(conv, targetType);
+            } catch (InvalidCastException) { } catch (FormatException) { } catch (System.OverflowException) { }
+        }
 
-    private static bool IsMathematicalInteger(double value) {
-        if (double.IsNaN(value) || double.IsInfinity(value)) return false;
-        return value == Math.Truncate(value);
+        throw new TypeMismatchException(
+            $"无法将 {result?.GetType().Name ?? "null"} 转换为 {typeof(T).Name}",
+            typeof(T).Name, result?.GetType().Name ?? "null");
     }
 
     public void Set(string name, object value) => _context.Set(name, value);
@@ -110,6 +95,9 @@ public class Calculator(string expression, ExpressionContext context, Expression
             if (_options.HasFlag(ExpressionOptions.ConstantFolding)) {
                 _ast = ConstantFolder.Fold(_ast);
             }
+
+            // 应用索引下推优化
+            _ast = IndexPushdownOptimizer.Optimize(_ast);
 
             if (!_options.HasFlag(ExpressionOptions.NoCache)) ExpressionCache.Set(_expressionText, _ast);
         }

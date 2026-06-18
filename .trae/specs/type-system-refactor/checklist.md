@@ -1,0 +1,12 @@
+- [ ] Lexer: Token 类型合并完成, [ ] 支持, 字符串相关代码移除
+- [ ] AST: 4 个字符串类删除, 2 个数组类新增, Visitor 接口更新
+- [ ] Parser: Number 统一处理, 数组常量/索引解析, 字符串解析移除
+- [ ] TypeHelper: 纯 double 运算 + 数组运算, 无 long/bool/string 分支
+- [ ] EvaluationVisitor: 数组求值 + 函数广播, And/Or 适配 double
+- [ ] Calculator: ConvertResult 适配 double/double[]
+- [ ] CompiledExpression: 数组编译, 插值编译移除
+- [ ] ConstantFolder: 数组节点折叠
+- [ ] IndexPushdownOptimizer: 索引下推优化实现
+- [ ] 单元测试覆盖所有新功能
+- [ ] 所有测试通过
+- [ ] PR 已提交

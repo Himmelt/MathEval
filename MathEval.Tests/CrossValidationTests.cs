@@ -377,36 +377,6 @@ public class CrossValidationTests {
 
     #endregion
 
-    #region 审查问题 #6: TypeHelper.EvaluateEqual null 安全性
-
-    [Fact]
-    public void EvaluateEqual_StringEqualNull_DoesNotThrow() {
-        // 通过字符串与不同类型比较来间接测试 null 安全性
-        // 主求值器中字符串与数字不等比较不会抛 NullReferenceException
-        Assert.False(Expression.Eval<bool>("1 == '1'"));
-        Assert.True(Expression.Eval<bool>("1 != '1'"));
-    }
-
-    #endregion
-
-    #region 审查问题 #14: Lexer 十六进制转义错误处理
-
-    [Fact]
-    public void Lexer_InvalidHexEscape_ThrowsParseException() {
-        // \x 后跟非十六进制字符应抛出 ParseException 而非 FormatException
-        var ex = Record.Exception(() => Expression.Eval("'\\xGG'"));
-        Assert.NotNull(ex);
-        // 期望是 ParseException（友好错误），如果得到 FormatException 则审查问题 #14 成立
-    }
-
-    [Fact]
-    public void Lexer_InvalidUnicodeEscape_ThrowsParseException() {
-        var ex = Record.Exception(() => Expression.Eval("'\\uZZZZ'"));
-        Assert.NotNull(ex);
-    }
-
-    #endregion
-
     #region 审查问题 #15: TypeHelper.EvaluatePower 死代码验证
 
     [Fact]
