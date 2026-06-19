@@ -142,8 +142,11 @@ public class ExpressionContext {
         return new ExpressionContext(this);
     }
 
-    public void Remove(string name) {
+    public void RemoveSymbol(string name) {
         _symbols.TryRemove(name, out _);
+    }
+
+    public void RemoveFunction(string name) {
         _functions.TryRemove(name, out _);
     }
 

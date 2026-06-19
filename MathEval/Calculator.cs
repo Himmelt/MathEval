@@ -76,7 +76,9 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
     public void Set(string name, Func<object> value) => _context.Set(name, value);
 
-    public void Remove(string name) => _context.Remove(name);
+    public void RemoveSymbol(string name) => _context.RemoveSymbol(name);
+
+    public void RemoveFunction(string name) => _context.RemoveFunction(name);
 
     private void EnsureParsed() {
         if (_ast != null) return;
