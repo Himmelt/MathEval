@@ -70,7 +70,7 @@ public class ContextTests {
         var parent = new ExpressionContext();
         parent.Set("x", 42L);
         var child = parent.CreateChild();
-        child.Remove("x");
+        child.RemoveSymbol("x");
         Assert.Equal(42L, Expression.Eval<long>("x", child));
     }
 
@@ -132,14 +132,14 @@ public class ContextTests {
     public void Remove_Symbol_ThenAccess_ThrowsSymbolNotFoundException() {
         var ctx = new ExpressionContext();
         ctx.Set("x", 42L);
-        ctx.Remove("x");
+        ctx.RemoveSymbol("x");
         Assert.Throws<SymbolNotFoundException>(() => Expression.Eval<long>("x", ctx));
     }
 
     [Fact]
     public void Remove_Function_ThenAccess_ThrowsFunctionNotFoundException() {
         var ctx = new ExpressionContext();
-        ctx.Remove("abs");
+        ctx.RemoveFunction("abs");
         Assert.Throws<FunctionNotFoundException>(() => Expression.Eval<long>("abs(-1)", ctx));
     }
 }

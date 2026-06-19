@@ -327,7 +327,7 @@ public class FunctionSupplementaryTests {
     public void CustomFunction_Remove() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("myFunc", (Func<double, double>)(x => x * 2));
-        ctx.Remove("myFunc");
+        ctx.RemoveFunction("myFunc");
         Assert.Throws<FunctionNotFoundException>(() => Expression.Eval("myFunc(5)", ctx));
     }
 

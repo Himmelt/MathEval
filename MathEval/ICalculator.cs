@@ -25,7 +25,12 @@ public interface ICalculator {
     void Set(string name, Func<object> value);
 
     /// <summary>
-    /// 删除符号或函数
+    /// 删除符号
     /// </summary>
-    void Remove(string name);
+    void RemoveSymbol(string name);
+
+    /// <summary>
+    /// 删除函数
+    /// </summary>
+    void RemoveFunction(string name);
 }

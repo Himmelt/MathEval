@@ -259,7 +259,7 @@ public class EvaluationSupplementaryTests {
     public void Context_RemoveSymbol() {
         var ctx = new ExpressionContext();
         ctx.Set("x", 10L);
-        ctx.Remove("x");
+        ctx.RemoveSymbol("x");
         Assert.Throws<SymbolNotFoundException>(() => Expression.Eval("x", ctx));
     }
 
