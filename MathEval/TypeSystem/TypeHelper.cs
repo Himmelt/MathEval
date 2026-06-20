@@ -67,8 +67,8 @@ public static class TypeHelper {
     private static double[] EvaluateBinaryArray(BinaryExpressionType type, object left, object right) {
         return (left, right) switch {
             (double[] a, double[] b) => ElementWise(a, b, type),
-            (double[] a, double s)   => ElementWise(a, s, type),
-            (double s, double[] b)   => ElementWise(s, b, type),
+            (double[] a, double s) => ElementWise(a, s, type),
+            (double s, double[] b) => ElementWise(s, b, type),
             _ => throw new TypeMismatchException("数组运算需要数值类型", "number|array",
                 $"{left?.GetType().Name ?? "null"}, {right?.GetType().Name ?? "null"}")
         };

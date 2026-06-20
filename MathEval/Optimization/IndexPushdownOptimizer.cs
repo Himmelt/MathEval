@@ -1,5 +1,4 @@
 using MathEval.AST;
-using MathEval.Parser;
 
 namespace MathEval.Optimization;
 

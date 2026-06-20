@@ -1,6 +1,6 @@
-using System.Globalization;
 using MathEval.AST;
 using MathEval.Exceptions;
+using System.Globalization;
 
 namespace MathEval.Parser;
 
