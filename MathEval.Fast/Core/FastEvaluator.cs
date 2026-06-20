@@ -100,19 +100,21 @@ internal ref struct FastEvaluator(string expression) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return 1.0;
+                    left = 1.0;
+                } else {
+                    var right = EvalLogicalAnd();
+                    left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
                 }
-                var right = EvalLogicalAnd();
-                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else if (TryMatchKeyword("or")) {
                 if (!_skipMode && ConvertToBool(left)) {
                     _skipMode = true;
                     EvalLogicalAnd();
                     _skipMode = false;
-                    return 1.0;
+                    left = 1.0;
+                } else {
+                    var right = EvalLogicalAnd();
+                    left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
                 }
-                var right = EvalLogicalAnd();
-                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else break;
         }
         return left;
@@ -128,19 +130,21 @@ internal ref struct FastEvaluator(string expression) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return 0.0;
+                    left = 0.0;
+                } else {
+                    var right = EvalEquality();
+                    left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
                 }
-                var right = EvalEquality();
-                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else if (TryMatchKeyword("and")) {
                 if (!_skipMode && !ConvertToBool(left)) {
                     _skipMode = true;
                     EvalEquality();
                     _skipMode = false;
-                    return 0.0;
+                    left = 0.0;
+                } else {
+                    var right = EvalEquality();
+                    left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
                 }
-                var right = EvalEquality();
-                left = _skipMode ? default : (ConvertToBool(right) ? 1.0 : 0.0);
             } else break;
         }
         return left;
@@ -153,11 +157,11 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '=' && PeekNext() == '=') {
                 Read(); Read();
                 var right = EvalRelational();
-                left = Equal(left, right);
+                left = _skipMode ? default : Equal(left, right);
             } else if (Peek() == '!' && PeekNext() == '=') {
                 Read(); Read();
                 var right = EvalRelational();
-                left = NotEqual(left, right);
+                left = _skipMode ? default : NotEqual(left, right);
             } else break;
         }
         return left;
@@ -170,19 +174,19 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '<' && PeekNext() == '=') {
                 Read(); Read();
                 var right = EvalBitwiseOr();
-                left = left <= right ? 1.0 : 0.0;
+                left = _skipMode ? default : (left <= right ? 1.0 : 0.0);
             } else if (Peek() == '>' && PeekNext() == '=') {
                 Read(); Read();
                 var right = EvalBitwiseOr();
-                left = left >= right ? 1.0 : 0.0;
+                left = _skipMode ? default : (left >= right ? 1.0 : 0.0);
             } else if (Peek() == '<' && PeekNext() != '<') {
                 Read();
                 var right = EvalBitwiseOr();
-                left = left < right ? 1.0 : 0.0;
+                left = _skipMode ? default : (left < right ? 1.0 : 0.0);
             } else if (Peek() == '>' && PeekNext() != '>') {
                 Read();
                 var right = EvalBitwiseOr();
-                left = left > right ? 1.0 : 0.0;
+                left = _skipMode ? default : (left > right ? 1.0 : 0.0);
             } else break;
         }
         return left;
@@ -195,7 +199,7 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '|' && PeekNext() != '|') {
                 Read();
                 var right = EvalBitwiseXor();
-                left = BuiltInOperators.BitwiseOr(left, right);
+                left = _skipMode ? default : BuiltInOperators.BitwiseOr(left, right);
             } else break;
         }
         return left;
@@ -207,7 +211,7 @@ internal ref struct FastEvaluator(string expression) {
             SkipWhitespace();
             if (TryMatchKeyword("xor")) {
                 var right = EvalBitwiseAnd();
-                left = BuiltInOperators.BitwiseXor(left, right);
+                left = _skipMode ? default : BuiltInOperators.BitwiseXor(left, right);
             } else break;
         }
         return left;
@@ -220,7 +224,7 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '&' && PeekNext() != '&') {
                 Read();
                 var right = EvalShift();
-                left = BuiltInOperators.BitwiseAnd(left, right);
+                left = _skipMode ? default : BuiltInOperators.BitwiseAnd(left, right);
             } else break;
         }
         return left;
@@ -233,15 +237,15 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '<' && PeekNext() == '<') {
                 Read(); Read();
                 var right = EvalAdditive();
-                left = BuiltInOperators.LeftShift(left, right);
+                left = _skipMode ? default : BuiltInOperators.LeftShift(left, right);
             } else if (Peek() == '>' && PeekNext() == '>' && PeekNextNext() == '>') {
                 Read(); Read(); Read();
                 var right = EvalAdditive();
-                left = BuiltInOperators.UnsignedRightShift(left, right);
+                left = _skipMode ? default : BuiltInOperators.UnsignedRightShift(left, right);
             } else if (Peek() == '>' && PeekNext() == '>') {
                 Read(); Read();
                 var right = EvalAdditive();
-                left = BuiltInOperators.RightShift(left, right);
+                left = _skipMode ? default : BuiltInOperators.RightShift(left, right);
             } else break;
         }
         return left;
@@ -254,11 +258,11 @@ internal ref struct FastEvaluator(string expression) {
             if (Peek() == '+') {
                 Read();
                 var right = EvalMultiplicative();
-                left += right;
+                left = _skipMode ? default : left + right;
             } else if (Peek() == '-') {
                 Read();
                 var right = EvalMultiplicative();
-                left -= right;
+                left = _skipMode ? default : left - right;
             } else break;
         }
         return left;
@@ -313,17 +317,17 @@ internal ref struct FastEvaluator(string expression) {
         if (Peek() == '-') {
             Read();
             var operand = EvalUnary();
-            return -operand;
+            return _skipMode ? default : -operand;
         }
         if (Peek() == '!' && PeekNext() != '=') {
             Read();
             var operand = EvalUnary();
-            return ConvertToBool(operand) ? 0.0 : 1.0;
+            return _skipMode ? default : (ConvertToBool(operand) ? 0.0 : 1.0);
         }
         if (Peek() == '~') {
             Read();
             var operand = EvalUnary();
-            return BuiltInOperators.BitwiseNot(operand);
+            return _skipMode ? default : BuiltInOperators.BitwiseNot(operand);
         }
         // not 关键字在 EvalPrimary 的标识符解析中处理
         return EvalPrimary();
@@ -359,7 +363,7 @@ internal ref struct FastEvaluator(string expression) {
         // not 关键字作为前缀一元运算符
         if (span.Length == 3 && FastScanner.EqualsLower(span, "not")) {
             var operand = EvalUnary();
-            return ConvertToBool(operand) ? 0.0 : 1.0;
+            return _skipMode ? default : (ConvertToBool(operand) ? 0.0 : 1.0);
         }
 
         // 函数调用

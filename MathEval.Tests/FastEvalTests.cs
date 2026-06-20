@@ -227,6 +227,74 @@ public class FastEvalTests {
 
     #endregion
 
+    #region 链式短路求值
+
+    [Fact]
+    public void EvalDouble_ChainedOr_ShortCircuitFirstTrue() {
+        // 1 || 2 || 3 → 短路于 1，但需消费剩余 || 3
+        Assert.Equal(1.0, FastEval.EvalDouble("1 || 2 || 3"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedOr_AllFalseLastTrue() {
+        Assert.Equal(1.0, FastEval.EvalDouble("0 || 0 || 3"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedOr_AllFalse() {
+        Assert.Equal(0.0, FastEval.EvalDouble("0 || 0 || 0"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedAnd_AllTrue() {
+        Assert.Equal(1.0, FastEval.EvalDouble("1 && 1 && 1"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedAnd_ShortCircuitFirstFalse() {
+        // 0 && 1 && 1 → 短路于 0，但需消费剩余 && 1
+        Assert.Equal(0.0, FastEval.EvalDouble("0 && 1 && 1"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedAnd_MiddleFalse() {
+        Assert.Equal(0.0, FastEval.EvalDouble("1 && 0 && 1"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedOrKeyword_ShortCircuit() {
+        Assert.Equal(1.0, FastEval.EvalDouble("1 or 2 or 3"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedAndKeyword_ShortCircuit() {
+        Assert.Equal(0.0, FastEval.EvalDouble("0 and 1 and 1"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedOrFourOperands() {
+        Assert.Equal(1.0, FastEval.EvalDouble("0 || 0 || 0 || 5"));
+    }
+
+    [Fact]
+    public void EvalDouble_ChainedAndFourOperands() {
+        Assert.Equal(0.0, FastEval.EvalDouble("1 && 1 && 0 && 1"));
+    }
+
+    [Fact]
+    public void EvalDouble_MixedOrAnd_Precedence() {
+        // 1 || 0 && 0 → 1 || (0 && 0) = 1
+        Assert.Equal(1.0, FastEval.EvalDouble("1 || 0 && 0"));
+    }
+
+    [Fact]
+    public void EvalDouble_MixedAndOr_Precedence() {
+        // 0 && 0 || 1 → (0 && 0) || 1 = 1
+        Assert.Equal(1.0, FastEval.EvalDouble("0 && 0 || 1"));
+    }
+
+    #endregion
+
     #region 三元运算
 
     [Fact]
@@ -254,6 +322,96 @@ public class FastEvalTests {
         Assert.False(FastEval.EvalBool("a ? b : false", vars));
         vars["a"] = true;
         Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a ? b : false", vars));
+    }
+
+    #endregion
+
+    #region 三元短路 skipMode 验证
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_BitwiseOr_UndefinedVar() {
+        // true ? 2 : 3.5 | x（x 未定义）→ skipMode 应跳过 3.5 | x，不抛异常
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 3.5 | x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_BitwiseAnd_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 3 & x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_LeftShift_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 1 << x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_RightShift_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 8 >> x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Addition_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 3 + x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Subtraction_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 3 - x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_BitwiseNot_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : ~x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Negate_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : -x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_LogicalNot_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : !x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_NotKeyword_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : not x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Xor_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : 3 xor x", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Equality_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : x == 0", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernarySkipBranch_Relational_UndefinedVar() {
+        var vars = new Dictionary<string, double> { ["a"] = 1.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 2 : x > 0", vars));
+    }
+
+    [Fact]
+    public void EvalDouble_TernaryFalseBranch_BitwiseOr_UndefinedVar() {
+        // false ? 3.5 | x : 2 → skipMode 跳过 true 分支的 3.5 | x
+        var vars = new Dictionary<string, double> { ["a"] = 0.0 };
+        Assert.Equal(2.0, FastEval.EvalDouble("a ? 3.5 | x : 2", vars));
     }
 
     #endregion
