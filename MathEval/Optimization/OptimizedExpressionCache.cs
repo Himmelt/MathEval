@@ -1,5 +1,5 @@
 using MathEval.AST;
-using System.Collections.Concurrent;
+using MathEval.Internal;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MathEval.Optimization;
@@ -8,7 +8,9 @@ namespace MathEval.Optimization;
 /// 优化的表达式缓存：缓存解析后的 AST 和编译后的委托
 /// </summary>
 public static class OptimizedExpressionCache {
-    private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+    // 默认缓存容量：最多缓存 512 条 AST+编译结果
+    private const int DefaultCapacity = 512;
+    private static readonly LruCache<string, CacheEntry> _cache = new(DefaultCapacity);
 
     private class CacheEntry {
         public LogicalExpression? Ast { get; set; }
@@ -16,7 +18,7 @@ public static class OptimizedExpressionCache {
     }
 
     public static bool TryGetAst(string expression, [MaybeNullWhen(false)] out LogicalExpression ast) {
-        if (_cache.TryGetValue(expression, out var entry)) {
+        if (_cache.TryGet(expression, out var entry)) {
             ast = entry.Ast;
             return ast != null;
         }
@@ -25,7 +27,7 @@ public static class OptimizedExpressionCache {
     }
 
     public static bool TryGetCompiled(string expression, [MaybeNullWhen(false)] out CompiledExpression compiled) {
-        if (_cache.TryGetValue(expression, out var entry)) {
+        if (_cache.TryGet(expression, out var entry)) {
             compiled = entry.Compiled;
             return compiled != null;
         }
@@ -34,26 +36,11 @@ public static class OptimizedExpressionCache {
     }
 
     public static void Set(string expression, LogicalExpression ast) {
-        _cache.AddOrUpdate(
-            expression,
-            new CacheEntry { Ast = ast },
-            (_, existing) => {
-                existing.Ast = ast;
-                existing.Compiled = null; // AST 变更后清除编译缓存
-                return existing;
-            }
-        );
+        _cache.Set(expression, new CacheEntry { Ast = ast, Compiled = null });
     }
 
     public static void SetCompiled(string expression, CompiledExpression compiled) {
-        _cache.AddOrUpdate(
-            expression,
-            new CacheEntry { Compiled = compiled },
-            (_, existing) => {
-                existing.Compiled = compiled;
-                return existing;
-            }
-        );
+        _cache.Set(expression, new CacheEntry { Compiled = compiled });
     }
 
     public static void Clear() {
@@ -68,26 +55,26 @@ public static class OptimizedExpressionCache {
     }
 
     public static CompiledExpression GetOrAddCompiled(string expression, Func<string, LogicalExpression> astFactory, Func<LogicalExpression, CompiledExpression> compileFactory) {
-        var entry = _cache.GetOrAdd(
-            expression,
-            expr => {
-                var ast = astFactory(expr);
-                var compiled = compileFactory(ast);
-                return new CacheEntry { Ast = ast, Compiled = compiled };
-            }
-        );
-
-        if (entry.Compiled != null) {
+        // 先检查是否已有编译结果
+        if (_cache.TryGet(expression, out var entry) && entry.Compiled != null) {
             return entry.Compiled;
         }
 
-        // 双重检查锁定：避免多线程同时调用 compileFactory
-        lock (entry) {
-            if (entry.Compiled == null) {
-                entry.Compiled = compileFactory(entry.Ast!);
+        // 原子地获取或创建完整条目
+        entry = _cache.GetOrAdd(expression, expr => {
+            var ast = astFactory(expr);
+            return new CacheEntry { Ast = ast, Compiled = compileFactory(ast) };
+        });
+
+        // 处理边界情况：条目来自 Set() 但 Compiled 为 null，需要编译
+        if (entry.Compiled == null) {
+            lock (entry) {
+                if (entry.Compiled == null) {
+                    entry.Compiled = compileFactory(entry.Ast!);
+                }
             }
         }
 
-        return entry.Compiled;
+        return entry.Compiled!;
     }
 }

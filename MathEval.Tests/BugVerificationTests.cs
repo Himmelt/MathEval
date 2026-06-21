@@ -291,13 +291,13 @@ public class BugVerificationTests {
 
     /// <summary>
     /// BUG-13：ExpressionCache 无容量限制，存在内存泄漏风险
-    /// 静态 ConcurrentDictionary 无上限，缓存无限增长。
-    /// 验证方式：求值多个不同表达式后通过反射检查缓存条目数。
-    /// 正确行为：有 LRU 策略限制容量
+    /// 修复后使用 LruCache 限制容量（默认 512）。
+    /// 验证方式：求值超过缓存容量的表达式后检查缓存条目数不超过容量上限。
+    /// 正确行为：LRU 策略限制条目数不超过容量
     /// BUG 行为：所有条目都保留，无容量限制
     /// </summary>
     [Fact]
-    public void Bug13_ExpressionCacheNoCapacityLimit() {
+    public void Bug13_ExpressionCacheHasCapacityLimit() {
         var cacheType = Type.GetType("MathEval.Internal.ExpressionCache, MathEval");
         Assert.NotNull(cacheType);
 
@@ -305,8 +305,8 @@ public class BugVerificationTests {
         var clearMethod = cacheType!.GetMethod("Clear", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
         clearMethod!.Invoke(null, null);
 
-        // 求值 200 个不同表达式
-        for (int i = 0; i < 200; i++) {
+        // 求值 600 个不同表达式（超过默认容量 512）
+        for (int i = 0; i < 600; i++) {
             Expression.Eval<double>($"{i} * 2");
         }
 
@@ -316,10 +316,12 @@ public class BugVerificationTests {
         var cache = cacheField!.GetValue(null);
         Assert.NotNull(cache);
         var countProperty = cache!.GetType().GetProperty("Count");
+        Assert.NotNull(countProperty);
         var count = (int)countProperty!.GetValue(cache)!;
 
-        // BUG-13: 缓存无容量限制，200 条全部保留
-        Assert.True(count >= 200, $"缓存无容量限制，应有 >= 200 条，实际 {count}");
+        // 修复后：LRU 策略应限制缓存条目数不超过容量上限 512
+        Assert.True(count <= 512, $"LRU 缓存应限制条目数 <= 512，实际 {count}");
+        Assert.True(count > 0, "缓存不应为空");
     }
 
     /// <summary>
