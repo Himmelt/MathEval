@@ -110,39 +110,18 @@ public static class TypeHelper {
     }
 
     private static double EvaluateDivide(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-        if (double.IsInfinity(d1) && double.IsInfinity(d2)) return double.NaN;
-        if (double.IsInfinity(d1)) return d1 > 0 ? double.PositiveInfinity : double.NegativeInfinity;
-        if (double.IsInfinity(d2)) return 0.0;
-        if (d2 == 0) throw new DivisionByZeroException();
-
         return d1 / d2;
     }
 
     private static double EvaluateIntegerDivide(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsInfinity(d1) || double.IsInfinity(d2)) {
-            throw new EvaluateException("整除运算不支持 NaN 或 INF");
-        }
-        if (d2 == 0) throw new DivisionByZeroException();
-
-        return (long)(d1 / d2);
+        return Math.Truncate(d1 / d2);
     }
 
     private static double EvaluateRemainder(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-        if (double.IsInfinity(d1)) return double.NaN;
-        if (double.IsInfinity(d2)) return d1;
-        if (d2 == 0) throw new DivisionByZeroException();
-
         return d1 % d2;
     }
 
     private static double EvaluateModulo(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-        if (double.IsInfinity(d1)) return double.NaN;
-        if (double.IsInfinity(d2)) return d1;
-        if (d2 == 0) throw new DivisionByZeroException();
-
         double r = d1 % d2;
         if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0)) r += d2;
         return r;

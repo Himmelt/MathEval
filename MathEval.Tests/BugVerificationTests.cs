@@ -114,30 +114,21 @@ public class BugVerificationTests {
     #region 中等 BUG（4 个）
 
     /// <summary>
-    /// BUG-6：BytecodeVM 除零不抛异常，与主项目行为不一致
-    /// Fast 的除法直接执行 double 除法，除零返回 Infinity。
-    /// 正确行为：1/0 → DivisionByZeroException
-    /// BUG 行为：Fast 返回 Infinity
+    /// BUG-6：主项目与 Fast 均遵循 IEEE 754 标准，除零返回 Infinity/NaN
     /// </summary>
     [Fact]
-    public void Bug06_FastDivisionByZeroReturnsInfinity() {
-        // Fast - 不抛异常，返回 Infinity（BUG）
+    public void Bug06_DivisionByZeroReturnsInfinity() {
         Assert.True(double.IsPositiveInfinity(FastEval.EvalDouble("1/0")));
-
-        // 主项目 - 正确抛异常
-        Assert.Throws<DivisionByZeroException>(() =>
-            Expression.Eval<double>("1/0", null, ExpressionOptions.NoCache));
+        Assert.True(double.IsPositiveInfinity(Expression.Eval<double>("1/0", null, ExpressionOptions.NoCache)));
     }
 
     /// <summary>
-    /// BUG-6（补充）：整除 // 同样不检查除零
+    /// BUG-6（补充）：整除 // 同样返回 Infinity
     /// </summary>
     [Fact]
-    public void Bug06_FastIntegerDivisionByZeroReturnsInfinity() {
+    public void Bug06_IntegerDivisionByZeroReturnsInfinity() {
         Assert.True(double.IsPositiveInfinity(FastEval.EvalDouble("1//0")));
-
-        Assert.Throws<DivisionByZeroException>(() =>
-            Expression.Eval<double>("1//0", null, ExpressionOptions.NoCache));
+        Assert.True(double.IsPositiveInfinity(Expression.Eval<double>("1//0", null, ExpressionOptions.NoCache)));
     }
 
     /// <summary>

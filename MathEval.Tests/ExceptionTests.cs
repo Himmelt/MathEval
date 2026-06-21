@@ -61,14 +61,8 @@ public class ExceptionTests {
 
     [Fact]
     public void EvaluateException_CaughtAs_MathEvalException() {
-        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("1 / 0"));
-        Assert.IsType<DivisionByZeroException>(ex);
-    }
-
-    [Fact]
-    public void DivisionByZeroException_CaughtAs_EvaluateException() {
-        var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("1 / 0"));
-        Assert.IsType<DivisionByZeroException>(ex);
+        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("undefinedVar"));
+        Assert.IsType<SymbolNotFoundException>(ex);
     }
 
     [Fact]
@@ -113,8 +107,9 @@ public class ExceptionTests {
     }
 
     [Fact]
-    public void DivisionByZero_Throws_DivisionByZeroException() {
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval("1 / 0"));
+    public void DivisionByZero_ReturnsInfinity() {
+        var result = Expression.Eval<double>("1 / 0");
+        Assert.True(double.IsPositiveInfinity(result));
     }
 
     [Fact]

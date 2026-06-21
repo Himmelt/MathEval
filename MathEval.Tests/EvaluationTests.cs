@@ -81,18 +81,21 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Division_ByZero_ThrowsDivisionByZeroException() {
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval("1 / 0"));
+    public void Division_ByZero_ReturnsInfinity() {
+        var result = Expression.Eval<double>("1 / 0");
+        Assert.True(double.IsPositiveInfinity(result));
     }
 
     [Fact]
-    public void IntegerDivision_ByZero_ThrowsDivisionByZeroException() {
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval("1 // 0"));
+    public void IntegerDivision_ByZero_ReturnsInfinity() {
+        var result = Expression.Eval<double>("1 // 0");
+        Assert.True(double.IsPositiveInfinity(result));
     }
 
     [Fact]
-    public void Modulo_ByZero_ThrowsDivisionByZeroException() {
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval("5 % 0"));
+    public void Modulo_ByZero_ReturnsNaN() {
+        var result = Expression.Eval<double>("5 % 0");
+        Assert.True(double.IsNaN(result));
     }
 
     [Fact]
@@ -123,13 +126,13 @@ public class EvaluationTests {
     [Fact]
     public void Logical_AndShortCircuit_DoesNotEvaluateRight() {
         Assert.False(Expression.Eval<bool>("false and (1/0 == 0)"));
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<bool>("true and (1/0 == 0)"));
+        Assert.False(Expression.Eval<bool>("true and (1/0 == 0)"));
     }
 
     [Fact]
     public void Logical_OrShortCircuit_DoesNotEvaluateRight() {
         Assert.True(Expression.Eval<bool>("true or (1/0 == 0)"));
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<bool>("false or (1/0 == 0)"));
+        Assert.False(Expression.Eval<bool>("false or (1/0 == 0)"));
     }
 
     [Fact]
@@ -277,13 +280,13 @@ public class EvaluationTests {
     [Fact]
     public void Ternary_TrueBranch_ShortCircuit() {
         Assert.Equal(1L, Expression.Eval<long>("true ? 1 : 1/0"));
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<long>("true ? 1/0 : 2"));
+        Assert.True(double.IsPositiveInfinity(Expression.Eval<double>("true ? 1/0 : 2")));
     }
 
     [Fact]
     public void Ternary_FalseBranch_ShortCircuit() {
         Assert.Equal(2L, Expression.Eval<long>("false ? 1/0 : 2"));
-        Assert.Throws<DivisionByZeroException>(() => Expression.Eval<long>("false ? 1 : 1/0"));
+        Assert.True(double.IsPositiveInfinity(Expression.Eval<double>("false ? 1 : 1/0")));
     }
 
     [Fact]

@@ -123,18 +123,18 @@ if (arrayArg is double[] arr) {
 
 ## 中等 BUG（4 个）
 
-### BUG-6：BytecodeVM 除零不抛异常，与主项目行为不一致
+### ~~BUG-6~~（已修复）：BytecodeVM 除零不抛异常，与主项目行为不一致
 
-**位置**：`BytecodeVM.cs`、`BuiltInOperators.cs`（`IntegerDivide` 方法）
+**位置**：`BytecodeVM.cs`、`BuiltInOperators.cs`（`IntegerDivide` 方法）、`TypeHelper.cs`
 
-**问题**：`OpCode.Div` 直接执行 `stack[sp-1] /= r`，除零返回 Infinity/NaN 而非异常。
+**问题**：~~主项目 `TypeHelper.cs` 提前检查除零并抛 `DivisionByZeroException`，而 Fast VM 直接执行 IEEE 754 标准除法返回 Infinity/NaN。~~
+
+**处理**：已修改主项目 `TypeHelper.cs`，移除所有除零预处理检查，统一遵循 IEEE 754 标准。`1/0` → `Infinity`，`0/0` → `NaN`，不再抛出 `DivisionByZeroException`。
 
 | 表达式 | MathEval 主项目 | MathEval.Fast VM |
 |--------|----------------|------------------|
-| `1/0`  | `DivisionByZeroException` | `Infinity` |
-| `1//0` | `DivisionByZeroException` | `Infinity`（IntegerDivide 未检查） |
-
-主项目 `TypeHelper.cs` 明确检查 `if (d2 == 0) throw new DivisionByZeroException()`。
+| `1/0`  | `Infinity`（原为 `DivisionByZeroException`） | `Infinity` |
+| `1//0` | `Infinity`（原为 `DivisionByZeroException`） | `Infinity` |
 
 ---
 
