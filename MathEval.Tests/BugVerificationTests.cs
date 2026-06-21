@@ -1,5 +1,4 @@
 using MathEval.AST;
-using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Fast;
 using MathEval.Fast.Exceptions;
@@ -64,14 +63,13 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-4：IndexPushdownOptimizer 无条件下推索引到函数参数
-    /// 将 f(a)[i] 转为 f(a[i])，对聚合函数语义错误。
-    /// 验证方式：直接调用优化器，检查 AST 结构变化。
-    /// 正确行为：max(a)[0] 保持原结构（或仅对 element-wise 函数下推）
-    /// BUG 行为：max(a)[0] 被转为 max(a[0])，破坏聚合语义
+    /// BUG-4：IndexPushdownOptimizer 无条件下推索引到函数参数（已修复）
+    /// 修复后：聚合函数 max/min 跳过索引下推，保持原 AST 结构。
+    /// max(a)[0] → ArrayIndexExpression(FunctionCall(max, a), 0)
+    /// 而非被下推为 FunctionCall(max, ArrayIndexExpression(a, 0))
     /// </summary>
     [Fact]
-    public void Bug04_IndexPushdownBreaksAggregateFunction() {
+    public void Bug04_IndexPushdownSkipsAggregateFunction() {
         // 构造 AST: max(a)[0]
         var original = new ArrayIndexExpression(
             new FunctionCall("max", [new Identifier("a")]),
@@ -79,13 +77,14 @@ public class BugVerificationTests {
 
         var optimized = IndexPushdownOptimizer.Optimize(original);
 
-        // BUG: 优化后变为 max(a[0])，索引被下推到函数参数
-        Assert.IsType<FunctionCall>(optimized);
-        var funcCall = (FunctionCall)optimized;
-        Assert.Equal("max", funcCall.Name);
-        Assert.Single(funcCall.Arguments);
-        // 参数从 Identifier("a") 变为 ArrayIndexExpression(Identifier("a"), 0)
-        Assert.IsType<ArrayIndexExpression>(funcCall.Arguments[0]);
+        // 修复后：聚合函数不被下推，根节点保持 ArrayIndexExpression
+        Assert.IsType<ArrayIndexExpression>(optimized);
+        var arrIdx = (ArrayIndexExpression)optimized;
+        Assert.IsType<FunctionCall>(arrIdx.Array);
+        var func = (FunctionCall)arrIdx.Array;
+        Assert.Equal("max", func.Name);
+        Assert.Single(func.Arguments);
+        Assert.IsType<Identifier>(func.Arguments[0]); // a 未被索引化
     }
 
     /// <summary>
@@ -182,15 +181,13 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-9：EvaluationVisitor 多数组广播未校验长度一致
-    /// 数组广播仅取第一个数组长度，其他数组直接用 da[i] 访问。
-    /// 正确行为：max([1,2,3], [1,2]) → 友好的长度不匹配错误
-    /// BUG 行为：抛 IndexOutOfRangeException（da[2] 越界）
+    /// BUG-9：EvaluationVisitor 多数组广播未校验长度一致（已修复）
+    /// 修复后：聚合函数不再进行 element-wise 广播，数组参数被展平后全局归约
+    /// max([1,2,3], [1,2]) → flatten → max(1,2,3,1,2) → 3
     /// </summary>
     [Fact]
-    public void Bug09_MultiArrayBroadcastNoLengthCheck() {
-        Assert.Throws<IndexOutOfRangeException>(() =>
-            Expression.Eval("max([1, 2, 3], [1, 2])", null, ExpressionOptions.NoCache));
+    public void Bug09_AggregateFunctionFlattensArrays() {
+        Assert.Equal(3.0, Expression.Eval<double>("max([1, 2, 3], [1, 2])", null, ExpressionOptions.NoCache));
     }
 
     #endregion

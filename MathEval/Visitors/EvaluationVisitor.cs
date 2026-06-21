@@ -9,6 +9,12 @@ namespace MathEval.Visitors;
 public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<object> {
     private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
+    /// <summary>
+    /// 聚合函数名集合 — 这些函数不应进行 element-wise 广播，
+    /// 应将数组参数展平后再归约（如 max([1,2],[3,4]) → 4）
+    /// </summary>
+    private static readonly HashSet<string> _aggregateFunctions = ["max", "min"];
+
     public object Visit(ValueExpression expr) {
         return expr.Value;
     }
@@ -53,6 +59,11 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
             args[i] = expr.Arguments[i].Accept(this);
 
         if (_context.TryGetFunction(expr.Name, out var func)) {
+            // 聚合函数：不广播，展平数组参数后直接调函数（全局归约语义）
+            if (_aggregateFunctions.Contains(expr.Name)) {
+                return func(FlattenArgs(args));
+            }
+
             // Check for array arguments - auto broadcast
             var arrayArg = args.FirstOrDefault(a => a is double[]);
             if (arrayArg is double[] arr) {
@@ -73,19 +84,31 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
         throw new FunctionNotFoundException(expr.Name);
     }
 
+    /// <summary>
+    /// 将参数展平：数组参数拆分为单个元素，标量参数保持不变
+    /// </summary>
+    private static object[] FlattenArgs(object[] args) {
+        var list = new List<object>();
+        foreach (var arg in args) {
+            if (arg is double[] arr) {
+                foreach (var item in arr) list.Add(item);
+            } else {
+                list.Add(arg);
+            }
+        }
+        return [.. list];
+    }
+
     public object Visit(ConditionalExpression expr) {
         var condition = expr.Condition.Accept(this);
         var condDouble = TypeHelper.ToDouble(condition);
-        if (condDouble != 0)
-            return expr.TrueExpression.Accept(this);
-        else
-            return expr.FalseExpression.Accept(this);
+        if (condDouble != 0) return expr.TrueExpression.Accept(this);
+        else return expr.FalseExpression.Accept(this);
     }
 
     public object Visit(ArrayLiteralExpression expr) {
         var results = new double[expr.Elements.Count];
-        for (int i = 0; i < results.Length; i++)
-            results[i] = TypeHelper.ToDouble(expr.Elements[i].Accept(this));
+        for (int i = 0; i < results.Length; i++) results[i] = TypeHelper.ToDouble(expr.Elements[i].Accept(this));
         return results;
     }
 
@@ -95,15 +118,13 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
         var intIndex = TypeHelper.ToInteger(indexValue, "数组索引");
 
         if (array is double[] arr) {
-            if (intIndex < 0 || intIndex >= arr.Length)
-                throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
+            if (intIndex < 0 || intIndex >= arr.Length) throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
             return arr[intIndex];
         }
 
         // Scalar value with index (from index pushdown optimization) - return the scalar itself
         // This handles cases like (arr * x + 10)[i] where x and 10 are scalars
-        if (array is double)
-            return array;
+        if (array is double) return array;
 
         throw new TypeMismatchException("索引操作需要数组类型", "array", array?.GetType().Name ?? "null");
     }

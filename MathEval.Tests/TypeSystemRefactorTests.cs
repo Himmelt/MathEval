@@ -293,8 +293,9 @@ public class TypeSystemRefactorTests {
     public void FunctionArrayBroadcast_MultiArg() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 4, 9 });
-        var result = Expression.Eval<double[]>("max(arr, 5)", context);
-        Assert.Equal(new double[] { 5, 5, 9 }, result);
+        // 聚合函数 max 不广播，展平后全局归约 → max(1,4,9,5) = 9
+        var result = Expression.Eval<double>("max(arr, 5)", context);
+        Assert.Equal(9.0, result);
     }
 
     [Fact]
@@ -428,7 +429,7 @@ public class TypeSystemRefactorTests {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3 });
         var result = Expression.Eval<List<double>>("arr * 2", context);
-        Assert.Equal(new List<double> { 2, 4, 6 }, result);
+        Assert.Equal([2, 4, 6], result);
     }
 
     [Fact]
