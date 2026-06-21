@@ -67,6 +67,14 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
             // Check for array arguments - auto broadcast
             var arrayArg = args.FirstOrDefault(a => a is double[]);
             if (arrayArg is double[] arr) {
+                // Validate all array arguments have the same length
+                foreach (var arg in args) {
+                    if (arg is double[] da && da.Length != arr.Length) {
+                        throw new EvaluateException(
+                            $"数组广播时所有数组参数长度必须一致，但遇到长度 {da.Length} 和 {arr.Length}");
+                    }
+                }
+
                 var result = new double[arr.Length];
                 for (int i = 0; i < arr.Length; i++) {
                     var scalarArgs = new object[args.Length];

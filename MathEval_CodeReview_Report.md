@@ -180,11 +180,11 @@ var safeArrayAccess = LinqExpression.Condition(
 
 ---
 
-### BUG-9：EvaluationVisitor 多数组广播未校验长度一致
+### ~~BUG-9~~（已修复）：EvaluationVisitor 多数组广播未校验长度一致
 
 **位置**：`EvaluationVisitor.cs`（`Visit` `FunctionCall`）
 
-**问题**：数组广播仅取第一个数组参数的长度，其他数组参数直接用 `da[i]` 访问，未校验长度。
+**问题**：~~数组广播仅取第一个数组参数的长度，其他数组参数直接用 `da[i]` 访问，未校验长度。~~
 
 ```csharp
 var arrayArg = args.FirstOrDefault(a => a is double[]);  // 只取第一个数组
@@ -197,6 +197,8 @@ if (arrayArg is double[] arr) {
     }
 }
 ```
+
+**处理**：已同时在 `EvaluationVisitor.cs` 和 `CompiledExpression.cs`（`CallFunctionWithBroadcast`）的广播循环前增加数组长度一致性校验，长度不一致时抛出友好的 `EvaluateException`。新增了 3 个验证测试覆盖解释模式、编译模式和正常广播场景。
 
 **复现**：`max([1,2,3], [1,2])` → i=2 时 `da[2]` 越界，抛 `IndexOutOfRangeException` 而非长度不匹配的友好错误。
 

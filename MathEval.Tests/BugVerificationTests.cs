@@ -1,4 +1,5 @@
 using MathEval.AST;
+using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Fast;
 using MathEval.Fast.Exceptions;
@@ -169,10 +170,42 @@ public class BugVerificationTests {
     /// BUG-9：EvaluationVisitor 多数组广播未校验长度一致（已修复）
     /// 修复后：聚合函数不再进行 element-wise 广播，数组参数被展平后全局归约
     /// max([1,2,3], [1,2]) → flatten → max(1,2,3,1,2) → 3
+    /// 非聚合函数广播时校验所有数组参数长度一致，不一致时抛 EvaluateException
     /// </summary>
     [Fact]
     public void Bug09_AggregateFunctionFlattensArrays() {
         Assert.Equal(3.0, Expression.Eval<double>("max([1, 2, 3], [1, 2])", null, ExpressionOptions.NoCache));
+    }
+
+    /// <summary>
+    /// BUG-9（续）：非聚合函数广播时校验数组长度一致（解释模式 + 编译模式）
+    /// add([1,2,3], [1,2]) 应抛 EvaluateException 而非 IndexOutOfRangeException
+    /// </summary>
+    [Theory]
+    [InlineData(ExpressionOptions.NoCache)]
+    [InlineData(ExpressionOptions.ConstantFolding | ExpressionOptions.CompileOptimization)]
+    public void Bug09_NonAggregateBroadcastValidatesArrayLength(ExpressionOptions options) {
+        var ctx = new ExpressionContext();
+        ctx.SetFunction("add", (double a, double b) => a + b);
+
+        var ex = Assert.Throws<EvaluateException>(() =>
+            Expression.Eval<double>("add([1, 2, 3], [1, 2])", ctx, options));
+        Assert.Contains("长度必须一致", ex.Message);
+    }
+
+    /// <summary>
+    /// BUG-9（续）：数组长度一致时广播正常工作
+    /// </summary>
+    [Fact]
+    public void Bug09_NonAggregateBroadcastSameLengthWorks() {
+        var ctx = new ExpressionContext();
+        ctx.SetFunction("add", (double a, double b) => a + b);
+
+        var result = Expression.Eval("add([1, 2, 3], [4, 5, 6])", ctx, ExpressionOptions.NoCache);
+        var arr = Assert.IsType<double[]>(result);
+        Assert.Equal(5.0, arr[0]);
+        Assert.Equal(7.0, arr[1]);
+        Assert.Equal(9.0, arr[2]);
     }
 
     #endregion

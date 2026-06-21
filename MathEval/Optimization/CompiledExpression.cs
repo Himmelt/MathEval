@@ -54,6 +54,16 @@ public class CompiledExpression(LogicalExpression ast) {
         var arrayArg = args.FirstOrDefault(a => a is double[]);
         if (arrayArg is double[] arr2)
         {
+            // Validate all array arguments have the same length
+            foreach (var arg in args)
+            {
+                if (arg is double[] da && da.Length != arr2.Length)
+                {
+                    throw new EvaluateException(
+                        $"数组广播时所有数组参数长度必须一致，但遇到长度 {da.Length} 和 {arr2.Length}");
+                }
+            }
+
             var result = new double[arr2.Length];
             for (int i = 0; i < arr2.Length; i++)
             {
