@@ -1,5 +1,3 @@
-using Xunit;
-
 namespace MathEval.Tests;
 
 public class StringInterpolationTests {
