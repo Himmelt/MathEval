@@ -88,19 +88,25 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-5：CompiledExpression 编译模式缺少数组广播
-    /// 编译模式直接调用 func(args)，未实现数组广播逻辑。
-    /// 正确行为：sin([1,2,3]) → [sin(1), sin(2), sin(3)]（数组广播）
-    /// BUG 行为：编译模式抛异常（函数收到 double[] 而非 double）
+    /// BUG-5：CompiledExpression 编译模式缺少数组广播（已修复）
+    /// 修复后：编译模式调用 CallFunctionWithBroadcast，行为匹配解释模式
+    /// sin([1,2,3]) → 编译模式也做 element-wise 广播 → [sin(1), sin(2), sin(3)]
+    /// max([1,2,3], 5) → 编译模式也展平 → max(1,2,3,5) = 5
     /// </summary>
     [Fact]
-    public void Bug05_CompiledModeLacksArrayBroadcast() {
-        // 解释模式 - 数组广播正常工作
-        var interpResult = Expression.Eval<double[]>("sin([1, 2, 3])", null, ExpressionOptions.NoCache);
-        Assert.Equal(3, interpResult.Length);
+    public void Bug05_CompiledModeArrayBroadcast() {
+        // 编译模式 - 广播 sin
+        var compiledResult = Expression.OptimizedEval("sin([1, 2, 3])");
+        Assert.IsType<double[]>(compiledResult);
+        var compiledArr = (double[])compiledResult;
+        Assert.Equal(3, compiledArr.Length);
+        Assert.Equal(Math.Sin(1), compiledArr[0], 10);
+        Assert.Equal(Math.Sin(2), compiledArr[1], 10);
+        Assert.Equal(Math.Sin(3), compiledArr[2], 10);
 
-        // 编译模式 - 缺少数组广播，抛异常（BUG）
-        Assert.ThrowsAny<Exception>(() => Expression.OptimizedEval("sin([1, 2, 3])"));
+        // 编译模式 - 聚合函数 max 展平数组
+        var maxResult = Expression.OptimizedEval("max([1, 2, 3], 5)");
+        Assert.Equal(5.0, maxResult);
     }
 
     #endregion

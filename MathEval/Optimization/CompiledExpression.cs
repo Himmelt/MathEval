@@ -14,8 +14,60 @@ namespace MathEval.Optimization;
 public class CompiledExpression(LogicalExpression ast) {
     private readonly Func<ExpressionContext, object> _compiledFunc = CompileToDelegate(ast);
 
+    /// <summary>
+    /// 聚合函数名集合 — 这些函数不应 element-wise 广播，需展平后全局归约
+    /// </summary>
+    private static readonly HashSet<string> _aggregateFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "max", "min",
+    };
+
     public object Evaluate(ExpressionContext context) {
         return _compiledFunc(context);
+    }
+
+    /// <summary>
+    /// 调用函数，处理数组广播或聚合展平（匹配 EvaluationVisitor 行为）
+    /// </summary>
+    internal static object CallFunctionWithBroadcast(ExpressionFunction func, object[] args, string funcName)
+    {
+        if (_aggregateFunctions.Contains(funcName))
+        {
+            // 聚合函数：展平数组参数后全局归约
+            var flatList = new List<object>();
+            foreach (var arg in args)
+            {
+                if (arg is double[] arr)
+                {
+                    foreach (var item in arr)
+                        flatList.Add(item);
+                }
+                else
+                {
+                    flatList.Add(arg);
+                }
+            }
+            return func([.. flatList])!;
+        }
+
+        // 非聚合函数：检测数组参数做 element-wise 广播
+        var arrayArg = args.FirstOrDefault(a => a is double[]);
+        if (arrayArg is double[] arr2)
+        {
+            var result = new double[arr2.Length];
+            for (int i = 0; i < arr2.Length; i++)
+            {
+                var scalarArgs = new object[args.Length];
+                for (int j = 0; j < args.Length; j++)
+                {
+                    scalarArgs[j] = args[j] is double[] da ? da[i] : args[j];
+                }
+                result[i] = TypeHelper.ToDouble(func(scalarArgs));
+            }
+            return result;
+        }
+
+        return func(args)!;
     }
 
     /// <summary>
@@ -139,7 +191,14 @@ public class CompiledExpression(LogicalExpression ast) {
             typeof(object)
         );
 
-        var invokeExpr = LinqExpression.Invoke(funcVar, argsArrayVar);
+        // 调用 CallFunctionWithBroadcast 处理数组广播/聚合展平，确保解释模式与编译模式一致
+        var broadcastMethod = typeof(CompiledExpression).GetMethod(
+            nameof(CallFunctionWithBroadcast),
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic,
+            null,
+            [typeof(ExpressionFunction), typeof(object[]), typeof(string)],
+            null)!;
+        var invokeExpr = LinqExpression.Call(broadcastMethod, funcVar, argsArrayVar, funcName);
 
         var body = LinqExpression.Block(
             [argsArrayVar, funcVar],
