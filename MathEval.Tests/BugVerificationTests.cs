@@ -151,19 +151,17 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-8：CompiledExpression.CompileArrayIndex 未检查越界
-    /// 编译模式使用原生数组访问，越界抛 IndexOutOfRangeException。
-    /// 正确行为：[1,2,3][5] → EvaluateException（友好错误）
-    /// BUG 行为：编译模式抛 IndexOutOfRangeException
+    /// BUG-8：CompiledExpression.CompileArrayIndex 已添加越界检查
+    /// 编译模式现在抛友好的 EvaluateException，与解释模式一致
     /// </summary>
     [Fact]
-    public void Bug08_CompiledArrayIndexOutOfBoundsThrowsNativeException() {
-        // 解释模式 - 正确抛 EvaluateException
+    public void Bug08_CompiledArrayIndexOutOfBoundsThrowsEvaluateException() {
+        // 解释模式 - 抛 EvaluateException
         Assert.Throws<EvaluateException>(() =>
             Expression.Eval("[1, 2, 3][5]", null, ExpressionOptions.NoCache));
 
-        // 编译模式 - 抛 IndexOutOfRangeException（BUG，应抛 EvaluateException）
-        Assert.Throws<IndexOutOfRangeException>(() =>
+        // 编译模式 - 现在也抛 EvaluateException（已修复）
+        Assert.Throws<EvaluateException>(() =>
             Expression.OptimizedEval("[1, 2, 3][5]"));
     }
 

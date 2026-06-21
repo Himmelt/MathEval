@@ -259,19 +259,43 @@ public class CompiledExpression(LogicalExpression ast) {
 
         // Handle both array and scalar (for index pushdown optimization)
         var arrayVar = LinqExpression.Variable(typeof(object), "array");
+        var indexVar = LinqExpression.Variable(typeof(int), "idx");
         var assignArray = LinqExpression.Assign(arrayVar, arrayExpr);
+        var assignIndex = LinqExpression.Assign(indexVar, intIndex);
 
         var isArray = LinqExpression.TypeIs(arrayVar, typeof(double[]));
-        var arrayAccess = LinqExpression.ArrayIndex(
-            LinqExpression.Convert(arrayVar, typeof(double[])),
-            intIndex);
-        var arrayResult = LinqExpression.Convert(arrayAccess, typeof(object));
+
+        // Bounds check: throw friendly EvaluateException instead of IndexOutOfRangeException
+        var arrayLen = LinqExpression.ArrayLength(LinqExpression.Convert(arrayVar, typeof(double[])));
+        var indexOutOfRange = LinqExpression.OrElse(
+            LinqExpression.LessThan(indexVar, LinqExpression.Constant(0)),
+            LinqExpression.GreaterThanOrEqual(indexVar, arrayLen));
+        var evalExCtor = typeof(EvaluateException).GetConstructor(new[] { typeof(string) })!;
+        var formatMethod = typeof(string).GetMethod("Format", new[] { typeof(string), typeof(object), typeof(object) })!;
+        var errorMsg = LinqExpression.Call(formatMethod,
+            LinqExpression.Constant("索引 {0} 超出数组范围 [0, {1})"),
+            LinqExpression.Convert(indexVar, typeof(object)),
+            LinqExpression.Convert(arrayLen, typeof(object)));
+        var throwOutOfRange = LinqExpression.Throw(
+            LinqExpression.New(evalExCtor, errorMsg),
+            typeof(object));
+
+        // Safe array access: check bounds first, then access
+        var safeArrayAccess = LinqExpression.Condition(
+            indexOutOfRange,
+            throwOutOfRange,
+            LinqExpression.Convert(
+                LinqExpression.ArrayIndex(
+                    LinqExpression.Convert(arrayVar, typeof(double[])),
+                    indexVar),
+                typeof(object)),
+            typeof(object));
 
         // If scalar, return the scalar itself
         var scalarResult = arrayVar;
 
-        var condition = LinqExpression.Condition(isArray, arrayResult, scalarResult, typeof(object));
+        var condition = LinqExpression.Condition(isArray, safeArrayAccess, scalarResult, typeof(object));
 
-        return LinqExpression.Block([arrayVar], assignArray, condition);
+        return LinqExpression.Block([arrayVar, indexVar], assignArray, assignIndex, condition);
     }
 }

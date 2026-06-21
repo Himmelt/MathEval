@@ -153,23 +153,29 @@ if (arrayArg is double[] arr) {
 
 ---
 
-### BUG-8：CompiledExpression.CompileArrayIndex 未检查越界
+### ~~BUG-8~~（已修复）：CompiledExpression.CompileArrayIndex 未检查越界
 
 **位置**：`CompiledExpression.cs`（`CompileArrayIndex` 方法）
 
-**问题**：编译为原生数组访问，越界抛 `IndexOutOfRangeException`，而非友好的 `EvaluateException`。
+**问题**：~~编译为原生数组访问，越界抛 `IndexOutOfRangeException`，而非友好的 `EvaluateException`。~~
+
+**处理**：已修改 `CompileArrayIndex`，在数组访问前增加越界检查，越界时抛出 `EvaluateException`，与解释模式行为一致。
 
 ```csharp
-var arrayAccess = LinqExpression.ArrayIndex(
-    LinqExpression.Convert(arrayVar, typeof(double[])),
-    intIndex);  // 越界 → IndexOutOfRangeException
-```
+// Bounds check: throw friendly EvaluateException instead of IndexOutOfRangeException
+var indexOutOfRange = LinqExpression.OrElse(
+    LinqExpression.LessThan(indexVar, LinqExpression.Constant(0)),
+    LinqExpression.GreaterThanOrEqual(indexVar, arrayLen));
+...
+var throwOutOfRange = LinqExpression.Throw(
+    LinqExpression.New(evalExCtor, errorMsg),
+    typeof(object));
 
-对比解释模式 `EvaluationVisitor.cs`：
-
-```csharp
-if (intIndex < 0 || intIndex >= arr.Length)
-    throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
+var safeArrayAccess = LinqExpression.Condition(
+    indexOutOfRange,
+    throwOutOfRange,
+    LinqExpression.ArrayIndex(...),
+    typeof(object));
 ```
 
 ---
