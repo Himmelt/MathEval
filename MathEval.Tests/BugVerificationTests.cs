@@ -285,8 +285,8 @@ public class BugVerificationTests {
                 });
         });
 
-        // BUG-12: 竞态导致 compileFactory 被多次调用
-        Assert.True(compileCount > 1, $"竞态条件未触发: compileCount={compileCount}");
+        // BUG-12: 双重检查锁定确保 compileFactory 仅被调用一次
+        Assert.Equal(1, compileCount);
     }
 
     /// <summary>

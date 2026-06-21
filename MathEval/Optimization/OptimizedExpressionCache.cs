@@ -81,8 +81,13 @@ public static class OptimizedExpressionCache {
             return entry.Compiled;
         }
 
-        var compiledExpr = compileFactory(entry.Ast!);
-        entry.Compiled = compiledExpr;
-        return compiledExpr;
+        // 双重检查锁定：避免多线程同时调用 compileFactory
+        lock (entry) {
+            if (entry.Compiled == null) {
+                entry.Compiled = compileFactory(entry.Ast!);
+            }
+        }
+
+        return entry.Compiled;
     }
 }
