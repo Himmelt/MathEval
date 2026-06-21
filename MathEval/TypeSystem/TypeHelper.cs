@@ -128,10 +128,6 @@ public static class TypeHelper {
     }
 
     private static double EvaluatePower(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2)) return double.NaN;
-        if (d1 < 0 && d2 != Math.Floor(d2)) throw new EvaluateException("不能对负数求非整数次幂");
-        if (d1 == 0 && d2 < 0) throw new EvaluateException("零不能求负数次幂");
-
         return Math.Pow(d1, d2);
     }
 

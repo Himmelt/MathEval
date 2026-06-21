@@ -138,18 +138,18 @@ if (arrayArg is double[] arr) {
 
 ---
 
-### BUG-7：BuiltInOperators.Power 未校验操作数
+### ~~BUG-7~~（已修复）：BuiltInOperators.Power 未校验操作数
 
-**位置**：`BuiltInOperators.cs`（`Power` 方法）
+**位置**：`BuiltInOperators.cs`（`Power` 方法）、`TypeHelper.cs`
 
-**问题**：直接调用 `Math.Pow`，未校验负底数非整数次幂、零的负次幂。
+**问题**：~~主项目 `TypeHelper.cs` 对负数非整数次幂、零的负次幂抛异常，与 IEEE 754 标准不一致。~~
+
+**处理**：已修改主项目 `TypeHelper.cs`，移除所有乘方预处理检查，统一遵循 IEEE 754 标准。`(-2)^0.5` → `NaN`，`0^-1` → `Infinity`。
 
 | 表达式 | MathEval 主项目 | MathEval.Fast |
 |--------|----------------|---------------|
-| `(-2) ^ 0.5` | `EvaluateException`（不能对负数求非整数次幂） | `NaN` |
-| `0 ^ -1`     | `EvaluateException`（零不能求负数次幂） | `Infinity` |
-
-主项目 `TypeHelper.cs` 有完整校验。
+| `(-2) ^ 0.5` | `NaN`（原为 `EvaluateException`） | `NaN` |
+| `0 ^ -1`     | `Infinity`（原为 `EvaluateException`） | `Infinity` |
 
 ---
 

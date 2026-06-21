@@ -132,32 +132,22 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-7：BuiltInOperators.Power 未校验操作数
-    /// Fast 直接调用 Math.Pow，未校验负底数非整数次幂、零的负次幂。
-    /// 正确行为：(-2)^0.5 → EvaluateException
-    /// BUG 行为：Fast 返回 NaN
+    /// BUG-7：主项目与 Fast 均遵循 IEEE 754 标准，Pow 自然运算
     /// </summary>
     [Fact]
-    public void Bug07_FastPowerNoValidation_NegativeBaseFractionalExp() {
-        // Fast - 返回 NaN（BUG，应抛异常）
+    public void Bug07_PowerNoValidation_NegativeBaseFractionalExp() {
+        // 均返回 NaN（IEEE 754 标准），不抛异常
         Assert.True(double.IsNaN(FastEval.EvalDouble("(-2) ^ 0.5")));
-
-        // 主项目 - 正确抛异常
-        Assert.Throws<EvaluateException>(() =>
-            Expression.Eval<double>("(-2) ^ 0.5", null, ExpressionOptions.NoCache));
+        Assert.True(double.IsNaN(Expression.Eval<double>("(-2) ^ 0.5", null, ExpressionOptions.NoCache)));
     }
 
     /// <summary>
-    /// BUG-7（补充）：零的负次幂未校验
+    /// BUG-7（补充）：零的负次幂返回 Infinity
     /// </summary>
     [Fact]
-    public void Bug07_FastPowerNoValidation_ZeroNegativeExp() {
-        // Fast - 返回 Infinity（BUG，应抛异常）
+    public void Bug07_PowerNoValidation_ZeroNegativeExp() {
         Assert.True(double.IsPositiveInfinity(FastEval.EvalDouble("0 ^ -1")));
-
-        // 主项目 - 正确抛异常
-        Assert.Throws<EvaluateException>(() =>
-            Expression.Eval<double>("0 ^ -1", null, ExpressionOptions.NoCache));
+        Assert.True(double.IsPositiveInfinity(Expression.Eval<double>("0 ^ -1", null, ExpressionOptions.NoCache)));
     }
 
     /// <summary>
