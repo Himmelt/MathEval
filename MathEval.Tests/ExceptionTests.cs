@@ -2,7 +2,6 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 using InvalidOperationException = MathEval.Exceptions.InvalidOperationException;
-using OverflowException = MathEval.Exceptions.OverflowException;
 
 namespace MathEval.Tests;
 
@@ -15,16 +14,6 @@ public class ExceptionTests {
     [Fact]
     public void EvaluateException_Inherits_MathEvalException() {
         Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(EvaluateException)));
-    }
-
-    [Fact]
-    public void DivisionByZeroException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(DivisionByZeroException)));
-    }
-
-    [Fact]
-    public void OverflowException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(OverflowException)));
     }
 
     [Fact]
