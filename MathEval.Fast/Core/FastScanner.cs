@@ -61,9 +61,14 @@ internal struct FastScanner(string expression) {
         if (_position < _expression.Length && (_expression[_position] == 'e' || _expression[_position] == 'E')) {
             _position++;
             if (_position < _expression.Length && (_expression[_position] == '+' || _expression[_position] == '-')) _position++;
+            if (!(_position < _expression.Length && char.IsDigit(_expression[_position])))
+                throw new FastEvalException("无效的数字：指数后缺少数字", _expression, start);
             while (_position < _expression.Length && char.IsDigit(_expression[_position])) _position++;
         }
-        return double.Parse(_expression.AsSpan(start, _position - start), CultureInfo.InvariantCulture);
+        var span = _expression.AsSpan(start, _position - start);
+        if (span.Length == 0 || (span.Length == 1 && span[0] == '.'))
+            throw new FastEvalException("无效的数字", _expression, start);
+        return double.Parse(span, CultureInfo.InvariantCulture);
     }
 
     private double ReadHex() {

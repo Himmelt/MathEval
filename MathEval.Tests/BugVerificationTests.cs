@@ -231,8 +231,8 @@ public class BugVerificationTests {
 
         var result = BytecodeVM.Execute(instructions, null);
 
-        // BUG: 返回 stack[0]=10 而非 stack[sp-1]=30
-        Assert.Equal(10.0, result);
+        // 修复后：返回 stack[sp-1]=stack[2]=30
+        Assert.Equal(30.0, result);
     }
 
     /// <summary>
@@ -244,9 +244,10 @@ public class BugVerificationTests {
     [Theory]
     [InlineData("1e")]
     [InlineData("1e+")]
+    [InlineData(".")]
     public void Bug11_FastScannerAcceptsInvalidNumberFormat(string expr) {
-        // BUG: 抛 FormatException 而非 FastEvalException
-        Assert.Throws<FormatException>(() => FastEval.EvalDouble(expr));
+        // 修复后：抛 FastEvalException 而非 FormatException
+        Assert.Throws<FastEvalException>(() => FastEval.EvalDouble(expr));
     }
 
     /// <summary>

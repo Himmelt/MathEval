@@ -90,7 +90,7 @@ internal static class BytecodeVM {
                 }
             }
 
-            return sp > 0 ? stack[0] : 0.0;
+            return sp > 0 ? stack[sp - 1] : 0.0;
         } finally {
             ArrayPool<double>.Shared.Return(stack);
         }
