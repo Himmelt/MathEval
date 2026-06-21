@@ -64,26 +64,6 @@ public class BugVerificationTests {
     }
 
     /// <summary>
-    /// BUG-3：TypeHelper.ToInteger 仅支持 double 类型
-    /// int/long 等整数类型变量参与位运算时抛异常。
-    /// 正确行为：x=5(int) 时 x & 3 → 1.0
-    /// BUG 行为：抛 TypeMismatchException
-    /// </summary>
-    [Fact]
-    public void Bug03_ToIntegerRejectsIntVariable() {
-        // double 类型变量正常工作
-        var ctxDouble = new ExpressionContext();
-        ctxDouble.Set("x", 5.0);
-        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctxDouble, ExpressionOptions.NoCache));
-
-        // int 类型变量触发 BUG
-        var ctxInt = new ExpressionContext();
-        ctxInt.Set("x", 5); // int 类型
-        Assert.Throws<TypeMismatchException>(() =>
-            Expression.Eval<double>("x & 3", ctxInt, ExpressionOptions.NoCache));
-    }
-
-    /// <summary>
     /// BUG-4：IndexPushdownOptimizer 无条件下推索引到函数参数
     /// 将 f(a)[i] 转为 f(a[i])，对聚合函数语义错误。
     /// 验证方式：直接调用优化器，检查 AST 结构变化。
@@ -340,10 +320,8 @@ public class BugVerificationTests {
             "TypeMismatchException 不继承 EvaluateException，catch(EvaluateException) 会漏掉此异常");
 
         // 验证：ToInteger 失败时抛出的 TypeMismatchException 无法被 catch(EvaluateException) 捕获
-        var ctx = new ExpressionContext();
-        ctx.Set("x", 5); // int 类型，触发 BUG-3 的 TypeMismatchException
         try {
-            Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache);
+            Expression.Eval<double>("3.5 & 1", null, ExpressionOptions.NoCache);
             Assert.Fail("应抛出异常");
         } catch (EvaluateException) {
             Assert.Fail("TypeMismatchException 不应被 catch(EvaluateException) 捕获（BUG-14 验证）");

@@ -1,5 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.TypeSystem;
 using Xunit;
 
 namespace MathEval.Tests;
@@ -445,6 +446,287 @@ public class TypeSystemRefactorTests {
     public void BitwiseOrOperator() {
         Assert.Equal(7.0, Expression.Eval<double>("5 | 3")); // 101 | 011 = 111 = 7
     }
+
+    #endregion
+
+    #region TypeHelper.ToInteger 完整测试
+
+    #region 直接调用 - 所有整数类型应成功
+
+    [Fact]
+    public void ToInteger_Int_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger(5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_Long_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger(5L, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_FloatInteger_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger(5.0f, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_DoubleInteger_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger(5.0, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_Short_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((short)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_Byte_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((byte)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_SByte_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((sbyte)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_UShort_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((ushort)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_UInt_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((uint)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_ULong_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger((ulong)5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_DecimalInteger_ReturnsLong() {
+        Assert.Equal(5L, TypeHelper.ToInteger(5m, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_BoolTrue_ReturnsOne() {
+        Assert.Equal(1L, TypeHelper.ToInteger(true, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_BoolFalse_ReturnsZero() {
+        Assert.Equal(0L, TypeHelper.ToInteger(false, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_Zero_ReturnsZero() {
+        Assert.Equal(0L, TypeHelper.ToInteger(0, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_NegativeInt_ReturnsNegative() {
+        Assert.Equal(-5L, TypeHelper.ToInteger(-5, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_NegativeDouble_ReturnsNegative() {
+        Assert.Equal(-5L, TypeHelper.ToInteger(-5.0, "op"));
+    }
+
+    #endregion
+
+    #region 直接调用 - 非整数应抛异常
+
+    [Fact]
+    public void ToInteger_NonIntegerDouble_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger(3.5, "按位与"));
+    }
+
+    [Fact]
+    public void ToInteger_NaN_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger(double.NaN, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_PositiveInfinity_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger(double.PositiveInfinity, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_NegativeInfinity_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger(double.NegativeInfinity, "op"));
+    }
+
+    [Fact]
+    public void ToInteger_String_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger("abc", "op"));
+    }
+
+    [Fact]
+    public void ToInteger_Null_Throws() {
+        Assert.Throws<TypeMismatchException>(() => TypeHelper.ToInteger(null!, "op"));
+    }
+
+    #endregion
+
+    #region 通过表达式 - 整数类型变量参与位运算
+
+    [Fact]
+    public void BitwiseAnd_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5); // int
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_LongVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5L); // long
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_FloatIntegerVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5.0f); // float (整数值)
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_ByteVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", (byte)5);
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_ShortVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", (short)5);
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_DecimalVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5m); // decimal
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_BoolVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", true); // bool → 1
+        Assert.Equal(1.0, Expression.Eval<double>("x & 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseOr_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5); // int, 101 | 011 = 111 = 7
+        Assert.Equal(7.0, Expression.Eval<double>("x | 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseXor_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5); // int, 101 xor 011 = 110 = 6
+        Assert.Equal(6.0, Expression.Eval<double>("x xor 3", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseNot_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5); // int, ~5 = -6
+        Assert.Equal(-6.0, Expression.Eval<double>("~x", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void LeftShift_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 5); // int, 5 << 1 = 10
+        Assert.Equal(10.0, Expression.Eval<double>("x << 1", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void RightShift_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 8); // int, 8 >> 1 = 4
+        Assert.Equal(4.0, Expression.Eval<double>("x >> 1", ctx, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void UnsignedRightShift_IntVariable_ReturnsCorrectResult() {
+        var ctx = new ExpressionContext();
+        ctx.Set("x", -8); // int → long(64-bit), -8L >>> 1 = 0x7FFFFFFFFFFFFFFC
+        Assert.Equal(9223372036854775804.0, Expression.Eval<double>("x >>> 1", ctx, ExpressionOptions.NoCache));
+    }
+
+    #endregion
+
+    #region 通过表达式 - 数组索引支持整数类型
+
+    [Fact]
+    public void ArrayIndex_IntIndex() {
+        var ctx = new ExpressionContext();
+        ctx.Set("arr", new double[] { 10, 20, 30 });
+        ctx.Set("i", 1); // int
+        Assert.Equal(20.0, Expression.Eval<double>("arr[i]", ctx));
+    }
+
+    [Fact]
+    public void ArrayIndex_LongIndex() {
+        var ctx = new ExpressionContext();
+        ctx.Set("arr", new double[] { 10, 20, 30 });
+        ctx.Set("i", 2L); // long
+        Assert.Equal(30.0, Expression.Eval<double>("arr[i]", ctx));
+    }
+
+    [Fact]
+    public void ArrayIndex_ByteIndex() {
+        var ctx = new ExpressionContext();
+        ctx.Set("arr", new double[] { 10, 20, 30 });
+        ctx.Set("i", (byte)0);
+        Assert.Equal(10.0, Expression.Eval<double>("arr[i]", ctx));
+    }
+
+    [Fact]
+    public void ArrayIndex_ShortIndex() {
+        var ctx = new ExpressionContext();
+        ctx.Set("arr", new double[] { 10, 20, 30 });
+        ctx.Set("i", (short)1);
+        Assert.Equal(20.0, Expression.Eval<double>("arr[i]", ctx));
+    }
+
+    #endregion
+
+    #region 通过表达式 - 非整数参与位运算应抛异常
+
+    [Fact]
+    public void BitwiseAnd_NonIntegerDouble_Throws() {
+        Assert.Throws<TypeMismatchException>(() =>
+            Expression.Eval<double>("3.5 & 1", null, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_NaN_Throws() {
+        Assert.Throws<TypeMismatchException>(() =>
+            Expression.Eval<double>("NaN & 1", null, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseAnd_Infinity_Throws() {
+        Assert.Throws<TypeMismatchException>(() =>
+            Expression.Eval<double>("INF & 1", null, ExpressionOptions.NoCache));
+    }
+
+    [Fact]
+    public void BitwiseNot_NonIntegerDouble_Throws() {
+        Assert.Throws<TypeMismatchException>(() =>
+            Expression.Eval<double>("~3.5", null, ExpressionOptions.NoCache));
+    }
+
+    #endregion
 
     #endregion
 }

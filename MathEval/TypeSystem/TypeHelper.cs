@@ -23,17 +23,14 @@ public static class TypeHelper {
     }
 
     public static long ToInteger(object value, string operationName) {
-        if (value is double d) {
-            if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d))
-                return (long)d;
-        }
+        double d = ToDouble(value);
+        if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d)) return (long)d;
         throw new TypeMismatchException($"{operationName} 需要整数操作数", "integer", value?.GetType().Name ?? "null");
     }
 
     public static object EvaluateBinary(BinaryExpressionType type, object left, object right) {
         // Array operations
-        if (left is double[] || right is double[])
-            return EvaluateBinaryArray(type, left, right);
+        if (left is double[] || right is double[]) return EvaluateBinaryArray(type, left, right);
 
         // Scalar operations - pure double, zero branching
         var (d1, d2) = (ToDouble(left), ToDouble(right));
@@ -75,31 +72,26 @@ public static class TypeHelper {
     }
 
     private static double[] ElementWise(double[] a, double[] b, BinaryExpressionType type) {
-        if (a.Length != b.Length)
-            throw new EvaluateException($"数组长度不匹配：{a.Length} vs {b.Length}");
+        if (a.Length != b.Length) throw new EvaluateException($"数组长度不匹配：{a.Length} vs {b.Length}");
         var result = new double[a.Length];
-        for (int i = 0; i < a.Length; i++)
-            result[i] = ToDouble(EvaluateBinary(type, a[i], b[i]));
+        for (int i = 0; i < a.Length; i++) result[i] = ToDouble(EvaluateBinary(type, a[i], b[i]));
         return result;
     }
 
     private static double[] ElementWise(double[] a, double scalar, BinaryExpressionType type) {
         var result = new double[a.Length];
-        for (int i = 0; i < a.Length; i++)
-            result[i] = ToDouble(EvaluateBinary(type, a[i], scalar));
+        for (int i = 0; i < a.Length; i++) result[i] = ToDouble(EvaluateBinary(type, a[i], scalar));
         return result;
     }
 
     private static double[] ElementWise(double scalar, double[] b, BinaryExpressionType type) {
         var result = new double[b.Length];
-        for (int i = 0; i < b.Length; i++)
-            result[i] = ToDouble(EvaluateBinary(type, scalar, b[i]));
+        for (int i = 0; i < b.Length; i++) result[i] = ToDouble(EvaluateBinary(type, scalar, b[i]));
         return result;
     }
 
     public static object EvaluateUnary(UnaryExpressionType type, object operand) {
-        if (operand is double[] arr)
-            return EvaluateUnaryArray(type, arr);
+        if (operand is double[] arr) return EvaluateUnaryArray(type, arr);
 
         var d = ToDouble(operand);
         return type switch {
@@ -113,8 +105,7 @@ public static class TypeHelper {
 
     private static double[] EvaluateUnaryArray(UnaryExpressionType type, double[] arr) {
         var result = new double[arr.Length];
-        for (int i = 0; i < arr.Length; i++)
-            result[i] = ToDouble(EvaluateUnary(type, arr[i]));
+        for (int i = 0; i < arr.Length; i++) result[i] = ToDouble(EvaluateUnary(type, arr[i]));
         return result;
     }
 
@@ -129,11 +120,12 @@ public static class TypeHelper {
     }
 
     private static double EvaluateIntegerDivide(double d1, double d2) {
-        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsInfinity(d1) || double.IsInfinity(d2))
+        if (double.IsNaN(d1) || double.IsNaN(d2) || double.IsInfinity(d1) || double.IsInfinity(d2)) {
             throw new EvaluateException("整除运算不支持 NaN 或 INF");
+        }
         if (d2 == 0) throw new DivisionByZeroException();
 
-        return (double)(long)(d1 / d2);
+        return (long)(d1 / d2);
     }
 
     private static double EvaluateRemainder(double d1, double d2) {
@@ -152,8 +144,7 @@ public static class TypeHelper {
         if (d2 == 0) throw new DivisionByZeroException();
 
         double r = d1 % d2;
-        if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0))
-            r += d2;
+        if ((r < 0 && d2 > 0) || (r > 0 && d2 < 0)) r += d2;
         return r;
     }
 
