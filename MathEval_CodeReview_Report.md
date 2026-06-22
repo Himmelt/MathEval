@@ -4,9 +4,46 @@
 
 ---
 
+## 复审结果（第二轮）
+
+> 复审范围：排除 Docs 文件夹的全部源码 + 测试代码。复审结论：**BUG-1 ~ BUG-13 的代码修复均已落实**，BUG-14 按预期保留（有意设计）。但发现 1 个测试一致性问题需处理。
+
+| 编号 | 代码修复 | 测试覆盖 | 复审结论 |
+|------|---------|---------|---------|
+| BUG-1  | ✅ 已修复（`while` 循环消费剩余链） | ⚠️ 测试仍验证旧 BUG 行为 | 代码 OK，测试需更新 |
+| BUG-2  | ✅ 已修复（所有运算方法加 `_skipMode` 检查） | ⚠️ 测试仍验证旧 BUG 行为 | 代码 OK，测试需更新 |
+| BUG-3  | ✅ 已修复（`ToInteger` 改用 `ToDouble`） | ✅ `TypeSystemRefactorTests` 16 个用例 | 通过 |
+| BUG-4  | ✅ 已修复（聚合函数白名单 `max`/`min`） | ✅ `Bug04_IndexPushdownSkipsAggregateFunction` | 通过 |
+| BUG-5  | ✅ 已修复（`CallFunctionWithBroadcast`） | ✅ `Bug05_CompiledModeArrayBroadcast` | 通过 |
+| BUG-6  | ✅ 已修复（IEEE 754 除零） | ✅ `Bug06_*` | 通过 |
+| BUG-7  | ✅ 已修复（IEEE 754 幂运算） | ✅ `Bug07_*` | 通过 |
+| BUG-8  | ✅ 已修复（越界抛 `EvaluateException`） | ✅ `Bug08_*` | 通过 |
+| BUG-9  | ✅ 已修复（数组长度校验 + 聚合展平） | ✅ `Bug09_*` 3 个用例 | 通过 |
+| BUG-10 | ✅ 已修复（`stack[sp - 1]`） | ✅ `Bug10_*` | 通过 |
+| BUG-11 | ✅ 已修复（指数/空数字格式校验） | ✅ `Bug11_*` | 通过 |
+| BUG-12 | ✅ 已修复（双重检查锁定） | ✅ `Bug12_*` | 通过 |
+| BUG-13 | ✅ 已修复（`LruCache` 容量 512） | ✅ `Bug13_*` | 通过 |
+| BUG-14 | ➖ 不修复（有意设计） | ✅ `Bug14_*` 验证继承关系 | 按预期保留 |
+
+### 复审发现的新问题：BUG-1 / BUG-2 测试与修复不一致
+
+**位置**：[BugVerificationTests.cs](file:///workspace/MathEval.Tests/BugVerificationTests.cs)
+
+`BugVerificationTests` 类头部声明"测试通过 = BUG 存在"。BUG-4 ~ BUG-13 的测试均已更新为验证**修复后**的行为，但 BUG-1 和 BUG-2 的 3 个测试仍验证**旧的 BUG 行为**（期望抛异常），与代码修复矛盾，运行时会失败：
+
+| 测试方法 | 期望（旧 BUG 行为） | 实际（修复后） | 结果 |
+|---------|-------------------|--------------|------|
+| `Bug01_ChainedShortCircuitOrThrowsUnexpectedChar` | `1 \|\| 2 \|\| 3` 抛 `FastEvalException` | 返回 `1.0` | ❌ 失败 |
+| `Bug01_ChainedShortCircuitAndThrowsUnexpectedChar` | `0 && 0 && 0` 抛 `FastEvalException` | 返回 `0.0` | ❌ 失败 |
+| `Bug02_SkipModeBitwiseNotSkipped` | `1 ? 2 : 3.5 \| 1` 抛 `FastEvalException` | 返回 `2.0` | ❌ 失败 |
+
+**建议**：将这 3 个测试改为验证修复后的正确行为（断言返回值而非断言抛异常），与 BUG-4 ~ BUG-13 的测试风格保持一致。
+
+---
+
 ## 严重 BUG（5 个）
 
-### BUG-1：FastEvaluator 链式短路求值导致解析崩溃
+### ~~BUG-1~~（已修复）：FastEvaluator 链式短路求值导致解析崩溃
 
 **位置**：`FastEvaluator.cs`（`EvalLogicalOr`、`EvalLogicalAnd`）
 
@@ -264,23 +301,27 @@ private static readonly ConcurrentDictionary<string, LogicalExpression> _cache =
 
 ## 汇总
 
-| 编号 | 严重程度 | 项目 | 位置 | 简述 |
-|------|---------|------|------|------|
-| BUG-1 | 🔴 严重 | Fast | FastEvaluator.cs | 链式短路未消费剩余操作符，导致崩溃 |
-| BUG-2 | 🔴 严重 | Fast | FastEvaluator.cs | skipMode 下位运算/算术未跳过 |
-| BUG-3 | 🔴 严重 | MathEval | TypeHelper.cs | ToInteger 仅支持 double 类型 |
-| BUG-4 | 🔴 严重 | MathEval | IndexPushdownOptimizer.cs | 索引下推破坏聚合函数语义 |
-| BUG-5 | 🔴 严重 | MathEval | CompiledExpression.cs | 编译模式缺数组广播 |
-| BUG-6 | 🟠 中等 | Fast | BytecodeVM.cs / BuiltInOperators.cs | 除零不抛异常 |
-| BUG-7 | 🟠 中等 | Fast | BuiltInOperators.cs | 幂运算未校验操作数 |
-| BUG-8 | 🟠 中等 | MathEval | CompiledExpression.cs | 数组索引未检查越界 |
-| BUG-9 | 🟠 中等 | MathEval | EvaluationVisitor.cs | 多数组广播未校验长度 |
-| BUG-10 | ⚪ 轻微 | Fast | BytecodeVM.cs | 返回值 stack[0] 应为 stack[sp-1] |
-| BUG-11 | ⚪ 轻微 | Fast | FastScanner.cs | 数字格式校验缺失 |
-| BUG-12 | ⚪ 轻微 | MathEval | OptimizedExpressionCache.cs | 缓存竞态条件 |
-| BUG-13 | ⚪ 轻微 | MathEval | ExpressionCache.cs | 缓存无容量限制 |
-| BUG-14 | ⚪ 轻微 | MathEval | TypeMismatchException.cs | 异常继承层次（有意设计） |
+| 编号 | 严重程度 | 项目 | 位置 | 简述 | 复审状态 |
+|------|---------|------|------|------|---------|
+| BUG-1 | 🔴 严重 | Fast | FastEvaluator.cs | 链式短路未消费剩余操作符，导致崩溃 | ✅ 代码已修复 |
+| BUG-2 | 🔴 严重 | Fast | FastEvaluator.cs | skipMode 下位运算/算术未跳过 | ✅ 代码已修复 |
+| BUG-3 | 🔴 严重 | MathEval | TypeHelper.cs | ToInteger 仅支持 double 类型 | ✅ 已修复 |
+| BUG-4 | 🔴 严重 | MathEval | IndexPushdownOptimizer.cs | 索引下推破坏聚合函数语义 | ✅ 已修复 |
+| BUG-5 | 🔴 严重 | MathEval | CompiledExpression.cs | 编译模式缺数组广播 | ✅ 已修复 |
+| BUG-6 | 🟠 中等 | Fast | BytecodeVM.cs / BuiltInOperators.cs | 除零不抛异常 | ✅ 已修复 |
+| BUG-7 | 🟠 中等 | Fast | BuiltInOperators.cs | 幂运算未校验操作数 | ✅ 已修复 |
+| BUG-8 | 🟠 中等 | MathEval | CompiledExpression.cs | 数组索引未检查越界 | ✅ 已修复 |
+| BUG-9 | 🟠 中等 | MathEval | EvaluationVisitor.cs | 多数组广播未校验长度 | ✅ 已修复 |
+| BUG-10 | ⚪ 轻微 | Fast | BytecodeVM.cs | 返回值 stack[0] 应为 stack[sp-1] | ✅ 已修复 |
+| BUG-11 | ⚪ 轻微 | Fast | FastScanner.cs | 数字格式校验缺失 | ✅ 已修复 |
+| BUG-12 | ⚪ 轻微 | MathEval | OptimizedExpressionCache.cs | 缓存竞态条件 | ✅ 已修复 |
+| BUG-13 | ⚪ 轻微 | MathEval | ExpressionCache.cs | 缓存无容量限制 | ✅ 已修复 |
+| BUG-14 | ⚪ 轻微 | MathEval | TypeMismatchException.cs | 异常继承层次（有意设计） | ➖ 保留 |
+
+### 待处理事项
+
+- **测试一致性**：[BugVerificationTests.cs](file:///workspace/MathEval.Tests/BugVerificationTests.cs) 中 BUG-1、BUG-2 的 3 个测试仍验证旧 BUG 行为（期望抛异常），需更新为验证修复后的正确行为。详见上方"复审结果"章节。
 
 ---
 
-> ✅ 审查报告已完成。如需修复其中任何 BUG，可从最严重的 BUG-1 开始逐一修复。
+> ✅ 复审完成。BUG-1 ~ BUG-13 代码修复全部落实，BUG-14 按预期保留。仅剩 BUG-1/BUG-2 的 3 个测试用例需同步更新。
