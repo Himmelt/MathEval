@@ -24,7 +24,7 @@ public class ExpressionContext {
         _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
     }
 
-    private static readonly HashSet<string> ReservedKeywords = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ReservedKeywords = new(StringComparer.Ordinal)
     {
         "true", "false", "and", "or", "not", "xor", "mod", "NaN", "INF"
     };
@@ -73,14 +73,27 @@ public class ExpressionContext {
             try {
                 var convertedArgs = new object?[argCount];
                 for (int i = 0; i < argCount; i++) {
-                    convertedArgs[i] = Convert.ChangeType(args[i], parameters[i].ParameterType);
+                    try {
+                        convertedArgs[i] = Convert.ChangeType(args[i], parameters[i].ParameterType);
+                    } catch (Exception ex) when (ex is not MathEvalException) {
+                        // Convert.ChangeType 可抛 FormatException/OverflowException/InvalidCastException
+                        throw new FunctionTypeMismatchException($"函数 {name} 第 {i + 1} 个参数类型不匹配：{ex.Message}");
+                    }
                 }
-                var result = method.Invoke(func.Target, convertedArgs);
-                return result!;
-            } catch (InvalidCastException) {
-                throw new FunctionTypeMismatchException($"函数 {name} 参数类型不匹配");
-            } catch (TargetInvocationException ex) {
-                throw new FunctionTypeMismatchException($"调用函数 {name} 时出错：{ex.InnerException?.Message}");
+
+                try {
+                    var result = method.Invoke(func.Target, convertedArgs);
+                    return result!;
+                } catch (TargetInvocationException ex) {
+                    // 解包用户函数体内抛出的异常，重新包装为 MathEval 异常以保留异常契约
+                    var inner = ex.InnerException ?? ex;
+                    throw new EvaluateException($"调用函数 {name} 时出错：{inner.Message}", inner);
+                } catch (Exception ex) when (ex is not MathEvalException) {
+                    throw new EvaluateException($"调用函数 {name} 时出错：{ex.Message}", ex);
+                }
+            } catch (MathEvalException) {
+                // 已为 MathEval 异常，直接透传，避免重复包装
+                throw;
             }
         });
     }

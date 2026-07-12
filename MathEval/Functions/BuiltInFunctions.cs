@@ -1,5 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.TypeSystem;
 
 namespace MathEval.Functions;
 
@@ -37,17 +38,30 @@ internal static class BuiltInFunctions {
         // 数值处理函数
         context.SetFunction("abs", static (double x) => Math.Abs(x));
         context.SetFunction("sqrt", static (double x) => Math.Sqrt(x));
-        context.SetFunction("sign", static (double x) => Math.Sign(x));
+        context.SetFunction("sign", static (double x) => (double)Math.Sign(x));
 
         // 取整函数
         context.SetFunction("ceil", static (double x) => Math.Ceiling(x));
         context.SetFunction("floor", static (double x) => Math.Floor(x));
         context.SetFunction("trunc", static (double x) => Math.Truncate(x));
-        context.SetFunction("round", Func("round", 1, 2, args => args.Length == 1 ? Math.Round(Convert.ToDouble(args[0])) : Math.Round(Convert.ToDouble(args[0]), Convert.ToInt32(args[1]))));
+        context.SetFunction("round", Func("round", 1, 2, args => {
+            if (args.Length == 1) return Math.Round(Convert.ToDouble(args[0]));
+            // 用 ToInteger 约束位数范围，避免 Convert.ToInt32 抛出非 MathEval 异常
+            var digits = TypeHelper.ToInteger(args[1], "round");
+            if (digits < 0 || digits > 15)
+                throw new EvaluateException("round 的小数位数必须在 0 到 15 之间");
+            return Math.Round(Convert.ToDouble(args[0]), (int)digits);
+        }));
 
         // 聚合函数
-        context.SetFunction("max", Func("max", 1, int.MaxValue, args => args.Max(a => Convert.ToDouble(a))));
-        context.SetFunction("min", Func("min", 1, int.MaxValue, args => args.Min(a => Convert.ToDouble(a))));
+        context.SetFunction("max", Func("max", 0, int.MaxValue, args => {
+            if (args.Length == 0) throw new EvaluateException("max 的参数不能为空");
+            return args.Max(a => Convert.ToDouble(a));
+        }));
+        context.SetFunction("min", Func("min", 0, int.MaxValue, args => {
+            if (args.Length == 0) throw new EvaluateException("min 的参数不能为空");
+            return args.Min(a => Convert.ToDouble(a));
+        }));
     }
 
     private static ExpressionFunction Func(string name, int argCount, Func<object?[], object?> fn) => args => args.Length == argCount ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");

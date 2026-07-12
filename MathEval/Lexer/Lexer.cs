@@ -14,7 +14,7 @@ public class Lexer {
     private int _startLine;
     private int _startColumn;
 
-    private static readonly Dictionary<string, TokenType> Keywords = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, TokenType> Keywords = new(StringComparer.Ordinal)
     {
         { "true", TokenType.Number },
         { "false", TokenType.Number },
@@ -194,7 +194,7 @@ public class Lexer {
         var text = sb.ToString();
         if (Keywords.TryGetValue(text, out var type)) {
             if (type == TokenType.Number) {
-                var numberText = text.Equals("true", StringComparison.OrdinalIgnoreCase) ? "1" : "0";
+                var numberText = text.Equals("true", StringComparison.Ordinal) ? "1" : "0";
                 CurrentToken = new Token(TokenType.Number, numberText, _startPosition, _startLine, _startColumn);
             } else {
                 CurrentToken = new Token(type, text, _startPosition, _startLine, _startColumn);

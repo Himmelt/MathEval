@@ -266,13 +266,13 @@ public class BugVerificationTests {
         var lexer = new LinqExprLexer(expr);
         var parser = new LinqExprParser(lexer);
         var ast = IndexPushdownOptimizer.Optimize(parser.Parse());
-        OptimizedExpressionCache.Set(expr, ast);
+        OptimizedExpressionCache.Set(expr, 0, ast);
 
         int compileCount = 0;
 
         // 并发调用 GetOrAddCompiled
         Parallel.For(0, 100, _ => {
-            OptimizedExpressionCache.GetOrAddCompiled(expr,
+            OptimizedExpressionCache.GetOrAddCompiled(expr, 0,
                 e => {
                     var lx = new LinqExprLexer(e);
                     var pr = new LinqExprParser(lx);

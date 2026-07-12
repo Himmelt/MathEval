@@ -85,23 +85,25 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
         if (string.IsNullOrWhiteSpace(_expressionText)) throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
 
-        // 尝试从缓存获取
-        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, out var cachedAst)) {
+        // 尝试从缓存获取（缓存键包含表达式文本与选项，避免不同选项共享 AST）
+        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, (int)_options, out var cachedAst)) {
             _ast = cachedAst;
         } else {
             var lexer = new Lexer.Lexer(_expressionText);
             var parser = new Parser.Parser(lexer);
             _ast = parser.Parse();
 
-            // 应用常量折叠优化
+            // 应用常量折叠优化（受 ConstantFolding 选项控制）
             if (_options.HasFlag(ExpressionOptions.ConstantFolding)) {
                 _ast = ConstantFolder.Fold(_ast);
             }
 
-            // 应用索引下推优化
-            _ast = IndexPushdownOptimizer.Optimize(_ast);
+            // 应用索引下推优化（默认开启，可用 DisableIndexPushdown 关闭）
+            if (!_options.HasFlag(ExpressionOptions.DisableIndexPushdown)) {
+                _ast = IndexPushdownOptimizer.Optimize(_ast);
+            }
 
-            if (!_options.HasFlag(ExpressionOptions.NoCache)) ExpressionCache.Set(_expressionText, _ast);
+            if (!_options.HasFlag(ExpressionOptions.NoCache)) ExpressionCache.Set(_expressionText, (int)_options, _ast);
         }
     }
 
@@ -111,7 +113,7 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
         // 尝试从优化缓存获取编译后的表达式
         if (!_options.HasFlag(ExpressionOptions.NoCache) &&
-            OptimizedExpressionCache.TryGetCompiled(_expressionText, out var cachedCompiled)) {
+            OptimizedExpressionCache.TryGetCompiled(_expressionText, (int)_options, out var cachedCompiled)) {
             _compiledExpression = cachedCompiled;
             return;
         }
@@ -121,7 +123,7 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
         // 缓存编译后的表达式
         if (!_options.HasFlag(ExpressionOptions.NoCache)) {
-            OptimizedExpressionCache.SetCompiled(_expressionText, _compiledExpression);
+            OptimizedExpressionCache.SetCompiled(_expressionText, (int)_options, _compiledExpression);
         }
     }
 }
