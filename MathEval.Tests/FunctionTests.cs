@@ -141,7 +141,9 @@ public class FunctionTests {
     [Fact]
     public void Sign_Positive() {
         var result = Expression.Eval("sign(5)", _ctx);
-        Assert.NotStrictEqual(1.0, result);
+        // 修复 BUG-8 后 sign 返回 double（与 Fast 项目及整体类型一致）
+        Assert.IsType<double>(result);
+        Assert.Equal(1.0, result);
     }
 
     [Fact]

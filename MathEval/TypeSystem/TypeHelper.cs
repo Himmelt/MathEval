@@ -24,7 +24,10 @@ public static class TypeHelper {
 
     public static long ToInteger(object value, string operationName) {
         double d = ToDouble(value);
-        if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d)) return (long)d;
+        // 超出 long 范围的整型 double（如 1e19）不可安全地转换为 long，
+        // 必须先做范围检查，否则 (long)d 会产生实现定义的饱和值（数据错误）。
+        if (d == Math.Truncate(d) && !double.IsInfinity(d) && !double.IsNaN(d)
+            && d >= long.MinValue && d < 9223372036854775808.0) return (long)d;
         throw new TypeMismatchException($"{operationName} 需要整数操作数", "integer", value?.GetType().Name ?? "null");
     }
 
@@ -62,13 +65,17 @@ public static class TypeHelper {
     }
 
     private static double[] EvaluateBinaryArray(BinaryExpressionType type, object left, object right) {
-        return (left, right) switch {
-            (double[] a, double[] b) => ElementWise(a, b, type),
-            (double[] a, double s) => ElementWise(a, s, type),
-            (double s, double[] b) => ElementWise(s, b, type),
-            _ => throw new TypeMismatchException("数组运算需要数值类型", "number|array",
-                $"{left?.GetType().Name ?? "null"}, {right?.GetType().Name ?? "null"}")
-        };
+        if (left is double[] lhs && right is double[] rhs) return ElementWise(lhs, rhs, type);
+
+        double[] arr = (left as double[]) ?? (right as double[])!;
+        if (arr == null) {
+            throw new TypeMismatchException("数组运算需要数值类型", "number|array",
+                $"{left?.GetType().Name ?? "null"}, {right?.GetType().Name ?? "null"}");
+        }
+
+        // 非 double 标量（int/long/bool 等）统一转换为 double 后再参与 element-wise 运算
+        var scalar = ToDouble(left is double[] ? right : left);
+        return left is double[] ? ElementWise(arr, scalar, type) : ElementWise(scalar, arr, type);
     }
 
     private static double[] ElementWise(double[] a, double[] b, BinaryExpressionType type) {

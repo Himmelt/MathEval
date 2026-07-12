@@ -23,5 +23,10 @@ public enum ExpressionOptions {
     /// <summary>
     /// 启用编译优化（将 AST 编译为委托）
     /// </summary>
-    CompileOptimization = 4
+    CompileOptimization = 4,
+
+    /// <summary>
+    /// 禁用索引下推优化（默认启用）。索引下推默认开启，设置此选项可关闭。
+    /// </summary>
+    DisableIndexPushdown = 8
 }

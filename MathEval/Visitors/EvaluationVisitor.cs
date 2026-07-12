@@ -29,17 +29,31 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
     public object Visit(BinaryExpression expr) {
         if (expr.Type == BinaryExpressionType.And) {
             var leftResult = expr.Left.Accept(this);
+            // 数组操作数无法进行标量短路，转交 EvaluateBinary 做 element-wise 计算
+            if (leftResult is double[]) {
+                var rhs = expr.Right.Accept(this);
+                return TypeHelper.EvaluateBinary(BinaryExpressionType.And, leftResult, rhs);
+            }
+
             var leftDouble = TypeHelper.ToDouble(leftResult);
             if (leftDouble == 0) return 0.0;  // short-circuit
             var rightResult = expr.Right.Accept(this);
+            if (rightResult is double[]) return TypeHelper.EvaluateBinary(BinaryExpressionType.And, leftDouble, rightResult);
             return TypeHelper.ToDouble(rightResult) != 0 ? 1.0 : 0.0;
         }
 
         if (expr.Type == BinaryExpressionType.Or) {
             var leftResult = expr.Left.Accept(this);
+            // 数组操作数无法进行标量短路，转交 EvaluateBinary 做 element-wise 计算
+            if (leftResult is double[]) {
+                var rhs = expr.Right.Accept(this);
+                return TypeHelper.EvaluateBinary(BinaryExpressionType.Or, leftResult, rhs);
+            }
+
             var leftDouble = TypeHelper.ToDouble(leftResult);
             if (leftDouble != 0) return 1.0;  // short-circuit
             var rightResult = expr.Right.Accept(this);
+            if (rightResult is double[]) return TypeHelper.EvaluateBinary(BinaryExpressionType.Or, leftDouble, rightResult);
             return TypeHelper.ToDouble(rightResult) != 0 ? 1.0 : 0.0;
         }
 
@@ -130,9 +144,15 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<o
             return arr[intIndex];
         }
 
-        // Scalar value with index (from index pushdown optimization) - return the scalar itself
-        // This handles cases like (arr * x + 10)[i] where x and 10 are scalars
-        if (array is double) return array;
+        // Scalar value with index. This legitimately occurs for variable scalar indexing
+        // (e.g. x[0] where x is a scalar) and index-pushdown optimization (e.g. (arr * x + 10)[i]
+        // becomes arr[i] * x[i] with x a scalar). However, a directly written literal scalar index
+        // like 5[0] or 5[999] is a user error and must not be silently ignored.
+        if (array is double) {
+            if (expr.Array is ValueExpression)
+                throw new EvaluateException($"无法对标量 {array} 进行索引");
+            return array;
+        }
 
         throw new TypeMismatchException("索引操作需要数组类型", "array", array?.GetType().Name ?? "null");
     }
