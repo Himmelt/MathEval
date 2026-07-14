@@ -5,7 +5,7 @@ namespace MathEval.AST;
 /// <summary>
 /// 表示数组常量表达式，如 [1, 2, 3]、[1+2, sqrt(9)]
 /// </summary>
-public class ArrayLiteralExpression : LogicalExpression {
+public sealed class ArrayLiteralExpression : LogicalExpression {
     private readonly List<LogicalExpression> _elements;
 
     /// <summary>

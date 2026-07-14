@@ -139,7 +139,8 @@ public class ContextTests {
     [Fact]
     public void Remove_Function_ThenAccess_ThrowsFunctionNotFoundException() {
         var ctx = new ExpressionContext();
-        ctx.RemoveFunction("abs");
-        Assert.Throws<FunctionNotFoundException>(() => Expression.Eval<long>("abs(-1)", ctx));
+        ctx.SetFunction("customFn", (Func<double, double>)Math.Abs);
+        ctx.RemoveFunction("customFn");
+        Assert.Throws<FunctionNotFoundException>(() => Expression.Eval<long>("customFn(-1)", ctx));
     }
 }

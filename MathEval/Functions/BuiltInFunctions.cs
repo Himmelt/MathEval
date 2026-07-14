@@ -1,67 +1,66 @@
 using MathEval.Context;
 using MathEval.Exceptions;
-using MathEval.TypeSystem;
+using MathEval.Internal;
 
 namespace MathEval.Functions;
 
 /// <summary>
 /// 内置数学函数及常量注册器
+/// <br/>
+/// 通过 <see cref="Populate"/> 将内置项填入字典，由 <see cref="ExpressionContext"/> 冻结为静态共享表（ARCH-8），
+/// 避免每次 <c>new ExpressionContext()</c> 重复注册 ~30 项
+/// <br/>
+/// ARCH-10: 注册方式设计——
+/// 固定参数数量的函数使用 <see cref="FunctionWrapper.Wrap{T1,TResult}"/> 等强类型重载（编译期类型安全）；
+/// 可变参数数量的函数（log/round/max/min）使用私有 <c>Func</c> 辅助方法手动注册。
+/// 两种方式各司其职，不强制统一。
 /// </summary>
 internal static class BuiltInFunctions {
-    public static void Register(ExpressionContext context) {
-
+    /// <summary>
+    /// 将内置常量与函数填入给定字典
+    /// </summary>
+    /// <param name="symbols">常量表（名称 → 数值）</param>
+    /// <param name="functions">函数表（名称 → 函数条目）</param>
+    internal static void Populate(IDictionary<string, double> symbols, IDictionary<string, ExpressionContext.FunctionEntry> functions) {
         // 常量
-        context.Set("E", Math.E);
-        context.Set("π", Math.PI);
-        context.Set("PI", Math.PI);
+        symbols["E"] = Math.E;
+        symbols["π"] = Math.PI;
+        symbols["PI"] = Math.PI;
 
         // 三角函数
-        context.SetFunction("sin", static (double x) => Math.Sin(x));
-        context.SetFunction("cos", static (double x) => Math.Cos(x));
-        context.SetFunction("tan", static (double x) => Math.Tan(x));
-        context.SetFunction("asin", static (double x) => Math.Asin(x));
-        context.SetFunction("acos", static (double x) => Math.Acos(x));
-        context.SetFunction("atan", static (double x) => Math.Atan(x));
-        context.SetFunction("atan2", static (double y, double x) => Math.Atan2(y, x));
+        functions["sin"] = new(FunctionWrapper.Wrap("sin", (Func<double, double>)Math.Sin), FunctionFlags.ElementWise);
+        functions["cos"] = new(FunctionWrapper.Wrap("cos", (Func<double, double>)Math.Cos), FunctionFlags.ElementWise);
+        functions["tan"] = new(FunctionWrapper.Wrap("tan", (Func<double, double>)Math.Tan), FunctionFlags.ElementWise);
+        functions["asin"] = new(FunctionWrapper.Wrap("asin", (Func<double, double>)Math.Asin), FunctionFlags.ElementWise);
+        functions["acos"] = new(FunctionWrapper.Wrap("acos", (Func<double, double>)Math.Acos), FunctionFlags.ElementWise);
+        functions["atan"] = new(FunctionWrapper.Wrap("atan", (Func<double, double>)Math.Atan), FunctionFlags.ElementWise);
+        functions["atan2"] = new(FunctionWrapper.Wrap("atan2", (Func<double, double, double>)Math.Atan2), FunctionFlags.ElementWise);
 
         // 指数幂函数
-        context.SetFunction("exp", static (double x) => Math.Exp(x));
-        context.SetFunction("pow", static (double x, double y) => Math.Pow(x, y));
+        functions["exp"] = new(FunctionWrapper.Wrap("exp", (Func<double, double>)Math.Exp), FunctionFlags.ElementWise);
+        functions["pow"] = new(FunctionWrapper.Wrap("pow", (Func<double, double, double>)Math.Pow), FunctionFlags.ElementWise);
 
         // 对数函数
-        context.SetFunction("ln", static (double x) => Math.Log(x));
-        context.SetFunction("lg", static (double x) => Math.Log10(x));
-        context.SetFunction("log", Func("log", 1, 2, args => args.Length == 1 ? Math.Log(Convert.ToDouble(args[0])) : Math.Log(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
-        context.SetFunction("log2", static (double x) => Math.Log2(x));
-        context.SetFunction("log10", static (double x) => Math.Log10(x));
+        functions["ln"] = new(FunctionWrapper.Wrap("ln", (Func<double, double>)Math.Log), FunctionFlags.ElementWise);
+        functions["lg"] = new(FunctionWrapper.Wrap("lg", (Func<double, double>)Math.Log10), FunctionFlags.ElementWise);
+        functions["log"] = new(Func("log", 1, 2, args => args.Length == 1 ? Math.Log(Convert.ToDouble(args[0])) : Math.Log(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))), FunctionFlags.ElementWise);
+        functions["log2"] = new(FunctionWrapper.Wrap("log2", (Func<double, double>)Math.Log2), FunctionFlags.ElementWise);
+        functions["log10"] = new(FunctionWrapper.Wrap("log10", (Func<double, double>)Math.Log10), FunctionFlags.ElementWise);
 
         // 数值处理函数
-        context.SetFunction("abs", static (double x) => Math.Abs(x));
-        context.SetFunction("sqrt", static (double x) => Math.Sqrt(x));
-        context.SetFunction("sign", static (double x) => (double)Math.Sign(x));
+        functions["abs"] = new(FunctionWrapper.Wrap("abs", (Func<double, double>)Math.Abs), FunctionFlags.ElementWise);
+        functions["sqrt"] = new(FunctionWrapper.Wrap("sqrt", (Func<double, double>)Math.Sqrt), FunctionFlags.ElementWise);
+        functions["sign"] = new(FunctionWrapper.Wrap("sign", (Func<double, int>)Math.Sign), FunctionFlags.ElementWise);
 
         // 取整函数
-        context.SetFunction("ceil", static (double x) => Math.Ceiling(x));
-        context.SetFunction("floor", static (double x) => Math.Floor(x));
-        context.SetFunction("trunc", static (double x) => Math.Truncate(x));
-        context.SetFunction("round", Func("round", 1, 2, args => {
-            if (args.Length == 1) return Math.Round(Convert.ToDouble(args[0]));
-            // 用 ToInteger 约束位数范围，避免 Convert.ToInt32 抛出非 MathEval 异常
-            var digits = TypeHelper.ToInteger(args[1], "round");
-            if (digits < 0 || digits > 15)
-                throw new EvaluateException("round 的小数位数必须在 0 到 15 之间");
-            return Math.Round(Convert.ToDouble(args[0]), (int)digits);
-        }));
+        functions["ceil"] = new(FunctionWrapper.Wrap("ceil", (Func<double, double>)Math.Ceiling), FunctionFlags.ElementWise);
+        functions["floor"] = new(FunctionWrapper.Wrap("floor", (Func<double, double>)Math.Floor), FunctionFlags.ElementWise);
+        functions["trunc"] = new(FunctionWrapper.Wrap("trunc", (Func<double, double>)Math.Truncate), FunctionFlags.ElementWise);
+        functions["round"] = new(Func("round", 1, 2, args => args.Length == 1 ? Math.Round(Convert.ToDouble(args[0])) : Math.Round(Convert.ToDouble(args[0]), Convert.ToInt32(args[1]))), FunctionFlags.ElementWise);
 
         // 聚合函数
-        context.SetFunction("max", Func("max", 0, int.MaxValue, args => {
-            if (args.Length == 0) throw new EvaluateException("max 的参数不能为空");
-            return args.Max(a => Convert.ToDouble(a));
-        }));
-        context.SetFunction("min", Func("min", 0, int.MaxValue, args => {
-            if (args.Length == 0) throw new EvaluateException("min 的参数不能为空");
-            return args.Min(a => Convert.ToDouble(a));
-        }));
+        functions["max"] = new(Func("max", 1, int.MaxValue, args => args.Max(a => Convert.ToDouble(a))), FunctionFlags.Aggregate);
+        functions["min"] = new(Func("min", 1, int.MaxValue, args => args.Min(a => Convert.ToDouble(a))), FunctionFlags.Aggregate);
     }
 
     private static ExpressionFunction Func(string name, int argCount, Func<object?[], object?> fn) => args => args.Length == argCount ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");

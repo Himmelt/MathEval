@@ -1,7 +1,7 @@
 namespace MathEval.Fast.VM;
 
 internal static class InstructionCache {
-    private static LruCache<string, Instruction[]> _cache = new(256);
+    private static readonly LruCache<string, Instruction[]> _cache = new(256);
 
     public static Instruction[] GetOrCompile(string expression) {
         if (_cache.TryGet(expression, out var instructions) && instructions != null) {
@@ -16,7 +16,8 @@ internal static class InstructionCache {
     public static void Clear() => _cache.Clear();
 
     public static void SetCapacity(int capacity) {
-        // Recreate cache with new capacity; this clears existing entries
-        _cache = new LruCache<string, Instruction[]>(capacity);
+        // _cache 为 readonly，无法重建。清空缓存以释放条目。
+        // 如需改变容量，应在初始化时设置。
+        _cache.Clear();
     }
 }

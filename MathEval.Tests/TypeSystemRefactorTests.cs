@@ -164,11 +164,11 @@ public class TypeSystemRefactorTests {
     }
 
     [Fact]
-    public void ArrayIndex_ScalarWithIndex_ReturnsScalar() {
+    public void ArrayIndex_ScalarWithIndex_Throws() {
         var context = new ExpressionContext();
         context.Set("x", 42.0);
-        // Scalar indexed returns the scalar itself (supports index pushdown optimization)
-        Assert.Equal(42.0, Expression.Eval<double>("x[0]", context));
+        // ARCH-7: 用户原始编写的标量索引应抛出类型错误，而非静默返回标量
+        Assert.Throws<TypeMismatchException>(() => Expression.Eval<double>("x[0]", context));
     }
 
     #endregion

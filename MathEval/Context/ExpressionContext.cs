@@ -1,6 +1,7 @@
 using MathEval.Exceptions;
 using MathEval.Functions;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Reflection;
 using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
@@ -9,19 +10,33 @@ namespace MathEval.Context;
 public class ExpressionContext {
     private readonly ExpressionContext? _parent;
     private readonly ConcurrentDictionary<string, SymbolEntry> _symbols;
-    private readonly ConcurrentDictionary<string, ExpressionFunction> _functions;
+    private readonly ConcurrentDictionary<string, FunctionEntry> _functions;
+
+    internal readonly record struct FunctionEntry(ExpressionFunction Function, FunctionFlags Flags);
+
+    // ARCH-8: 内置函数与常量通过静态 FrozenDictionary 共享，
+    // 避免每次 new ExpressionContext() 重复注册 ~30 项到 ConcurrentDictionary
+    private static readonly FrozenDictionary<string, FunctionEntry> s_builtInFunctions;
+    private static readonly FrozenDictionary<string, double> s_builtInSymbols;
+
+    static ExpressionContext() {
+        var symbols = new Dictionary<string, double>(StringComparer.Ordinal);
+        var functions = new Dictionary<string, FunctionEntry>(StringComparer.Ordinal);
+        BuiltInFunctions.Populate(symbols, functions);
+        s_builtInSymbols = symbols.ToFrozenDictionary(StringComparer.Ordinal);
+        s_builtInFunctions = functions.ToFrozenDictionary(StringComparer.Ordinal);
+    }
 
     public ExpressionContext() {
         _parent = null;
         _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
-        _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
-        BuiltInFunctions.Register(this);
+        _functions = new ConcurrentDictionary<string, FunctionEntry>(StringComparer.Ordinal);
     }
 
     private ExpressionContext(ExpressionContext parent) {
         _parent = parent;
         _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
-        _functions = new ConcurrentDictionary<string, ExpressionFunction>(StringComparer.Ordinal);
+        _functions = new ConcurrentDictionary<string, FunctionEntry>(StringComparer.Ordinal);
     }
 
     private static readonly HashSet<string> ReservedKeywords = new(StringComparer.Ordinal)
@@ -51,16 +66,22 @@ public class ExpressionContext {
     /// <summary>
     /// 注册自定义函数
     /// </summary>
-    public void SetFunction(string name, ExpressionFunction func) {
+    /// <param name="name">函数名</param>
+    /// <param name="func">函数委托</param>
+    /// <param name="flags">函数行为标记，默认为 ElementWise（逐元素操作）</param>
+    public void SetFunction(string name, ExpressionFunction func, FunctionFlags flags = FunctionFlags.ElementWise) {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
-        _functions[name] = func;
+        _functions[name] = new FunctionEntry(func, flags);
     }
 
     /// <summary>
     /// 通过 Delegate 注册函数
     /// </summary>
-    public void SetFunction(string name, Delegate func) {
+    /// <param name="name">函数名</param>
+    /// <param name="func">函数委托</param>
+    /// <param name="flags">函数行为标记，默认为 ElementWise（逐元素操作）</param>
+    public void SetFunction(string name, Delegate func, FunctionFlags flags = FunctionFlags.ElementWise) {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
         var method = func.Method;
@@ -95,7 +116,7 @@ public class ExpressionContext {
                 // 已为 MathEval 异常，直接透传，避免重复包装
                 throw;
             }
-        });
+        }, flags);
     }
 
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func) {
@@ -138,17 +159,62 @@ public class ExpressionContext {
 
         if (_parent != null) return _parent.TryGetSymbol(name, out value);
 
+        // 回退到静态内置常量表（E、PI、π）
+        if (s_builtInSymbols.TryGetValue(name, out var constValue)) {
+            value = constValue;
+            return true;
+        }
+
         value = null!;
         return false;
     }
 
-    public bool TryGetFunction(string name, out ExpressionFunction func) {
-        if (_functions.TryGetValue(name, out func!)) return true;
+    /// <summary>
+    /// 在当前上下文链（含父级）中解析函数条目，根级回退到静态内置函数表
+    /// </summary>
+    internal bool TryGetFunctionEntry(string name, out FunctionEntry entry) {
+        if (_functions.TryGetValue(name, out entry)) return true;
+        if (_parent != null) return _parent.TryGetFunctionEntry(name, out entry);
+        return s_builtInFunctions.TryGetValue(name, out entry);
+    }
 
-        if (_parent != null) return _parent.TryGetFunction(name, out func);
+    public bool TryGetFunction(string name, out ExpressionFunction func) {
+        if (TryGetFunctionEntry(name, out var entry)) {
+            func = entry.Function;
+            return true;
+        }
 
         func = null!;
         return false;
+    }
+
+    /// <summary>
+    /// 判断指定函数是否为聚合函数
+    /// </summary>
+    internal bool IsAggregateFunction(string name) {
+        return TryGetFunctionEntry(name, out var entry) && entry.Flags.HasFlag(FunctionFlags.Aggregate);
+    }
+
+    /// <summary>
+    /// 获取当前上下文（含父级）中所有聚合函数名集合（含内置聚合函数 max/min）
+    /// </summary>
+    internal HashSet<string> GetAggregateFunctionNames() {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        CollectAggregateFunctions(set);
+        // 包含内置聚合函数，确保 IndexPushdownOptimizer 能正确跳过
+        foreach (var kvp in s_builtInFunctions) {
+            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
+                set.Add(kvp.Key);
+        }
+        return set;
+    }
+
+    private void CollectAggregateFunctions(HashSet<string> set) {
+        foreach (var kvp in _functions) {
+            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
+                set.Add(kvp.Key);
+        }
+        _parent?.CollectAggregateFunctions(set);
     }
 
     public ExpressionContext CreateChild() {

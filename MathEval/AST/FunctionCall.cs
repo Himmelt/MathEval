@@ -10,7 +10,7 @@ namespace MathEval.AST;
 /// </remarks>
 /// <param name="name">函数名称</param>
 /// <param name="arguments">参数列表</param>
-public class FunctionCall(string name, List<LogicalExpression> arguments) : LogicalExpression {
+public sealed class FunctionCall(string name, List<LogicalExpression> arguments) : LogicalExpression {
     /// <summary>
     /// 获取函数名称
     /// </summary>
@@ -19,7 +19,7 @@ public class FunctionCall(string name, List<LogicalExpression> arguments) : Logi
     /// <summary>
     /// 获取函数参数列表
     /// </summary>
-    public List<LogicalExpression> Arguments { get; } = arguments;
+    public IReadOnlyList<LogicalExpression> Arguments { get; } = arguments;
 
     /// <inheritdoc />
     public override void Accept(IExpressionVisitor visitor) {

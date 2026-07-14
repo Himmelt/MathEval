@@ -8,10 +8,16 @@ public class Parser {
     private readonly Lexer.Lexer _lexer;
     private Lexer.Token _currentToken;
     private int _depth;
-    private const int MaxDepth = 1024;
+    /// <summary>
+    /// 默认最大嵌套深度
+    /// </summary>
+    public const int DefaultMaxDepth = 1024;
+    private readonly int _maxDepth;
 
-    public Parser(Lexer.Lexer lexer) {
+    public Parser(Lexer.Lexer lexer, int maxDepth = DefaultMaxDepth) {
         _lexer = lexer ?? throw new ArgumentNullException(nameof(lexer));
+        if (maxDepth <= 0) throw new ArgumentOutOfRangeException(nameof(maxDepth), "最大嵌套深度必须为正数");
+        _maxDepth = maxDepth;
         _lexer.MoveNext();
         _currentToken = _lexer.CurrentToken;
     }
@@ -241,24 +247,23 @@ public class Parser {
                 else
                     numValue = double.Parse(numText, CultureInfo.InvariantCulture);
                 MoveNext();
-                _depth--;
                 expr = new ValueExpression(numValue);
                 break;
 
             case Lexer.TokenType.NaN:
                 MoveNext();
-                _depth--;
                 expr = new ValueExpression(double.NaN);
                 break;
 
             case Lexer.TokenType.INF:
                 MoveNext();
-                _depth--;
                 expr = new ValueExpression(double.PositiveInfinity);
                 break;
 
             case Lexer.TokenType.Identifier:
-                _depth--;
+                // 注意：此处不再提前 _depth--，否则函数调用内的递归嵌套不会累积深度（BUG-5）
+                // _depth-- 统一在 switch 之后执行，确保 ParseIdentifierOrFunction 内的
+                // ParseExpression → ... → ParsePrimary 链路正确累积深度
                 expr = ParseIdentifierOrFunction();
                 break;
 
@@ -266,17 +271,18 @@ public class Parser {
                 MoveNext();
                 expr = ParseExpression();
                 Expect(Lexer.TokenType.RightParenthesis);
-                _depth--;
                 break;
 
             case Lexer.TokenType.LeftBracket:
-                _depth--;
                 expr = ParseArrayLiteral();
                 break;
 
             default:
                 throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
         }
+
+        // 统一在 switch 后递减深度（匹配 CheckDepth 的 +1）
+        _depth--;
 
         // Postfix array indexing: supports arr[i], (expr)[i], [1,2,3][i]
         while (CurrentToken.Type == Lexer.TokenType.LeftBracket) {
@@ -324,7 +330,7 @@ public class Parser {
 
     private void CheckDepth() {
         _depth++;
-        if (_depth > MaxDepth)
-            throw new ParseException("表达式嵌套深度超过最大限制 1024", CurrentToken.Line, CurrentToken.Column);
+        if (_depth > _maxDepth)
+            throw new ParseException($"表达式嵌套深度超过最大限制 {_maxDepth}", CurrentToken.Line, CurrentToken.Column);
     }
 }

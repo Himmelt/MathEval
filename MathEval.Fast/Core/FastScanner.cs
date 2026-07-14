@@ -116,7 +116,7 @@ internal struct FastScanner(string expression) {
         if (pos + keyword.Length > _expression.Length) return false;
 
         for (int i = 0; i < keyword.Length; i++) {
-            if (char.ToLowerInvariant(_expression[pos + i]) != char.ToLowerInvariant(keyword[i])) return false;
+            if (_expression[pos + i] != keyword[i]) return false;
         }
 
         // 确保关键字后不是标识符字符
@@ -129,7 +129,7 @@ internal struct FastScanner(string expression) {
     public static bool EqualsLower(ReadOnlySpan<char> span, string keyword) {
         if (span.Length != keyword.Length) return false;
         for (int i = 0; i < keyword.Length; i++) {
-            if (char.ToLowerInvariant(span[i]) != char.ToLowerInvariant(keyword[i])) return false;
+            if (span[i] != keyword[i]) return false;
         }
         return true;
     }

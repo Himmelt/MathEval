@@ -11,7 +11,7 @@ namespace MathEval.AST;
 /// <param name="condition">条件表达式</param>
 /// <param name="trueExpression">条件为 true 时的表达式</param>
 /// <param name="falseExpression">条件为 false 时的表达式</param>
-public class ConditionalExpression(LogicalExpression condition, LogicalExpression trueExpression, LogicalExpression falseExpression) : LogicalExpression {
+public sealed class ConditionalExpression(LogicalExpression condition, LogicalExpression trueExpression, LogicalExpression falseExpression) : LogicalExpression {
     /// <summary>
     /// 获取条件表达式
     /// </summary>

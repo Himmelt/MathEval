@@ -22,6 +22,11 @@ public static class TypeHelper {
         };
     }
 
+    /// <summary>
+    /// 判断 double 值是否为真（非零且非 NaN），与 Fast 项目 ConvertToBool 语义一致
+    /// </summary>
+    public static bool IsTruthy(double value) => value != 0 && !double.IsNaN(value);
+
     public static long ToInteger(object value, string operationName) {
         double d = ToDouble(value);
         // 超出 long 范围的整型 double（如 1e19）不可安全地转换为 long，
@@ -58,8 +63,8 @@ public static class TypeHelper {
             BinaryExpressionType.LessThanOrEqual => d1 <= d2 ? 1.0 : 0.0,
             BinaryExpressionType.GreaterThan => d1 > d2 ? 1.0 : 0.0,
             BinaryExpressionType.GreaterThanOrEqual => d1 >= d2 ? 1.0 : 0.0,
-            BinaryExpressionType.And => (d1 != 0 && d2 != 0) ? 1.0 : 0.0,
-            BinaryExpressionType.Or => (d1 != 0 || d2 != 0) ? 1.0 : 0.0,
+            BinaryExpressionType.And => (IsTruthy(d1) && IsTruthy(d2)) ? 1.0 : 0.0,
+            BinaryExpressionType.Or => (IsTruthy(d1) || IsTruthy(d2)) ? 1.0 : 0.0,
             _ => throw new System.InvalidOperationException($"未知的二元运算符：{type}")
         };
     }
@@ -104,7 +109,7 @@ public static class TypeHelper {
         return type switch {
             UnaryExpressionType.Positive => d,
             UnaryExpressionType.Negate => -d,
-            UnaryExpressionType.Not => d == 0 ? 1.0 : 0.0,
+            UnaryExpressionType.Not => !IsTruthy(d) ? 1.0 : 0.0,
             UnaryExpressionType.BitwiseNot => (double)(~ToInteger(operand, "按位取反")),
             _ => throw new System.InvalidOperationException($"未知的一元运算符：{type}")
         };

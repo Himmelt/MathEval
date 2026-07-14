@@ -416,8 +416,7 @@ internal ref struct FastEvaluator(string expression) {
 
     private static double CallBuiltInFunction(ReadOnlySpan<char> name, ReadOnlySpan<double> args) {
         if (BuiltInFunctions.TryGetFunction(name, out var func)) {
-            double[] arr = args.ToArray();
-            return func(arr);
+            return func(args);
         }
         throw new FastEvalException($"未知函数 '{name}'", "");
     }

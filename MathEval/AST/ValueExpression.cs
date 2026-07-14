@@ -9,7 +9,7 @@ namespace MathEval.AST;
 /// 初始化 ValueExpression 类的新实例
 /// </remarks>
 /// <param name="value">值</param>
-public class ValueExpression(object value) : LogicalExpression {
+public sealed class ValueExpression(object value) : LogicalExpression {
     /// <summary>
     /// 获取值
     /// </summary>

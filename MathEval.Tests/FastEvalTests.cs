@@ -713,26 +713,32 @@ public class FastEvalTests {
     }
 
     [Fact]
-    public void EvalDouble_KeywordOrCaseInsensitive() {
+    public void EvalDouble_KeywordOrCaseSensitive() {
+        // BUG-3 修复后 Fast 关键字大小写敏感，小写 or 正常工作
         var vars = new Dictionary<string, object> { ["a"] = true, ["b"] = false };
-        Assert.True(FastEval.EvalBool("a OR b", vars));
+        Assert.True(FastEval.EvalBool("a or b", vars));
+        // 大写 OR 不再被识别为关键字
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a OR b", vars));
     }
 
     [Fact]
-    public void EvalDouble_KeywordAndCaseInsensitive() {
+    public void EvalDouble_KeywordAndCaseSensitive() {
         var vars = new Dictionary<string, object> { ["a"] = true, ["b"] = true };
-        Assert.True(FastEval.EvalBool("a AND b", vars));
+        Assert.True(FastEval.EvalBool("a and b", vars));
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("a AND b", vars));
     }
 
     [Fact]
-    public void EvalDouble_KeywordNotCaseInsensitive() {
+    public void EvalDouble_KeywordNotCaseSensitive() {
         var vars = new Dictionary<string, object> { ["a"] = false };
-        Assert.True(FastEval.EvalBool("NOT a", vars));
+        Assert.True(FastEval.EvalBool("not a", vars));
+        Assert.Throws<FastEvalException>(() => FastEval.EvalBool("NOT a", vars));
     }
 
     [Fact]
-    public void EvalDouble_KeywordXorCaseInsensitive() {
-        Assert.Equal(1L, FastEval.EvalLong("3 XOR 2"));
+    public void EvalDouble_KeywordXorCaseSensitive() {
+        Assert.Equal(1L, FastEval.EvalLong("3 xor 2"));
+        Assert.Throws<FastEvalException>(() => FastEval.EvalLong("3 XOR 2"));
     }
 
     #endregion

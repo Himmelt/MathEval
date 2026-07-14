@@ -11,7 +11,7 @@ namespace MathEval.AST;
 /// </remarks>
 /// <param name="type">一元表达式类型</param>
 /// <param name="operand">操作数</param>
-public class UnaryExpression(UnaryExpressionType type, LogicalExpression operand) : LogicalExpression {
+public sealed class UnaryExpression(UnaryExpressionType type, LogicalExpression operand) : LogicalExpression {
     /// <summary>
     /// 获取一元表达式类型
     /// </summary>

@@ -56,6 +56,21 @@ internal class LruCache<TKey, TValue>(int capacity) where TKey : notnull
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> factory)
     {
+        // 第一次检查：若已存在则直接返回（持锁）
+        lock (_lock)
+        {
+            if (_map.TryGetValue(key, out var node))
+            {
+                _list.Remove(node);
+                _list.AddFirst(node);
+                return node.Value.Value;
+            }
+        }
+
+        // factory 在锁外执行，避免持锁期间阻塞其他缓存操作（ARCH-6）
+        var value = factory(key);
+
+        // 第二次检查：可能已有其他线程插入相同键
         lock (_lock)
         {
             if (_map.TryGetValue(key, out var node))
@@ -72,7 +87,6 @@ internal class LruCache<TKey, TValue>(int capacity) where TKey : notnull
                 _list.RemoveLast();
             }
 
-            var value = factory(key);
             var item = new CacheItem(key, value);
             _list.AddFirst(item);
             _map[key] = _list.First!;

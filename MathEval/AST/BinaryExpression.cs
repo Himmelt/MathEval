@@ -12,7 +12,7 @@ namespace MathEval.AST;
 /// <param name="type">二元表达式类型</param>
 /// <param name="left">左操作数</param>
 /// <param name="right">右操作数</param>
-public class BinaryExpression(BinaryExpressionType type, LogicalExpression left, LogicalExpression right) : LogicalExpression {
+public sealed class BinaryExpression(BinaryExpressionType type, LogicalExpression left, LogicalExpression right) : LogicalExpression {
     /// <summary>
     /// 获取二元表达式类型
     /// </summary>

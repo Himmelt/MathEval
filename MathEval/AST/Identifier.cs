@@ -9,7 +9,7 @@ namespace MathEval.AST;
 /// 初始化 Identifier 类的新实例
 /// </remarks>
 /// <param name="name">标识符名称</param>
-public class Identifier(string name) : LogicalExpression {
+public sealed class Identifier(string name) : LogicalExpression {
     /// <summary>
     /// 获取标识符名称
     /// </summary>

@@ -67,11 +67,16 @@ internal static class BytecodeVM {
                     case OpCode.Call: {
                             var func = BuiltInFunctions.GetEvaluateById(instr.FunctionId);
                             var argCount = instr.IntOperand;
-                            var args = new double[argCount];
-                            for (int i = argCount - 1; i >= 0; i--) {
-                                args[i] = stack[--sp];
+                            // OPT-3: 用 ArrayPool 租借参数数组，避免每次 Call 指令堆分配
+                            var args = ArrayPool<double>.Shared.Rent(argCount);
+                            try {
+                                for (int i = argCount - 1; i >= 0; i--) {
+                                    args[i] = stack[--sp];
+                                }
+                                stack[sp++] = func(args.AsSpan(0, argCount));
+                            } finally {
+                                ArrayPool<double>.Shared.Return(args);
                             }
-                            stack[sp++] = func(args);
                             break;
                         }
 

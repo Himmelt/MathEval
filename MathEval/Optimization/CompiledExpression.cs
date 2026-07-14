@@ -1,6 +1,7 @@
 using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.Internal;
 using MathEval.Parser;
 using MathEval.TypeSystem;
 using System.Linq.Expressions;
@@ -14,70 +15,17 @@ namespace MathEval.Optimization;
 public class CompiledExpression(LogicalExpression ast) {
     private readonly Func<ExpressionContext, object> _compiledFunc = CompileToDelegate(ast);
 
-    /// <summary>
-    /// 聚合函数名集合 — 这些函数不应 element-wise 广播，需展平后全局归约
-    /// </summary>
-    private static readonly HashSet<string> _aggregateFunctions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "max", "min",
-    };
-
     public object Evaluate(ExpressionContext context) {
         return _compiledFunc(context);
     }
 
     /// <summary>
     /// 调用函数，处理数组广播或聚合展平（匹配 EvaluationVisitor 行为）
+    /// isAggregate 由调用方通过 ExpressionContext.IsAggregateFunction 查询 FunctionFlags 得到
     /// </summary>
-    internal static object CallFunctionWithBroadcast(ExpressionFunction func, object[] args, string funcName)
+    internal static object CallFunctionWithBroadcast(ExpressionFunction func, object[] args, bool isAggregate)
     {
-        if (_aggregateFunctions.Contains(funcName))
-        {
-            // 聚合函数：展平数组参数后全局归约
-            var flatList = new List<object>();
-            foreach (var arg in args)
-            {
-                if (arg is double[] arr)
-                {
-                    foreach (var item in arr)
-                        flatList.Add(item);
-                }
-                else
-                {
-                    flatList.Add(arg);
-                }
-            }
-            return func([.. flatList])!;
-        }
-
-        // 非聚合函数：检测数组参数做 element-wise 广播
-        var arrayArg = args.FirstOrDefault(a => a is double[]);
-        if (arrayArg is double[] arr2)
-        {
-            // Validate all array arguments have the same length
-            foreach (var arg in args)
-            {
-                if (arg is double[] da && da.Length != arr2.Length)
-                {
-                    throw new EvaluateException(
-                        $"数组广播时所有数组参数长度必须一致，但遇到长度 {da.Length} 和 {arr2.Length}");
-                }
-            }
-
-            var result = new double[arr2.Length];
-            for (int i = 0; i < arr2.Length; i++)
-            {
-                var scalarArgs = new object[args.Length];
-                for (int j = 0; j < args.Length; j++)
-                {
-                    scalarArgs[j] = args[j] is double[] da ? da[i] : args[j];
-                }
-                result[i] = TypeHelper.ToDouble(func(scalarArgs));
-            }
-            return result;
-        }
-
-        return func(args)!;
+        return FunctionCallEvaluator.Evaluate(func, args, isAggregate);
     }
 
     /// <summary>
@@ -145,7 +93,12 @@ public class CompiledExpression(LogicalExpression ast) {
     /// <summary>
     /// 编译二元表达式
     /// </summary>
-    private static BlockExpression CompileBinaryExpression(AST.BinaryExpression expr, ParameterExpression contextParam) {
+    private static LinqExpression CompileBinaryExpression(AST.BinaryExpression expr, ParameterExpression contextParam) {
+        // And/Or 短路求值：仅在需要时编译右操作数
+        if (expr.Type == BinaryExpressionType.And || expr.Type == BinaryExpressionType.Or) {
+            return CompileShortCircuitBinary(expr, contextParam);
+        }
+
         var leftExpr = CompileNode(expr.Left, contextParam);
         var rightExpr = CompileNode(expr.Right, contextParam);
 
@@ -161,6 +114,46 @@ public class CompiledExpression(LogicalExpression ast) {
         var call = LinqExpression.Call(typeHelperMethod!, opType, leftVar, rightVar);
 
         return LinqExpression.Block([leftVar, rightVar], assignLeft, assignRight, call);
+    }
+
+    /// <summary>
+    /// 编译 And/Or 短路求值，右操作数仅在短路条件不满足时求值
+    /// </summary>
+    private static LinqExpression CompileShortCircuitBinary(AST.BinaryExpression expr, ParameterExpression contextParam) {
+        var toDoubleMethod = ((Func<object, double>)TypeHelper.ToDouble).Method;
+        var isTruthyMethod = ((Func<double, bool>)TypeHelper.IsTruthy).Method;
+
+        var leftVar = LinqExpression.Variable(typeof(object), "left");
+        var leftDoubleVar = LinqExpression.Variable(typeof(double), "leftDouble");
+        var assignLeft = LinqExpression.Assign(leftVar, CompileNode(expr.Left, contextParam));
+        var assignLeftDouble = LinqExpression.Assign(leftDoubleVar, LinqExpression.Call(toDoubleMethod, leftVar));
+        var isLeftTruthy = LinqExpression.Call(isTruthyMethod, leftDoubleVar);
+
+        // 右操作数求值（仅在短路条件不满足时执行）
+        var rightVar = LinqExpression.Variable(typeof(object), "right");
+        var rightDoubleVar = LinqExpression.Variable(typeof(double), "rightDouble");
+        var assignRight = LinqExpression.Assign(rightVar, CompileNode(expr.Right, contextParam));
+        var assignRightDouble = LinqExpression.Assign(rightDoubleVar, LinqExpression.Call(toDoubleMethod, rightVar));
+        var isRightTruthy = LinqExpression.Call(isTruthyMethod, rightDoubleVar);
+        var rightResult = LinqExpression.Condition(isRightTruthy,
+            LinqExpression.Convert(LinqExpression.Constant(1.0), typeof(object)),
+            LinqExpression.Convert(LinqExpression.Constant(0.0), typeof(object)),
+            typeof(object));
+        var evalRight = LinqExpression.Block([rightVar, rightDoubleVar], assignRight, assignRightDouble, rightResult);
+
+        LinqExpression condition;
+        if (expr.Type == BinaryExpressionType.And) {
+            // And: left truthy → eval right; left falsy → 0.0
+            condition = LinqExpression.Condition(isLeftTruthy, evalRight,
+                LinqExpression.Convert(LinqExpression.Constant(0.0), typeof(object)), typeof(object));
+        } else {
+            // Or: left truthy → 1.0; left falsy → eval right
+            condition = LinqExpression.Condition(isLeftTruthy,
+                LinqExpression.Convert(LinqExpression.Constant(1.0), typeof(object)),
+                evalRight, typeof(object));
+        }
+
+        return LinqExpression.Block([leftVar, leftDoubleVar], assignLeft, assignLeftDouble, condition);
     }
 
     /// <summary>
@@ -190,6 +183,8 @@ public class CompiledExpression(LogicalExpression ast) {
         var assignArray = LinqExpression.Assign(argsArrayVar, initArray);
 
         var tryGetFuncMethod = typeof(ExpressionContext).GetMethod(nameof(ExpressionContext.TryGetFunction));
+        var isAggregateMethod = typeof(ExpressionContext).GetMethod(nameof(ExpressionContext.IsAggregateFunction),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         var funcName = LinqExpression.Constant(expr.Name);
         var funcVar = LinqExpression.Variable(typeof(ExpressionFunction), "func");
 
@@ -201,14 +196,13 @@ public class CompiledExpression(LogicalExpression ast) {
             typeof(object)
         );
 
-        // 调用 CallFunctionWithBroadcast 处理数组广播/聚合展平，确保解释模式与编译模式一致
-        var broadcastMethod = typeof(CompiledExpression).GetMethod(
-            nameof(CallFunctionWithBroadcast),
-            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic,
-            null,
-            [typeof(ExpressionFunction), typeof(object[]), typeof(string)],
-            null)!;
-        var invokeExpr = LinqExpression.Call(broadcastMethod, funcVar, argsArrayVar, funcName);
+        // 运行时查询上下文判断是否为聚合函数（依据 FunctionFlags），
+        // 再调用 CallFunctionWithBroadcast 处理数组广播/聚合展平，确保解释模式与编译模式一致
+        var isAggregateCall = LinqExpression.Call(contextParam, isAggregateMethod!, funcName);
+
+        // OPT-5: 用方法组代替反射 GetMethod + BindingFlags，编译期类型安全
+        var broadcastMethod = ((Func<ExpressionFunction, object[], bool, object>)CallFunctionWithBroadcast).Method;
+        var invokeExpr = LinqExpression.Call(broadcastMethod, funcVar, argsArrayVar, isAggregateCall);
 
         var body = LinqExpression.Block(
             [argsArrayVar, funcVar],
@@ -230,8 +224,9 @@ public class CompiledExpression(LogicalExpression ast) {
         var assignCondition = LinqExpression.Assign(conditionVar, conditionExpr);
 
         var toDoubleMethod = ((Func<object, double>)TypeHelper.ToDouble).Method;
+        var isTruthyMethod = ((Func<double, bool>)TypeHelper.IsTruthy).Method;
         var toDoubleCall = LinqExpression.Call(toDoubleMethod, conditionVar);
-        var conditionBool = LinqExpression.NotEqual(toDoubleCall, LinqExpression.Constant(0.0));
+        var conditionBool = LinqExpression.Call(isTruthyMethod, toDoubleCall);
 
         var trueExprObj = LinqExpression.Convert(CompileNode(expr.TrueExpression, contextParam), typeof(object));
         var falseExprObj = LinqExpression.Convert(CompileNode(expr.FalseExpression, contextParam), typeof(object));
@@ -260,8 +255,8 @@ public class CompiledExpression(LogicalExpression ast) {
         var arrayExpr = CompileNode(expr.Array, contextParam);
         var indexExpr = CompileNode(expr.Index, contextParam);
 
-        // Get index as int
-        var toIntMethod = typeof(TypeHelper).GetMethod("ToInteger", new[] { typeof(object), typeof(string) })!;
+        // Get index as int (OPT-5: 方法组代替反射 GetMethod)
+        var toIntMethod = ((Func<object, string, long>)TypeHelper.ToInteger).Method;
         var indexCall = LinqExpression.Call(toIntMethod,
             LinqExpression.Convert(indexExpr, typeof(object)),
             LinqExpression.Constant("数组索引"));
@@ -301,10 +296,22 @@ public class CompiledExpression(LogicalExpression ast) {
                 typeof(object)),
             typeof(object));
 
-        // If scalar, return the scalar itself
-        var scalarResult = arrayVar;
+        // 标量回退行为：合成索引（IndexPushdownOptimizer 生成）静默返回标量本身；
+        // 用户原始索引对标量抛 TypeMismatchException，提供清晰错误反馈
+        LinqExpression scalarFallback;
+        if (expr.IsSynthetic) {
+            scalarFallback = arrayVar;
+        } else {
+            var typeMismatchCtor = typeof(TypeMismatchException).GetConstructor([typeof(string), typeof(string), typeof(string)])!;
+            scalarFallback = LinqExpression.Throw(
+                LinqExpression.New(typeMismatchCtor,
+                    LinqExpression.Constant("索引操作需要数组类型"),
+                    LinqExpression.Constant("array"),
+                    LinqExpression.Constant("scalar")),
+                typeof(object));
+        }
 
-        var condition = LinqExpression.Condition(isArray, safeArrayAccess, scalarResult, typeof(object));
+        var condition = LinqExpression.Condition(isArray, safeArrayAccess, scalarFallback, typeof(object));
 
         return LinqExpression.Block([arrayVar, indexVar], assignArray, assignIndex, condition);
     }

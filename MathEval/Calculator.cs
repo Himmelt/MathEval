@@ -11,9 +11,16 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
     private LogicalExpression? _ast;
     private CompiledExpression? _compiledExpression;
+    private EvaluationVisitor? _visitor;
     private readonly ExpressionOptions _options = options;
     private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
     private readonly string _expressionText = expression ?? throw new ArgumentNullException(nameof(expression));
+
+    /// <summary>
+    /// 最大嵌套深度（控制表达式嵌套层次上限，防止栈溢出）
+    /// 默认 <see cref="Parser.Parser.DefaultMaxDepth"/> = 1024
+    /// </summary>
+    public int MaxNestingDepth { get; set; } = Parser.Parser.DefaultMaxDepth;
 
     public object Eval() {
         EnsureParsed();
@@ -24,8 +31,8 @@ public class Calculator(string expression, ExpressionContext context, Expression
             return _compiledExpression!.Evaluate(_context);
         }
 
-        // 否则使用原始的 Visitor 模式
-        var visitor = new EvaluationVisitor(_context);
+        // 否则使用原始的 Visitor 模式（复用 visitor 实例减少 GC 压力 OPT-2）
+        var visitor = _visitor ??= new EvaluationVisitor(_context);
         return _ast!.Accept(visitor);
     }
 
@@ -85,45 +92,47 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
         if (string.IsNullOrWhiteSpace(_expressionText)) throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
 
-        // 尝试从缓存获取（缓存键包含表达式文本与选项，避免不同选项共享 AST）
-        if (!_options.HasFlag(ExpressionOptions.NoCache) && ExpressionCache.TryGet(_expressionText, (int)_options, out var cachedAst)) {
-            _ast = cachedAst;
+        // OPT-7: 使用 GetOrAdd 代替 TryGet + Set，避免并发首跑时重复解析同一表达式
+        if (_options.HasFlag(ExpressionOptions.NoCache)) {
+            _ast = ParseAndOptimize();
         } else {
-            var lexer = new Lexer.Lexer(_expressionText);
-            var parser = new Parser.Parser(lexer);
-            _ast = parser.Parse();
-
-            // 应用常量折叠优化（受 ConstantFolding 选项控制）
-            if (_options.HasFlag(ExpressionOptions.ConstantFolding)) {
-                _ast = ConstantFolder.Fold(_ast);
-            }
-
-            // 应用索引下推优化（默认开启，可用 DisableIndexPushdown 关闭）
-            if (!_options.HasFlag(ExpressionOptions.DisableIndexPushdown)) {
-                _ast = IndexPushdownOptimizer.Optimize(_ast);
-            }
-
-            if (!_options.HasFlag(ExpressionOptions.NoCache)) ExpressionCache.Set(_expressionText, (int)_options, _ast);
+            _ast = OptimizedExpressionCache.GetOrAdd(_expressionText, _ => ParseAndOptimize());
         }
+    }
+
+    /// <summary>
+    /// 解析表达式并应用优化（索引下推 + 常量折叠）
+    /// </summary>
+    private LogicalExpression ParseAndOptimize() {
+        var lexer = new Lexer.Lexer(_expressionText);
+        var parser = new Parser.Parser(lexer, MaxNestingDepth);
+        var ast = parser.Parse();
+
+        // 应用索引下推优化（仅对非聚合函数下推索引，避免改变聚合函数语义）
+        ast = IndexPushdownOptimizer.Optimize(ast, _context.GetAggregateFunctionNames());
+
+        // 应用常量折叠优化（在索引下推之后运行，可折叠下推产生的模式，如 ([1,2,3]*2)[0] → 1*2 → 2）
+        if (_options.HasFlag(ExpressionOptions.ConstantFolding)) {
+            ast = ConstantFolder.Fold(ast);
+        }
+
+        return ast;
     }
 
     private void EnsureCompiled() {
         if (_compiledExpression != null) return;
         EnsureParsed();
 
-        // 尝试从优化缓存获取编译后的表达式
-        if (!_options.HasFlag(ExpressionOptions.NoCache) &&
-            OptimizedExpressionCache.TryGetCompiled(_expressionText, (int)_options, out var cachedCompiled)) {
-            _compiledExpression = cachedCompiled;
-            return;
-        }
-
-        // 编译表达式
-        _compiledExpression = new CompiledExpression(_ast!);
-
-        // 缓存编译后的表达式
-        if (!_options.HasFlag(ExpressionOptions.NoCache)) {
-            OptimizedExpressionCache.SetCompiled(_expressionText, (int)_options, _compiledExpression);
+        // OPT-8: 使用 GetOrAddCompiled 代替 TryGetCompiled + SetCompiled，
+        // 内部双重检查锁定避免并发首跑重复编译
+        if (_options.HasFlag(ExpressionOptions.NoCache)) {
+            _compiledExpression = new CompiledExpression(_ast!);
+        } else {
+            _compiledExpression = OptimizedExpressionCache.GetOrAddCompiled(
+                _expressionText,
+                _ => _ast!,
+                ast => new CompiledExpression(ast)
+            );
         }
     }
 }
