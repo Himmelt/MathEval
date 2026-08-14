@@ -1,5 +1,6 @@
 using MathEval.Exceptions;
 using MathEval.Parser;
+using System.Globalization;
 
 namespace MathEval.TypeSystem;
 
@@ -150,6 +151,48 @@ public static class TypeHelper {
         MathKind.TextArray => "text[]",
         _ => kind.ToString(),
     };
+
+    // ============ 插值显示与格式化 ============
+
+    /// <summary>
+    /// 插值段的默认显示：Number 用 G 格式（NaN/INF 特殊显示，InvariantCulture），
+    /// Text 原样，数组显示 Kind 与长度
+    /// </summary>
+    public static string ToDisplayString(MathValue value) => value.Kind switch {
+        MathKind.Number => FormatNumberG(value.AsNumber),
+        MathKind.Text => value.AsText,
+        _ => value.ToString(),
+    };
+
+    /// <summary>
+    /// 插值段格式化：仅数值支持 d/e/f/g/x 说明符；d/x 要求整数值。
+    /// Text/数组使用格式说明符抛 EvaluateException。
+    /// </summary>
+    public static string Format(MathValue value, string formatSpec) {
+        if (value.Kind != MathKind.Number)
+            throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于数值类型");
+
+        double d = value.AsNumber;
+        var firstChar = char.ToLowerInvariant(formatSpec[0]);
+        var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
+        if (!supportedFormats.Contains(firstChar))
+            throw new ParseException($"不支持的格式说明符：{formatSpec}", 1, 1);
+
+        // D/X 格式只适用于整数：double 为数学整数时转换后格式化
+        if (firstChar == 'd' || firstChar == 'x') {
+            if (double.IsNaN(d) || double.IsInfinity(d) || d != Math.Truncate(d))
+                throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于整数，但值为 {FormatNumberG(d)}");
+            return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", (long)d);
+        }
+
+        return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", d);
+    }
+
+    private static string FormatNumberG(double d) =>
+        double.IsNaN(d) ? "NaN"
+        : double.IsPositiveInfinity(d) ? "INF"
+        : double.IsNegativeInfinity(d) ? "-INF"
+        : d.ToString("G", CultureInfo.InvariantCulture);
 
     // ============ 内部计算（纯 double，无类型判断） ============
 

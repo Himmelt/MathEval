@@ -81,4 +81,20 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<M
         var index = expr.Index.Accept(this);
         return TypeHelper.ArrayIndex(array, index, expr.IsSynthetic);
     }
+
+    public MathValue Visit(InterpolatedString expr) {
+        var sb = new StringBuilder();
+        foreach (var segment in expr.Segments) {
+            if (segment is TextSegment textSeg) {
+                sb.Append(textSeg.Text);
+            } else if (segment is ExpressionSegment exprSeg) {
+                var value = exprSeg.Expression.Accept(this);
+                if (exprSeg.FormatSpec != null)
+                    sb.Append(TypeHelper.Format(value, exprSeg.FormatSpec));
+                else
+                    sb.Append(TypeHelper.ToDisplayString(value));
+            }
+        }
+        return MathValue.Text(sb.ToString());
+    }
 }

@@ -51,6 +51,7 @@ public class CompiledExpression(LogicalExpression ast) {
             AST.ConditionalExpression condExpr => CompileConditionalExpression(condExpr, contextParam),
             ArrayLiteralExpression arrExpr => CompileArrayLiteral(arrExpr, contextParam),
             ArrayIndexExpression idxExpr => CompileArrayIndex(idxExpr, contextParam),
+            InterpolatedString interpolated => CompileInterpolatedString(interpolated, contextParam),
             _ => throw new System.InvalidOperationException($"不支持的节点类型：{node.GetType().Name}")
         };
     }
@@ -234,6 +235,33 @@ public class CompiledExpression(LogicalExpression ast) {
         var arrayExpr = LinqExpression.NewArrayInit(typeof(MathValue), elementExprs);
         var buildMethod = ((Func<MathValue[], MathValue>)TypeHelper.BuildArrayLiteral).Method;
         return LinqExpression.Call(buildMethod, arrayExpr);
+    }
+
+    /// <summary>
+    /// 编译插值字符串：各段转为 string 后经 string.Concat 拼接，
+    /// 段格式化调用 TypeHelper.Format/ToDisplayString 与解释模式共享语义
+    /// </summary>
+    private static LinqExpression CompileInterpolatedString(InterpolatedString expr, ParameterExpression contextParam) {
+        var displayMethod = ((Func<MathValue, string>)TypeHelper.ToDisplayString).Method;
+        var formatMethod = ((Func<MathValue, string, string>)TypeHelper.Format).Method;
+        var textFactory = ((Func<string, MathValue>)MathValue.Text).Method;
+
+        var parts = new List<LinqExpression>();
+        foreach (var segment in expr.Segments) {
+            if (segment is TextSegment textSeg) {
+                parts.Add(LinqExpression.Constant(textSeg.Text, typeof(string)));
+            } else if (segment is ExpressionSegment exprSeg) {
+                var valueExpr = CompileNode(exprSeg.Expression, contextParam);
+                var stringExpr = exprSeg.FormatSpec != null
+                    ? LinqExpression.Call(formatMethod, valueExpr, LinqExpression.Constant(exprSeg.FormatSpec))
+                    : (LinqExpression)LinqExpression.Call(displayMethod, valueExpr);
+                parts.Add(stringExpr);
+            }
+        }
+
+        var concatMethod = typeof(string).GetMethod(nameof(string.Concat), [typeof(string[])])!;
+        return LinqExpression.Call(textFactory,
+            LinqExpression.Call(concatMethod, LinqExpression.NewArrayInit(typeof(string), parts)));
     }
 
     /// <summary>

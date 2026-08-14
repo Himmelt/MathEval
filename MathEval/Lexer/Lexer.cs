@@ -65,7 +65,9 @@ public class Lexer {
 
         char ch = Peek();
 
-        if (char.IsDigit(ch)) {
+        if (ch == '$' && (PeekNext() == '\'' || PeekNext() == '"')) {
+            ScanInterpolatedString();
+        } else if (char.IsDigit(ch)) {
             ScanNumber();
         } else if (IsIdentifierStart(ch)) {
             ScanIdentifier();
@@ -254,6 +256,92 @@ public class Lexer {
 
         Read();
         CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
+    }
+
+    /// <summary>
+    /// 扫描插值字符串，读取完整原始文本（包含 $ 前缀和引号），
+    /// 产出 InterpolatedString 类型的 Token，由 Parser 负责解析插值段。
+    /// </summary>
+    private void ScanInterpolatedString() {
+        // 读取 $ 前缀和开引号
+        Read(); // '$'
+        char quote = Read(); // '\'' or '"'
+
+        var sb = new StringBuilder();
+        sb.Append('$');
+        sb.Append(quote);
+
+        var depthStack = new Stack<int>();
+
+        while (!IsAtEnd()) {
+            char ch = Peek();
+
+            if (ch == quote && depthStack.Count == 0) {
+                break;
+            }
+
+            if (ch == '{') {
+                if (PeekNext() == '{') {
+                    // {{ 转义为字面量 {
+                    sb.Append(Read());
+                    sb.Append(Read());
+                } else {
+                    sb.Append(Read());
+                    depthStack.Push(0);
+                }
+            } else if (ch == '}') {
+                if (depthStack.Count > 0) {
+                    sb.Append(Read());
+                    depthStack.Pop();
+                } else if (PeekNext() == '}') {
+                    // }} 转义为字面量 }
+                    sb.Append(Read());
+                    sb.Append(Read());
+                } else {
+                    // 在顶层遇到未匹配的 }，报错
+                    throw new ParseException("插值字符串中存在未匹配的 '}'", _line, _column);
+                }
+            } else if (ch == '\'' || ch == '"') {
+                // 插值表达式内的嵌套字符串，需要完整跳过
+                sb.Append(Read());
+                ScanNestedStringContent(sb, ch);
+            } else {
+                sb.Append(Read());
+            }
+        }
+
+        if (IsAtEnd())
+            throw new ParseException("未终止的插值字符串", _line, _column);
+
+        // 读取闭引号
+        sb.Append(Read());
+
+        if (depthStack.Count > 0)
+            throw new ParseException("插值字符串中存在未匹配的 '{'", _startLine, _startColumn);
+
+        CurrentToken = new Token(TokenType.InterpolatedString, sb.ToString(), _startPosition, _startLine, _startColumn);
+    }
+
+    /// <summary>
+    /// 扫描插值表达式内嵌套的字符串字面量内容，将原始字符追加到 sb
+    /// </summary>
+    private void ScanNestedStringContent(StringBuilder sb, char quote) {
+        while (!IsAtEnd() && Peek() != quote) {
+            if (Peek() == '\\') {
+                sb.Append(Read());
+                if (IsAtEnd())
+                    throw new ParseException("插值表达式中字符串意外结束", _line, _column);
+                sb.Append(Read());
+            } else {
+                sb.Append(Read());
+            }
+        }
+
+        if (IsAtEnd())
+            throw new ParseException("插值表达式中存在未终止的字符串", _line, _column);
+
+        // 读取闭引号
+        sb.Append(Read());
     }
 
     private void ScanOperator() {

@@ -371,12 +371,7 @@ public class TypeSystemRefactorTests {
 
     #region 字符串运算
 
-    // P1：字符串字面量已恢复支持（见 TextScalarTests），插值字符串仍待 P3 恢复
-
-    [Fact]
-    public void InterpolatedString_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("$\"hello {1}\""));
-    }
+    // P1/P3：字符串字面量与插值字符串均已恢复支持（见 TextScalarTests / StringInterpolationTests）
 
     #endregion
 

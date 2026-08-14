@@ -46,4 +46,9 @@ public interface IExpressionVisitor<out T> {
     /// 访问数组索引表达式节点
     /// </summary>
     T Visit(ArrayIndexExpression expr);
+
+    /// <summary>
+    /// 访问插值字符串节点
+    /// </summary>
+    T Visit(InterpolatedString expr);
 }

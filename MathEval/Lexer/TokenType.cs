@@ -7,6 +7,7 @@ public enum TokenType {
     // 字面量
     Number,
     String,
+    InterpolatedString,
     NaN,
     INF,
 

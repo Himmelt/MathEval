@@ -266,6 +266,11 @@ public class Parser {
                 expr = new ValueExpression(double.PositiveInfinity);
                 break;
 
+            case Lexer.TokenType.InterpolatedString:
+                expr = ParseInterpolatedString(CurrentToken.Text);
+                MoveNext();
+                break;
+
             case Lexer.TokenType.Identifier:
                 // 注意：此处不再提前 _depth--，否则函数调用内的递归嵌套不会累积深度（BUG-5）
                 // _depth-- 统一在 switch 之后执行，确保 ParseIdentifierOrFunction 内的
@@ -332,6 +337,164 @@ public class Parser {
         }
         Expect(Lexer.TokenType.RightBracket);
         return new ArrayLiteralExpression(elements);
+    }
+
+    /// <summary>
+    /// 解析插值字符串 Token 文本，构建 InterpolatedString AST 节点。
+    /// Token 文本格式：$"content" 或 $'content'，包含 {{ }} 转义和 {expr:format} 插值
+    /// </summary>
+    private InterpolatedString ParseInterpolatedString(string rawText) {
+        // 跳过 $" 或 $' 前缀
+        int pos = 2;
+        char quote = rawText[1];
+        var segments = new List<InterpolationSegment>();
+        var textBuilder = new StringBuilder();
+
+        while (pos < rawText.Length) {
+            char ch = rawText[pos];
+
+            if (ch == quote) {
+                break;
+            }
+
+            if (ch == '{') {
+                if (pos + 1 < rawText.Length && rawText[pos + 1] == '{') {
+                    textBuilder.Append('{');
+                    pos += 2;
+                    continue;
+                }
+
+                if (textBuilder.Length > 0) {
+                    segments.Add(new TextSegment(textBuilder.ToString()));
+                    textBuilder.Clear();
+                }
+
+                pos++;
+                var (expression, formatSpec, newPos) = ParseInterpolationExpression(rawText, pos);
+                segments.Add(new ExpressionSegment(expression, formatSpec));
+                pos = newPos;
+                continue;
+            }
+
+            if (ch == '}') {
+                if (pos + 1 < rawText.Length && rawText[pos + 1] == '}') {
+                    textBuilder.Append('}');
+                    pos += 2;
+                    continue;
+                }
+            }
+
+            textBuilder.Append(ch);
+            pos++;
+        }
+
+        if (textBuilder.Length > 0) {
+            segments.Add(new TextSegment(textBuilder.ToString()));
+        }
+
+        if (segments.Count == 0) {
+            segments.Add(new TextSegment(""));
+        }
+
+        return new InterpolatedString(segments);
+    }
+
+    /// <summary>
+    /// 解析插值表达式 {expr:format}，返回表达式AST、格式说明符和结束位置
+    /// </summary>
+    private (LogicalExpression expression, string? formatSpec, int endPos) ParseInterpolationExpression(string rawText, int startPos) {
+        var exprBuilder = new StringBuilder();
+        int depth = 1;
+        int pos = startPos;
+
+        while (pos < rawText.Length && depth > 0) {
+            char ch = rawText[pos];
+            if (ch == '{') {
+                depth++;
+                exprBuilder.Append(ch);
+            } else if (ch == '}') {
+                depth--;
+                if (depth > 0)
+                    exprBuilder.Append(ch);
+            } else if (ch == '\'' || ch == '"') {
+                exprBuilder.Append(ch);
+                pos++;
+                while (pos < rawText.Length && rawText[pos] != ch) {
+                    if (rawText[pos] == '\\') {
+                        exprBuilder.Append(rawText[pos]);
+                        pos++;
+                        if (pos < rawText.Length) {
+                            exprBuilder.Append(rawText[pos]);
+                        }
+                    } else {
+                        exprBuilder.Append(rawText[pos]);
+                    }
+                    pos++;
+                }
+                if (pos < rawText.Length) {
+                    exprBuilder.Append(rawText[pos]);
+                }
+            } else {
+                exprBuilder.Append(ch);
+            }
+            pos++;
+        }
+
+        var exprText = exprBuilder.ToString().Trim();
+
+        string? formatSpec = null;
+        var colonIndex = FindFormatColon(exprText);
+        if (colonIndex >= 0) {
+            formatSpec = exprText[(colonIndex + 1)..].Trim();
+            exprText = exprText[..colonIndex].Trim();
+        }
+
+        var innerLexer = new Lexer.Lexer(exprText);
+        var innerParser = new Parser(innerLexer, _maxDepth);
+        var expression = innerParser.Parse();
+
+        return (expression, formatSpec, pos);
+    }
+
+    /// <summary>
+    /// 查找格式说明符的冒号位置，跳过嵌套的括号、字符串与三元条件表达式的冒号
+    /// </summary>
+    private static int FindFormatColon(string text) {
+        int parenDepth = 0;
+        int ternaryDepth = 0;
+        bool inString = false;
+        char stringQuote = '\0';
+
+        for (int i = 0; i < text.Length; i++) {
+            char ch = text[i];
+
+            if (inString) {
+                if (ch == '\\') {
+                    i++;
+                    continue;
+                }
+                if (ch == stringQuote)
+                    inString = false;
+                continue;
+            }
+
+            if (ch == '\'' || ch == '"') {
+                inString = true;
+                stringQuote = ch;
+                continue;
+            }
+
+            if (ch == '(') parenDepth++;
+            else if (ch == ')') parenDepth--;
+            else if (ch == '?') ternaryDepth++;
+            else if (ch == ':') {
+                if (ternaryDepth > 0) ternaryDepth--;
+                else if (parenDepth == 0)
+                    return i;
+            }
+        }
+
+        return -1;
     }
 
     private void CheckDepth() {
