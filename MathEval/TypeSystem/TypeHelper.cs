@@ -59,6 +59,10 @@ public static class TypeHelper {
         if (left.Kind == MathKind.NumberArray || right.Kind == MathKind.NumberArray)
             return MathValue.Array(EvaluateBinaryArray(type, left, right));
 
+        // 文本数组广播：TextArray 与 TextArray/Text（拼接与比较）
+        if (left.Kind == MathKind.TextArray || right.Kind == MathKind.TextArray)
+            return EvaluateTextArrayOp(type, left, right);
+
         throw new TypeMismatchException($"运算符 {type} 不支持 {left.KindName} 与 {right.KindName}",
             "number|text|array", $"{left.KindName}, {right.KindName}");
     }
@@ -92,10 +96,60 @@ public static class TypeHelper {
             return MathValue.Number(arr[intIndex]);
         }
 
-        if (isSynthetic && array.Kind == MathKind.Number) return array;
+        if (array.Kind == MathKind.TextArray) {
+            var arr = array.AsTextArray;
+            if (intIndex < 0 || intIndex >= arr.Length)
+                throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
+            return MathValue.Text(arr[intIndex]);
+        }
+
+        if (isSynthetic && (array.Kind == MathKind.Number || array.Kind == MathKind.Text)) return array;
 
         throw new TypeMismatchException("索引操作需要数组类型", "array", array.KindName);
     }
+
+    /// <summary>
+    /// 数组字面量构造（解释模式与编译模式共享）：按首个元素的 Kind 推断数组类型，
+    /// 全 number → number[]，全 text → text[]，空数组 → number[]，元素类型不一致抛 TypeMismatch。
+    /// </summary>
+    public static MathValue BuildArrayLiteral(MathValue[] elements) {
+        if (elements.Length == 0) return MathValue.Array(System.Array.Empty<double>());
+
+        var kind = elements[0].Kind;
+        switch (kind) {
+            case MathKind.Number: {
+                    var result = new double[elements.Length];
+                    for (int i = 0; i < elements.Length; i++) {
+                        if (elements[i].Kind != MathKind.Number)
+                            throw new TypeMismatchException("数组字面量元素类型必须一致", "number[]",
+                                $"{KindNameOf(elements[i].Kind)}（第 {i} 个元素）");
+                        result[i] = elements[i].AsNumber;
+                    }
+                    return MathValue.Array(result);
+                }
+            case MathKind.Text: {
+                    var result = new string[elements.Length];
+                    for (int i = 0; i < elements.Length; i++) {
+                        if (elements[i].Kind != MathKind.Text)
+                            throw new TypeMismatchException("数组字面量元素类型必须一致", "text[]",
+                                $"{KindNameOf(elements[i].Kind)}（第 {i} 个元素）");
+                        result[i] = elements[i].AsText;
+                    }
+                    return MathValue.Array(result);
+                }
+            default:
+                throw new TypeMismatchException("数组字面量元素必须是 number 或 text", "number|text",
+                    elements[0].KindName);
+        }
+    }
+
+    private static string KindNameOf(MathKind kind) => kind switch {
+        MathKind.Number => "number",
+        MathKind.Text => "text",
+        MathKind.NumberArray => "number[]",
+        MathKind.TextArray => "text[]",
+        _ => kind.ToString(),
+    };
 
     // ============ 内部计算（纯 double，无类型判断） ============
 
@@ -165,6 +219,55 @@ public static class TypeHelper {
             default:
                 throw new TypeMismatchException($"运算符 {type} 不支持 text 与 text", "text(+|==|!=|<|<=|>|>=)", "text");
         }
+    }
+
+    /// <summary>
+    /// 文本数组二元运算广播：TextArray×TextArray（等长）/ TextArray×Text / Text×TextArray。
+    /// + 为逐元素拼接（结果 text[]），比较为逐元素序数比较（结果 number[]），其余运算符不支持。
+    /// </summary>
+    private static MathValue EvaluateTextArrayOp(BinaryExpressionType type, MathValue left, MathValue right) {
+        if (type is not (BinaryExpressionType.Plus or BinaryExpressionType.Equal or BinaryExpressionType.NotEqual
+            or BinaryExpressionType.LessThan or BinaryExpressionType.LessThanOrEqual
+            or BinaryExpressionType.GreaterThan or BinaryExpressionType.GreaterThanOrEqual))
+            throw new TypeMismatchException($"运算符 {type} 不支持 {left.KindName} 与 {right.KindName}",
+                "text[](+|==|!=|<|<=|>|>=)", $"{left.KindName}, {right.KindName}");
+
+        // 对齐为等长的两侧（数组×数组校验等长，标量侧按数组长度展开）
+        string[] a, b;
+        if (left.Kind == MathKind.TextArray && right.Kind == MathKind.TextArray) {
+            a = left.AsTextArray;
+            b = right.AsTextArray;
+            if (a.Length != b.Length)
+                throw new EvaluateException($"数组长度不匹配：{a.Length} vs {b.Length}");
+        } else if (left.Kind == MathKind.TextArray) {
+            a = left.AsTextArray;
+            b = new string[a.Length];
+            System.Array.Fill(b, right.AsText);
+        } else {
+            b = right.AsTextArray;
+            a = new string[b.Length];
+            System.Array.Fill(a, left.AsText);
+        }
+
+        if (type == BinaryExpressionType.Plus) {
+            var result = new string[a.Length];
+            for (int i = 0; i < a.Length; i++) result[i] = string.Concat(a[i], b[i]);
+            return MathValue.Array(result);
+        }
+
+        var cmpResult = new double[a.Length];
+        for (int i = 0; i < a.Length; i++) {
+            int cmp = string.CompareOrdinal(a[i], b[i]);
+            cmpResult[i] = type switch {
+                BinaryExpressionType.Equal => a[i] == b[i] ? 1.0 : 0.0,
+                BinaryExpressionType.NotEqual => a[i] != b[i] ? 1.0 : 0.0,
+                BinaryExpressionType.LessThan => cmp < 0 ? 1.0 : 0.0,
+                BinaryExpressionType.LessThanOrEqual => cmp <= 0 ? 1.0 : 0.0,
+                BinaryExpressionType.GreaterThan => cmp > 0 ? 1.0 : 0.0,
+                _ => cmp >= 0 ? 1.0 : 0.0,
+            };
+        }
+        return MathValue.Array(cmpResult);
     }
 
     private static double[] EvaluateBinaryArray(BinaryExpressionType type, MathValue left, MathValue right) {

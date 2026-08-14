@@ -71,9 +71,9 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<M
     }
 
     public MathValue Visit(ArrayLiteralExpression expr) {
-        var results = new double[expr.Elements.Count];
-        for (int i = 0; i < results.Length; i++) results[i] = expr.Elements[i].Accept(this).AsNumber;
-        return MathValue.Array(results);
+        var results = new MathValue[expr.Elements.Count];
+        for (int i = 0; i < results.Length; i++) results[i] = expr.Elements[i].Accept(this);
+        return TypeHelper.BuildArrayLiteral(results);
     }
 
     public MathValue Visit(ArrayIndexExpression expr) {

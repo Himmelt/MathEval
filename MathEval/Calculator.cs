@@ -68,6 +68,11 @@ public class Calculator(string expression, ExpressionContext context, Expression
             if (targetType == typeof(List<double>)) return (T)(object)arr.ToList();
         }
 
+        if (result is string[] strArr) {
+            if (targetType == typeof(string[])) return (T)(object)strArr;
+            if (targetType == typeof(List<string>)) return (T)(object)strArr.ToList();
+        }
+
         // Handle non-double numeric types from context variables
         if (result is IConvertible conv) {
             try {

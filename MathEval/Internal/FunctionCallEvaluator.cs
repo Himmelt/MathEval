@@ -23,47 +23,52 @@ internal static class FunctionCallEvaluator {
         }
 
         // 非聚合函数：检测数组参数做 element-wise 广播
-        double[]? broadcastArray = null;
+        int broadcastLength = -1;
         foreach (var arg in args) {
-            if (arg.Kind == MathKind.NumberArray) {
-                broadcastArray = arg.AsNumberArray;
-                break;
+            if (arg.Kind is MathKind.NumberArray or MathKind.TextArray) {
+                var len = GetArrayLength(arg);
+                if (broadcastLength == -1) broadcastLength = len;
+                else if (broadcastLength != len)
+                    throw new EvaluateException(
+                        $"数组广播时所有数组参数长度必须一致，但遇到长度 {broadcastLength} 和 {len}");
             }
         }
 
-        if (broadcastArray != null) {
-            return MathValue.Array(Broadcast(func, args, broadcastArray));
-        }
+        if (broadcastLength != -1)
+            return Broadcast(func, args, broadcastLength);
 
         return MathValue.FromObject(func(ToObjectArgs(args)));
     }
 
     /// <summary>
-    /// 逐元素广播：数组参数按索引取元素、标量参数保持不变，逐次调用函数
+    /// 逐元素广播：数组参数按索引取元素、标量参数保持不变，逐次调用函数。
+    /// 结果 Kind 按各次返回值统一推断：全 double → number[]，全 string → text[]，不一致抛 TypeMismatch。
     /// </summary>
-    private static double[] Broadcast(ExpressionFunction func, MathValue[] args, double[] broadcastArray) {
-        // 校验所有数组参数长度一致
-        foreach (var arg in args) {
-            if (arg.Kind == MathKind.NumberArray) {
-                var da = arg.AsNumberArray;
-                if (da.Length != broadcastArray.Length) {
-                    throw new EvaluateException(
-                        $"数组广播时所有数组参数长度必须一致，但遇到长度 {da.Length} 和 {broadcastArray.Length}");
-                }
+    private static MathValue Broadcast(ExpressionFunction func, MathValue[] args, int length) {
+        var resultKind = MathKind.Number;
+        var numbers = new double[length];
+        var texts = new string[length];
+
+        for (int i = 0; i < length; i++) {
+            var scalarArgs = new object[args.Length];
+            for (int j = 0; j < args.Length; j++)
+                scalarArgs[j] = GetElementAt(args[j], i);     // 数组取元素（边界装箱），标量原样
+
+            var result = func(scalarArgs);
+            if (result is string s) {
+                if (i > 0 && resultKind != MathKind.Text)
+                    throw new TypeMismatchException("函数广播结果的元素类型必须一致", "number[]|text[]", "mixed");
+                resultKind = MathKind.Text;
+                texts[i] = s;
+            } else {
+                if (i > 0 && resultKind != MathKind.Number)
+                    throw new TypeMismatchException("函数广播结果的元素类型必须一致", "number[]|text[]", "mixed");
+                resultKind = MathKind.Number;
+                numbers[i] = TypeHelper.ToDouble(result);
             }
         }
 
-        var result = new double[broadcastArray.Length];
-        for (int i = 0; i < broadcastArray.Length; i++) {
-            var scalarArgs = new object[args.Length];
-            for (int j = 0; j < args.Length; j++) {
-                scalarArgs[j] = args[j].Kind == MathKind.NumberArray
-                    ? args[j].AsNumberArray[i]      // 装箱 double（函数边界）
-                    : args[j].ToObject();
-            }
-            result[i] = TypeHelper.ToDouble(func(scalarArgs));
-        }
-        return result;
+        return resultKind == MathKind.Text ? MathValue.Array(texts) : MathValue.Array(numbers);
     }
 
     /// <summary>
@@ -72,14 +77,32 @@ internal static class FunctionCallEvaluator {
     private static object[] FlattenArgs(MathValue[] args) {
         var list = new List<object>();
         foreach (var arg in args) {
-            if (arg.Kind == MathKind.NumberArray) {
-                foreach (var item in arg.AsNumberArray) list.Add(item);
-            } else {
-                list.Add(arg.ToObject());
+            switch (arg.Kind) {
+                case MathKind.NumberArray:
+                    foreach (var item in arg.AsNumberArray) list.Add(item);
+                    break;
+                case MathKind.TextArray:
+                    foreach (var item in arg.AsTextArray) list.Add(item);
+                    break;
+                default:
+                    list.Add(arg.ToObject());
+                    break;
             }
         }
         return [.. list];
     }
+
+    private static int GetArrayLength(MathValue value) => value.Kind switch {
+        MathKind.NumberArray => value.AsNumberArray.Length,
+        MathKind.TextArray => value.AsTextArray.Length,
+        _ => throw new TypeMismatchException("期望数组类型", "array", value.KindName),
+    };
+
+    private static object GetElementAt(MathValue value, int index) => value.Kind switch {
+        MathKind.NumberArray => value.AsNumberArray[index],   // 装箱 double（函数边界）
+        MathKind.TextArray => value.AsTextArray[index],
+        _ => value.ToObject(),
+    };
 
     private static object[] ToObjectArgs(MathValue[] args) {
         var result = new object[args.Length];

@@ -226,16 +226,14 @@ public class CompiledExpression(LogicalExpression ast) {
     }
 
     /// <summary>
-    /// 编译数组常量表达式
+    /// 编译数组常量表达式：元素求值后经 TypeHelper.BuildArrayLiteral 推断 Kind
+    /// （number[]/text[]），与解释模式共享一致性与类型检查语义
     /// </summary>
     private static LinqExpression CompileArrayLiteral(ArrayLiteralExpression expr, ParameterExpression contextParam) {
         var elementExprs = expr.Elements.Select(e => CompileNode(e, contextParam)).ToArray();
-        // 每个元素经 AsNumber 归一为 double（非数值元素抛 TypeMismatch，匹配解释模式）
-        var conversions = elementExprs.Select(e =>
-            LinqExpression.Property(e, nameof(MathValue.AsNumber))).ToArray();
-        var arrayExpr = LinqExpression.NewArrayInit(typeof(double), conversions);
-        var fromArrayMethod = ((Func<double[], MathValue>)MathValue.Array).Method;
-        return LinqExpression.Call(fromArrayMethod, arrayExpr);
+        var arrayExpr = LinqExpression.NewArrayInit(typeof(MathValue), elementExprs);
+        var buildMethod = ((Func<MathValue[], MathValue>)TypeHelper.BuildArrayLiteral).Method;
+        return LinqExpression.Call(buildMethod, arrayExpr);
     }
 
     /// <summary>
