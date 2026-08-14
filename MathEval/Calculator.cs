@@ -31,9 +31,10 @@ public class Calculator(string expression, ExpressionContext context, Expression
             return _compiledExpression!.Evaluate(_context);
         }
 
-        // 否则使用原始的 Visitor 模式（复用 visitor 实例减少 GC 压力 OPT-2）
+        // 否则使用原始的 Visitor 模式（复用 visitor 实例减少 GC 压力 OPT-2）。
+        // 内核值流为 MathValue，出口经 ToObject 装箱为 object 返回
         var visitor = _visitor ??= new EvaluationVisitor(_context);
-        return _ast!.Accept(visitor);
+        return _ast!.Accept(visitor).ToObject();
     }
 
     public T Eval<T>() {

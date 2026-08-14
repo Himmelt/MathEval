@@ -67,8 +67,9 @@ public static class ConstantFolder {
         // 如果两边都是常量值，直接计算
         if (left is ValueExpression leftVal && right is ValueExpression rightVal) {
             try {
-                var result = TypeHelper.EvaluateBinary(expr.Type, leftVal.Value, rightVal.Value);
-                return new ValueExpression(result);
+                var result = TypeHelper.EvaluateBinary(expr.Type,
+                    MathValue.FromObject(leftVal.Value), MathValue.FromObject(rightVal.Value));
+                return new ValueExpression(result.ToObject());
             } catch {
                 // 计算失败，保持原样
                 return new BinaryExpression(expr.Type, left, right);
@@ -84,8 +85,8 @@ public static class ConstantFolder {
         // 如果操作数是常量值，直接计算
         if (operand is ValueExpression valExpr) {
             try {
-                var result = TypeHelper.EvaluateUnary(expr.Type, valExpr.Value);
-                return new ValueExpression(result);
+                var result = TypeHelper.EvaluateUnary(expr.Type, MathValue.FromObject(valExpr.Value));
+                return new ValueExpression(result.ToObject());
             } catch {
                 // 计算失败，保持原样
                 return new UnaryExpression(expr.Type, operand);
