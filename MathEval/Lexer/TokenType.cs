@@ -6,6 +6,7 @@ namespace MathEval.Lexer;
 public enum TokenType {
     // 字面量
     Number,
+    String,
     NaN,
     INF,
 

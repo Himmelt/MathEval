@@ -51,12 +51,16 @@ public static class TypeHelper {
         if (left.Kind == MathKind.Number && right.Kind == MathKind.Number)
             return MathValue.Number(EvaluateNumberOp(type, left.AsNumber, right.AsNumber));
 
+        // 文本运算：Text×Text 拼接（+）与序数比较（==/!=/</<=/>/>=）
+        if (left.Kind == MathKind.Text && right.Kind == MathKind.Text)
+            return EvaluateTextOp(type, left.AsText, right.AsText);
+
         // 数组广播：任一操作数为 NumberArray
         if (left.Kind == MathKind.NumberArray || right.Kind == MathKind.NumberArray)
             return MathValue.Array(EvaluateBinaryArray(type, left, right));
 
         throw new TypeMismatchException($"运算符 {type} 不支持 {left.KindName} 与 {right.KindName}",
-            "number|array", $"{left.KindName}, {right.KindName}");
+            "number|text|array", $"{left.KindName}, {right.KindName}");
     }
 
     public static MathValue EvaluateUnary(UnaryExpressionType type, MathValue operand) {
@@ -131,6 +135,36 @@ public static class TypeHelper {
             UnaryExpressionType.BitwiseNot => ~ToLongChecked(d, "按位取反", "number"),
             _ => throw new System.InvalidOperationException($"未知的一元运算符：{type}")
         };
+    }
+
+    /// <summary>
+    /// 文本二元运算：+ 为拼接，比较运算采用序数（Ordinal）比较以保证结果与区域设置无关，
+    /// 与数值比较一致返回 1.0/0.0；其余运算符不支持文本。
+    /// </summary>
+    private static MathValue EvaluateTextOp(BinaryExpressionType type, string s1, string s2) {
+        switch (type) {
+            case BinaryExpressionType.Plus:
+                return MathValue.Text(string.Concat(s1, s2));
+            case BinaryExpressionType.Equal:
+                return MathValue.Number(string.Equals(s1, s2, StringComparison.Ordinal) ? 1.0 : 0.0);
+            case BinaryExpressionType.NotEqual:
+                return MathValue.Number(!string.Equals(s1, s2, StringComparison.Ordinal) ? 1.0 : 0.0);
+            case BinaryExpressionType.LessThan:
+            case BinaryExpressionType.LessThanOrEqual:
+            case BinaryExpressionType.GreaterThan:
+            case BinaryExpressionType.GreaterThanOrEqual: {
+                    int cmp = string.CompareOrdinal(s1, s2);
+                    bool result = type switch {
+                        BinaryExpressionType.LessThan => cmp < 0,
+                        BinaryExpressionType.LessThanOrEqual => cmp <= 0,
+                        BinaryExpressionType.GreaterThan => cmp > 0,
+                        _ => cmp >= 0,
+                    };
+                    return MathValue.Number(result ? 1.0 : 0.0);
+                }
+            default:
+                throw new TypeMismatchException($"运算符 {type} 不支持 text 与 text", "text(+|==|!=|<|<=|>|>=)", "text");
+        }
     }
 
     private static double[] EvaluateBinaryArray(BinaryExpressionType type, MathValue left, MathValue right) {

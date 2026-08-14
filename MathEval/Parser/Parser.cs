@@ -250,6 +250,12 @@ public class Parser {
                 expr = new ValueExpression(numValue);
                 break;
 
+            case Lexer.TokenType.String:
+                var strValue = CurrentToken.Text;
+                MoveNext();
+                expr = new ValueExpression(strValue);
+                break;
+
             case Lexer.TokenType.NaN:
                 MoveNext();
                 expr = new ValueExpression(double.NaN);

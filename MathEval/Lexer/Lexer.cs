@@ -69,6 +69,8 @@ public class Lexer {
             ScanNumber();
         } else if (IsIdentifierStart(ch)) {
             ScanIdentifier();
+        } else if (ch == '\'' || ch == '"') {
+            ScanString();
         } else {
             ScanOperator();
         }
@@ -202,6 +204,56 @@ public class Lexer {
         } else {
             CurrentToken = new Token(TokenType.Identifier, text, _startPosition, _startLine, _startColumn);
         }
+    }
+
+    /// <summary>
+    /// 扫描字符串字面量（单引号或双引号），处理转义序列，
+    /// Token.Text 为解码后的字符串值（不含引号）
+    /// </summary>
+    private void ScanString() {
+        char quote = Read();
+        var sb = new StringBuilder();
+        while (!IsAtEnd() && Peek() != quote) {
+            if (Peek() == '\\') {
+                Read();
+                if (IsAtEnd())
+                    throw new ParseException("字符串意外结束", _line, _column);
+                char escaped = Read();
+                switch (escaped) {
+                    case 'n': sb.Append('\n'); break;
+                    case 'r': sb.Append('\r'); break;
+                    case 't': sb.Append('\t'); break;
+                    case 'b': sb.Append('\b'); break;
+                    case 'f': sb.Append('\f'); break;
+                    case '0': sb.Append('\0'); break;
+                    case '\\': sb.Append('\\'); break;
+                    case '\'': sb.Append('\''); break;
+                    case '"': sb.Append('"'); break;
+                    case 'x':
+                        if (_position + 2 > _text.Length)
+                            throw new ParseException("无效的十六进制转义序列", _line, _column);
+                        var hex = new string([Read(), Read()]);
+                        sb.Append((char)Convert.ToInt32(hex, 16));
+                        break;
+                    case 'u':
+                        if (_position + 4 > _text.Length)
+                            throw new ParseException("无效的 Unicode 转义序列", _line, _column);
+                        var uni = new string([Read(), Read(), Read(), Read()]);
+                        sb.Append((char)Convert.ToInt32(uni, 16));
+                        break;
+                    default:
+                        throw new ParseException($"无效的转义序列 '\\{escaped}'", _line, _column);
+                }
+            } else {
+                sb.Append(Read());
+            }
+        }
+
+        if (IsAtEnd())
+            throw new ParseException("未终止的字符串字面量", _line, _column);
+
+        Read();
+        CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
 
     private void ScanOperator() {

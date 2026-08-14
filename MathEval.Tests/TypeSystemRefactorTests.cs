@@ -369,12 +369,9 @@ public class TypeSystemRefactorTests {
 
     #endregion
 
-    #region 字符串运算已移除
+    #region 字符串运算
 
-    [Fact]
-    public void StringLiteral_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("\"hello\""));
-    }
+    // P1：字符串字面量已恢复支持（见 TextScalarTests），插值字符串仍待 P3 恢复
 
     [Fact]
     public void InterpolatedString_ThrowsParseException() {
