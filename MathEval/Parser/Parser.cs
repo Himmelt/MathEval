@@ -447,6 +447,7 @@ public class Parser {
         if (colonIndex >= 0) {
             formatSpec = exprText[(colonIndex + 1)..].Trim();
             exprText = exprText[..colonIndex].Trim();
+            if (formatSpec.Length == 0) formatSpec = null;   // 空格式说明符视为无格式
         }
 
         var innerLexer = new Lexer.Lexer(exprText);

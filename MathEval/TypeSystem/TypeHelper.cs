@@ -170,6 +170,9 @@ public static class TypeHelper {
             throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于数值类型");
 
         double d = value.AsNumber;
+        if (formatSpec.Length == 0)
+            throw new ParseException("格式说明符不能为空", 1, 1);
+
         var firstChar = char.ToLowerInvariant(formatSpec[0]);
         var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
         if (!supportedFormats.Contains(firstChar))
@@ -179,10 +182,19 @@ public static class TypeHelper {
         if (firstChar == 'd' || firstChar == 'x') {
             if (double.IsNaN(d) || double.IsInfinity(d) || d != Math.Truncate(d))
                 throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于整数，但值为 {FormatNumberG(d)}");
-            return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", (long)d);
+            return FormatWithCatch(formatSpec, (long)d);
         }
 
-        return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", d);
+        return FormatWithCatch(formatSpec, d);
+    }
+
+    /// <summary>string.Format 对非法精度符（如 'e+'）抛 FormatException，包装为 MathEval 异常避免泄漏</summary>
+    private static string FormatWithCatch(string formatSpec, object arg) {
+        try {
+            return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", arg);
+        } catch (FormatException ex) {
+            throw new ParseException($"无效的格式说明符：{formatSpec}", 1, 1, ex.InnerException ?? ex);
+        }
     }
 
     private static string FormatNumberG(double d) =>

@@ -167,8 +167,9 @@ public class Calculator(string expression, ExpressionContext context, Expression
         var version = _context.SymbolVersion;
         if (_strictCheckedVersion == version) return;
 
-        var (_, pureNumber) = StrictTypeCache.InferKind(_expressionText, _context, _ast!);
-        _specializedFunc = StrictTypeCache.GetOrCompileSpecialized(_expressionText, _context, _ast!, pureNumber);
+        bool folded = _options.HasFlag(ExpressionOptions.ConstantFolding);
+        var (_, pureNumber) = StrictTypeCache.InferKind(_expressionText, _context, _ast!, folded);
+        _specializedFunc = StrictTypeCache.GetOrCompileSpecialized(_expressionText, _context, _ast!, pureNumber, folded);
         _strictCheckedVersion = version;
     }
 }

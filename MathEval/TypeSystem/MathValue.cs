@@ -107,8 +107,8 @@ public readonly struct MathValue {
         double or float or long or int or short or sbyte or byte or ushort or uint or ulong or bool or decimal
             => MathKind.Number,
         string or char => MathKind.Text,
-        double[] => MathKind.NumberArray,
-        string[] or int[] or long[] => MathKind.NumberArray,   // int[]/long[] 归一化为 double[]
+        double[] or int[] or long[] => MathKind.NumberArray,   // int[]/long[] 归一化为 double[]
+        string[] => MathKind.TextArray,
         null => MathKind.Text,                                  // FromObject(null) = Text("")
         _ => null,
     };
