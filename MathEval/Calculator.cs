@@ -12,6 +12,8 @@ public class Calculator(string expression, ExpressionContext context, Expression
     private LogicalExpression? _ast;
     private CompiledExpression? _compiledExpression;
     private EvaluationVisitor? _visitor;
+    private Func<ExpressionContext, double>? _specializedFunc;
+    private long _strictCheckedVersion = -1;
     private readonly ExpressionOptions _options = options;
     private readonly ExpressionContext _context = context ?? throw new ArgumentNullException(nameof(context));
     private readonly string _expressionText = expression ?? throw new ArgumentNullException(nameof(expression));
@@ -24,6 +26,12 @@ public class Calculator(string expression, ExpressionContext context, Expression
 
     public object Eval() {
         EnsureParsed();
+
+        // StrictTypes：求值前静态 Kind 检查（含死分支）；整棵树纯 Number 时走特化委托
+        if (_options.HasFlag(ExpressionOptions.StrictTypes)) {
+            EnsureStrictChecked();
+            if (_specializedFunc != null) return _specializedFunc(_context);
+        }
 
         // 如果启用了编译优化，使用编译后的委托
         if (_options.HasFlag(ExpressionOptions.CompileOptimization)) {
@@ -140,5 +148,19 @@ public class Calculator(string expression, ExpressionContext context, Expression
                 ast => new CompiledExpression(ast)
             );
         }
+    }
+
+    /// <summary>
+    /// StrictTypes 检查（幂等）：以 SymbolVersion 判定是否需要重查——
+    /// 上下文符号/函数变更后重推断；纯 Number 特化委托按推断结论获取/复用。
+    /// 推断失败（无效类型组合、符号/函数缺失）在求值前抛出
+    /// </summary>
+    private void EnsureStrictChecked() {
+        var version = _context.SymbolVersion;
+        if (_strictCheckedVersion == version) return;
+
+        var (_, pureNumber) = StrictTypeCache.InferKind(_expressionText, _context, _ast!);
+        _specializedFunc = StrictTypeCache.GetOrCompileSpecialized(_expressionText, _context, _ast!, pureNumber);
+        _strictCheckedVersion = version;
     }
 }

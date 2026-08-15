@@ -196,7 +196,8 @@ public static class TypeHelper {
 
     // ============ 内部计算（纯 double，无类型判断） ============
 
-    private static double EvaluateNumberOp(BinaryExpressionType type, double d1, double d2) {
+    /// <summary>纯 double 二元运算（Kind 检查前置后的内核路径，亦供 Number 特化编译共享语义）</summary>
+    internal static double EvaluateNumberOp(BinaryExpressionType type, double d1, double d2) {
         return type switch {
             BinaryExpressionType.Plus => d1 + d2,
             BinaryExpressionType.Minus => d1 - d2,
@@ -224,7 +225,8 @@ public static class TypeHelper {
         };
     }
 
-    private static double EvaluateNumberUnary(UnaryExpressionType type, double d) {
+    /// <summary>纯 double 一元运算（供 Number 特化编译共享语义）</summary>
+    internal static double EvaluateNumberUnary(UnaryExpressionType type, double d) {
         return type switch {
             UnaryExpressionType.Positive => d,
             UnaryExpressionType.Negate => -d,

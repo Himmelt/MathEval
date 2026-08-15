@@ -99,6 +99,21 @@ public readonly struct MathValue {
     };
 
     /// <summary>
+    /// 静态探测 object 值经 <see cref="FromObject"/> 归一化后的 Kind，
+    /// 不实际转换值（无数组拷贝）。无法确定（未知类型）返回 null。
+    /// 供 StrictTypes 静态推断使用（见设计文档 §7）
+    /// </summary>
+    public static MathKind? TryKindOf(object? value) => value switch {
+        double or float or long or int or short or sbyte or byte or ushort or uint or ulong or bool or decimal
+            => MathKind.Number,
+        string or char => MathKind.Text,
+        double[] => MathKind.NumberArray,
+        string[] or int[] or long[] => MathKind.NumberArray,   // int[]/long[] 归一化为 double[]
+        null => MathKind.Text,                                  // FromObject(null) = Text("")
+        _ => null,
+    };
+
+    /// <summary>
     /// 出口装箱视图：MathValue → object（double 装箱 / string / 数组引用）。
     /// 供 Calculator.Eval() 的 object 返回值与旧式 ExpressionFunction(object[]) 委托边界使用。
     /// </summary>
