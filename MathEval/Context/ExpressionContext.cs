@@ -241,28 +241,6 @@ public class ExpressionContext {
         return TryGetFunctionEntry(name, out var entry) && entry.Flags.HasFlag(FunctionFlags.Aggregate);
     }
 
-    /// <summary>
-    /// 获取当前上下文（含父级）中所有聚合函数名集合（含内置聚合函数 max/min）
-    /// </summary>
-    internal HashSet<string> GetAggregateFunctionNames() {
-        var set = new HashSet<string>(StringComparer.Ordinal);
-        CollectAggregateFunctions(set);
-        // 包含内置聚合函数，确保 IndexPushdownOptimizer 能正确跳过
-        foreach (var kvp in s_builtInFunctions) {
-            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
-                set.Add(kvp.Key);
-        }
-        return set;
-    }
-
-    private void CollectAggregateFunctions(HashSet<string> set) {
-        foreach (var kvp in _functions) {
-            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
-                set.Add(kvp.Key);
-        }
-        _parent?.CollectAggregateFunctions(set);
-    }
-
     public ExpressionContext CreateChild() {
         return new ExpressionContext(this);
     }

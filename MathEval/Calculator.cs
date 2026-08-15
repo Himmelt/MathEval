@@ -107,8 +107,8 @@ public class Calculator(string expression, ExpressionContext context, Expression
         if (string.IsNullOrWhiteSpace(_expressionText)) throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
 
         // OPT-7: 使用 GetOrAdd 代替 TryGet + Set，避免并发首跑时重复解析同一表达式。
-        // BUG-审核：缓存键必须包含解析指纹（选项 + 聚合函数集合），否则
-        // 不同 options / 上下文会互相污染缓存条目（如未折叠版本被 ConstantFolding 用户命中）
+        // BUG-审核：缓存键必须包含解析指纹（折叠选项位），否则
+        // 不同 options 会互相污染缓存条目（如未折叠版本被 ConstantFolding 用户命中）
         if (_options.HasFlag(ExpressionOptions.NoCache)) {
             _ast = ParseAndOptimize();
         } else {
@@ -117,33 +117,22 @@ public class Calculator(string expression, ExpressionContext context, Expression
     }
 
     /// <summary>
-    /// 解析指纹：影响 AST 形态的全部因子（折叠/下推选项位 + 上下文聚合函数集合哈希）。
+    /// 解析指纹：影响 AST 形态的全部因子（当前仅常量折叠选项位）。
     /// 与表达式文本共同构成缓存键，保证同文本不同解析配置互不污染
     /// </summary>
     private string BuildCacheKey() {
-        int flags = (_options.HasFlag(ExpressionOptions.ConstantFolding) ? 1 : 0)
-                  | (_options.HasFlag(ExpressionOptions.DisableIndexPushdown) ? 2 : 0);
-        int agg = 17;
-        foreach (var name in _context.GetAggregateFunctionNames())
-            agg ^= StringComparer.Ordinal.GetHashCode(name);
-        return $"{_expressionText}\u0000{flags:X}|{agg:X8}";
+        int flags = _options.HasFlag(ExpressionOptions.ConstantFolding) ? 1 : 0;
+        return $"{_expressionText}\u0000{flags:X}";
     }
 
     /// <summary>
-    /// 解析表达式并应用优化（索引下推 + 常量折叠）
+    /// 解析表达式并应用优化（常量折叠）
     /// </summary>
     private LogicalExpression ParseAndOptimize() {
         var lexer = new Lexer.Lexer(_expressionText);
         var parser = new Parser.Parser(lexer, MaxNestingDepth);
         var ast = parser.Parse();
 
-        // 应用索引下推优化（仅对非聚合函数下推索引，避免改变聚合函数语义）。
-        // 审核修复：DisableIndexPushdown 选项此前未接线（定义了但从未生效）
-        if (!_options.HasFlag(ExpressionOptions.DisableIndexPushdown)) {
-            ast = IndexPushdownOptimizer.Optimize(ast, _context.GetAggregateFunctionNames());
-        }
-
-        // 应用常量折叠优化（在索引下推之后运行，可折叠下推产生的模式，如 ([1,2,3]*2)[0] → 1*2 → 2）
         if (_options.HasFlag(ExpressionOptions.ConstantFolding)) {
             ast = ConstantFolder.Fold(ast);
         }

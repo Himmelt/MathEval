@@ -79,7 +79,7 @@ public class EvaluationVisitor(ExpressionContext context) : IExpressionVisitor<M
     public MathValue Visit(ArrayIndexExpression expr) {
         var array = expr.Array.Accept(this);
         var index = expr.Index.Accept(this);
-        return TypeHelper.ArrayIndex(array, index, expr.IsSynthetic);
+        return TypeHelper.ArrayIndex(array, index);
     }
 
     public MathValue Visit(InterpolatedString expr) {

@@ -84,10 +84,9 @@ public static class TypeHelper {
 
     /// <summary>
     /// 数组索引求值（解释模式与编译模式共享，保证行为一致）。
-    /// 合成索引（IndexPushdownOptimizer 生成）对标量值静默返回标量本身；
-    /// 用户原始编写的标量索引抛类型错误。
+    /// 仅数组类型可索引；对标量值索引抛类型错误。
     /// </summary>
-    public static MathValue ArrayIndex(MathValue array, MathValue index, bool isSynthetic) {
+    public static MathValue ArrayIndex(MathValue array, MathValue index) {
         var intIndex = ToInteger(index, "数组索引");
 
         if (array.Kind == MathKind.NumberArray) {
@@ -103,8 +102,6 @@ public static class TypeHelper {
                 throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
             return MathValue.Text(arr[intIndex]);
         }
-
-        if (isSynthetic && (array.Kind == MathKind.Number || array.Kind == MathKind.Text)) return array;
 
         throw new TypeMismatchException("索引操作需要数组类型", "array", array.KindName);
     }

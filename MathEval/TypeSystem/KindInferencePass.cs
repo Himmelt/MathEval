@@ -134,7 +134,6 @@ internal sealed class KindInferencePass(ExpressionContext context) : IExpression
             null => null,
             MathKind.NumberArray => MathKind.Number,
             MathKind.TextArray => MathKind.Text,
-            MathKind.Number or MathKind.Text when expr.IsSynthetic => array,   // 合成索引标量回退
             _ => throw new TypeMismatchException("索引操作需要数组类型", "array", KindName(array)),
         });
     }

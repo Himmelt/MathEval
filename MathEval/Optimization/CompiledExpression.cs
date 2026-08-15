@@ -265,15 +265,14 @@ public class CompiledExpression(LogicalExpression ast) {
     }
 
     /// <summary>
-    /// 编译数组索引表达式：调用 TypeHelper.ArrayIndex 与解释模式共享边界检查与标量回退语义
+    /// 编译数组索引表达式：调用 TypeHelper.ArrayIndex 与解释模式共享边界检查语义
     /// </summary>
     private static LinqExpression CompileArrayIndex(ArrayIndexExpression expr, ParameterExpression contextParam) {
         var arrayExpr = CompileNode(expr.Array, contextParam);
         var indexExpr = CompileNode(expr.Index, contextParam);
 
-        var arrayIndexMethod = ((Func<MathValue, MathValue, bool, MathValue>)TypeHelper.ArrayIndex).Method;
+        var arrayIndexMethod = ((Func<MathValue, MathValue, MathValue>)TypeHelper.ArrayIndex).Method;
 
-        return LinqExpression.Call(arrayIndexMethod, arrayExpr, indexExpr,
-            LinqExpression.Constant(expr.IsSynthetic));
+        return LinqExpression.Call(arrayIndexMethod, arrayExpr, indexExpr);
     }
 }
