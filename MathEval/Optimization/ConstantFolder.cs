@@ -155,7 +155,9 @@ public static class ConstantFolder {
                 return lit.Elements[(int)idx];
         }
 
-        return new ArrayIndexExpression(foldedArray, foldedIndex);
+        // BUG-审核：重建时必须保留 IsSynthetic 标记，
+        // 否则索引下推产生的合成索引（标量静默回退）退化为用户索引，运行时误抛类型错误
+        return new ArrayIndexExpression(foldedArray, foldedIndex, expr.IsSynthetic);
     }
 
     /// <summary>

@@ -47,7 +47,11 @@ internal static class BuiltInFunctions {
         // 对数函数
         functions["ln"] = Num1(FunctionWrapper.Wrap("ln", (Func<double, double>)Math.Log));
         functions["lg"] = Num1(FunctionWrapper.Wrap("lg", (Func<double, double>)Math.Log10));
-        functions["log"] = NumResult(Func("log", 1, 2, args => args.Length == 1 ? Math.Log(Convert.ToDouble(args[0])) : Math.Log(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]))));
+        // 审核修复：变参函数经 TypeHelper.ToDouble 归一化，非法类型抛 MathEval 异常
+        // （Convert.ToDouble 对字符串抛 FormatException，会泄漏库外异常类型）
+        functions["log"] = NumResult(Func("log", 1, 2, args => args.Length == 1
+            ? Math.Log(TypeHelper.ToDouble(args[0]!))
+            : Math.Log(TypeHelper.ToDouble(args[0]!), TypeHelper.ToDouble(args[1]!))));
         functions["log2"] = Num1(FunctionWrapper.Wrap("log2", (Func<double, double>)Math.Log2));
         functions["log10"] = Num1(FunctionWrapper.Wrap("log10", (Func<double, double>)Math.Log10));
 
@@ -60,12 +64,15 @@ internal static class BuiltInFunctions {
         functions["ceil"] = Num1(FunctionWrapper.Wrap("ceil", (Func<double, double>)Math.Ceiling));
         functions["floor"] = Num1(FunctionWrapper.Wrap("floor", (Func<double, double>)Math.Floor));
         functions["trunc"] = Num1(FunctionWrapper.Wrap("trunc", (Func<double, double>)Math.Truncate));
-        functions["round"] = NumResult(Func("round", 1, 2, args => args.Length == 1 ? Math.Round(Convert.ToDouble(args[0])) : Math.Round(Convert.ToDouble(args[0]), Convert.ToInt32(args[1]))));
+        functions["round"] = NumResult(Func("round", 1, 2, args => args.Length == 1
+            ? Math.Round(TypeHelper.ToDouble(args[0]!))
+            : Math.Round(TypeHelper.ToDouble(args[0]!), (int)TypeHelper.ToDouble(args[1]!))));
 
         // 聚合函数（参数可为标量或数组，展平后归约为 Number）
-        functions["max"] = new(Func("max", 1, int.MaxValue, args => args.Max(a => Convert.ToDouble(a))),
+        // 经 TypeHelper.ToDouble 归一化：非法类型抛 TypeMismatchException 而非泄漏 FormatException
+        functions["max"] = new(Func("max", 1, int.MaxValue, args => args.Max(a => TypeHelper.ToDouble(a!))),
             FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
-        functions["min"] = new(Func("min", 1, int.MaxValue, args => args.Min(a => Convert.ToDouble(a))),
+        functions["min"] = new(Func("min", 1, int.MaxValue, args => args.Min(a => TypeHelper.ToDouble(a!))),
             FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
     }
 

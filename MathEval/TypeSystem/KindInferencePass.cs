@@ -9,8 +9,9 @@ namespace MathEval.TypeSystem;
 /// <summary>
 /// 静态 Kind 推断（StrictTypes，见设计文档 §7）：
 /// 求值前对整棵 AST 做一遍类型检查，与 TypeHelper 运行时分发规则保持一致——
-/// 所有静态报出的错误都是运行时必然发生的错误（保守正确，不误报）；
-/// 死分支（条件表达式的两侧、And/Or 短路的右侧）同样被检查。
+/// 静态报出的错误若该节点求值则必然发生（保守正确，不误报）；
+/// 死分支（条件表达式的两侧、And/Or 短路的右侧）同样被检查：
+/// 其报错是"潜在必错"（运行时若执行到则必错，可能因短路永不执行）。
 /// 返回根节点的 Kind：null 表示无法静态确定（延迟符号/无签名函数等），由运行时兜底。
 /// </summary>
 internal sealed class KindInferencePass(ExpressionContext context) : IExpressionVisitor<MathKind?> {
