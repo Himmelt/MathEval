@@ -317,69 +317,57 @@ public class TypeSystemRefactorTests {
 
     #endregion
 
-    #region 索引下推优化
+    #region 表达式结果索引
 
     [Fact]
-    public void IndexPushdown_ArrayMultiplyScalar() {
+    public void IndexedResult_ArrayMultiplyScalar() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3, 4, 5 });
-        // (arr * 2)[3] should be optimized to arr[3] * 2 = 8
         Assert.Equal(8.0, Expression.Eval<double>("(arr * 2)[3]", context));
     }
 
     [Fact]
-    public void IndexPushdown_ArrayAddScalar() {
+    public void IndexedResult_ArrayAddScalar() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 10, 20, 30 });
         Assert.Equal(25.0, Expression.Eval<double>("(arr + 5)[1]", context));
     }
 
     [Fact]
-    public void IndexPushdown_FunctionCall() {
+    public void IndexedResult_FunctionCall() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 0, 1.5707963267948966, 3.141592653589793 });
-        // sin(arr)[1] should be optimized to sin(arr[1]) ≈ 1.0
         Assert.Equal(1.0, Expression.Eval<double>("sin(arr)[1]", context), 0.0001);
     }
 
     [Fact]
-    public void IndexPushdown_ArrayAddArray() {
+    public void IndexedResult_ArrayAddArray() {
         var context = new ExpressionContext();
         context.Set("a", new double[] { 1, 2, 3 });
         context.Set("b", new double[] { 4, 5, 6 });
-        // (a + b)[1] should be optimized to a[1] + b[1] = 7
         Assert.Equal(7.0, Expression.Eval<double>("(a + b)[1]", context));
     }
 
     [Fact]
-    public void IndexPushdown_UnaryNegate() {
+    public void IndexedResult_UnaryNegate() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3 });
         Assert.Equal(-2.0, Expression.Eval<double>("(-arr)[1]", context));
     }
 
     [Fact]
-    public void IndexPushdown_ComplexExpression() {
+    public void IndexedResult_ComplexExpression() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3 });
         context.Set("x", 5.0);
-        // (arr * x + 10)[2] → arr[2] * x + 10 = 3*5+10 = 25
         Assert.Equal(25.0, Expression.Eval<double>("(arr * x + 10)[2]", context));
     }
 
     #endregion
 
-    #region 字符串运算已移除
+    #region 字符串运算
 
-    [Fact]
-    public void StringLiteral_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("\"hello\""));
-    }
-
-    [Fact]
-    public void InterpolatedString_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("$\"hello {1}\""));
-    }
+    // P1/P3：字符串字面量与插值字符串均已恢复支持（见 TextScalarTests / StringInterpolationTests）
 
     #endregion
 

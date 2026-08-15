@@ -7,7 +7,7 @@ namespace MathEval.AST;
 /// <br/>
 /// ARCH-9: AST 节点设计为不可变——所有属性均为只读（{ get; }），
 /// 构造后不应被修改。子类必须标记为 sealed 以强制不可变性约束。
-/// 优化器（如 IndexPushdownOptimizer）可安全地在多个节点间共享同一子表达式实例。
+/// 优化器（如 ConstantFolder）可安全地在多个节点间共享同一子表达式实例。
 /// </summary>
 public abstract class LogicalExpression {
     /// <summary>

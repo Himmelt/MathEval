@@ -26,7 +26,8 @@ public enum ExpressionOptions {
     CompileOptimization = 4,
 
     /// <summary>
-    /// 禁用索引下推优化（默认启用）。索引下推默认开启，设置此选项可关闭。
+    /// 启用静态 Kind 推断：求值前对整棵 AST 做一遍类型检查，
+    /// 无效的类型组合在执行前抛出（含死分支）；整棵树为纯 Number 时编译为特化代码
     /// </summary>
-    DisableIndexPushdown = 8
+    StrictTypes = 16
 }

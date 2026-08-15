@@ -1,8 +1,10 @@
 using MathEval.Exceptions;
 using MathEval.Functions;
+using MathEval.TypeSystem;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reflection;
+using System.Threading;
 using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Context;
@@ -12,7 +14,20 @@ public class ExpressionContext {
     private readonly ConcurrentDictionary<string, SymbolEntry> _symbols;
     private readonly ConcurrentDictionary<string, FunctionEntry> _functions;
 
-    internal readonly record struct FunctionEntry(ExpressionFunction Function, FunctionFlags Flags);
+    private long _symbolVersion;
+    private static long s_nextContextId;
+
+    /// <summary>Kind 推断缓存键用的上下文实例标识（程序集内唯一）</summary>
+    internal long ContextId { get; }
+
+    /// <summary>
+    /// 符号/函数集合的版本号：每次 Set/Remove（符号或函数）递增，
+    /// 父上下文的变更经链路实时汇总。KindInferenceCache 以此判定推断结果是否失效
+    /// </summary>
+    public long SymbolVersion => _symbolVersion + (_parent?.SymbolVersion ?? 0);
+
+    internal readonly record struct FunctionEntry(ExpressionFunction Function, FunctionFlags Flags,
+        MathKind?[]? ParamKinds = null, MathKind? ResultKind = null);
 
     // ARCH-8: 内置函数与常量通过静态 FrozenDictionary 共享，
     // 避免每次 new ExpressionContext() 重复注册 ~30 项到 ConcurrentDictionary
@@ -31,12 +46,14 @@ public class ExpressionContext {
         _parent = null;
         _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
         _functions = new ConcurrentDictionary<string, FunctionEntry>(StringComparer.Ordinal);
+        ContextId = Interlocked.Increment(ref s_nextContextId);
     }
 
     private ExpressionContext(ExpressionContext parent) {
         _parent = parent;
         _symbols = new ConcurrentDictionary<string, SymbolEntry>(StringComparer.Ordinal);
         _functions = new ConcurrentDictionary<string, FunctionEntry>(StringComparer.Ordinal);
+        ContextId = Interlocked.Increment(ref s_nextContextId);
     }
 
     private static readonly HashSet<string> ReservedKeywords = new(StringComparer.Ordinal)
@@ -51,6 +68,7 @@ public class ExpressionContext {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
 
         _symbols[name] = new SymbolEntry { DirectValue = value };
+        _symbolVersion++;
     }
 
     /// <summary>
@@ -61,6 +79,7 @@ public class ExpressionContext {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
 
         _symbols[name] = new SymbolEntry { LazyValue = value };
+        _symbolVersion++;
     }
 
     /// <summary>
@@ -69,14 +88,18 @@ public class ExpressionContext {
     /// <param name="name">函数名</param>
     /// <param name="func">函数委托</param>
     /// <param name="flags">函数行为标记，默认为 ElementWise（逐元素操作）</param>
-    public void SetFunction(string name, ExpressionFunction func, FunctionFlags flags = FunctionFlags.ElementWise) {
+    /// <param name="paramKinds">参数 Kind 签名（可空：null 表示该参数不约束），供 StrictTypes 静态检查</param>
+    /// <param name="resultKind">返回值 Kind 签名（可空），供 StrictTypes 静态检查</param>
+    public void SetFunction(string name, ExpressionFunction func, FunctionFlags flags = FunctionFlags.ElementWise,
+        MathKind?[]? paramKinds = null, MathKind? resultKind = null) {
         if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
 
-        _functions[name] = new FunctionEntry(func, flags);
+        _functions[name] = new FunctionEntry(func, flags, paramKinds, resultKind);
+        _symbolVersion++;
     }
 
     /// <summary>
-    /// 通过 Delegate 注册函数
+    /// 通过 Delegate 注册函数：按方法签名捕获参数与返回值的 Kind，供 StrictTypes 推断使用
     /// </summary>
     /// <param name="name">函数名</param>
     /// <param name="func">函数委托</param>
@@ -88,6 +111,12 @@ public class ExpressionContext {
         var parameters = method.GetParameters();
         var argCount = parameters.Length;
 
+        var paramKinds = new MathKind?[argCount];
+        for (int i = 0; i < argCount; i++)
+            paramKinds[i] = KindOfParameter(parameters[i].ParameterType);
+        var resultKind = method.ReturnType == typeof(void) ? null : KindOfParameter(method.ReturnType);
+
+        // 捕获的 Kind 签名随条目保存，供 KindInferencePass 做静态参数/返回类型检查
         SetFunction(name, args => {
             if (args.Length != argCount) throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
 
@@ -116,39 +145,56 @@ public class ExpressionContext {
                 // 已为 MathEval 异常，直接透传，避免重复包装
                 throw;
             }
-        }, flags);
+        }, flags, paramKinds, resultKind);
     }
 
+    // 强类型重载：Wrap 提供编译期类型安全的调用委托（ARCH-10），
+    // 同时按泛型参数捕获 Kind 签名，供 StrictTypes 静态检查（如 greet(1) 求值前报出）
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1))], resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, TResult>(string name, Func<T1, T2, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, TResult>(string name, Func<T1, T2, T3, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, TResult>(string name, Func<T1, T2, T3, T4, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, TResult>(string name, Func<T1, T2, T3, T4, T5, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6)), KindOfParameter(typeof(T7))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func));
+        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+            paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6)), KindOfParameter(typeof(T7)), KindOfParameter(typeof(T8))],
+            resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public bool TryGetSymbol(string name, out object value) {
@@ -195,38 +241,54 @@ public class ExpressionContext {
         return TryGetFunctionEntry(name, out var entry) && entry.Flags.HasFlag(FunctionFlags.Aggregate);
     }
 
-    /// <summary>
-    /// 获取当前上下文（含父级）中所有聚合函数名集合（含内置聚合函数 max/min）
-    /// </summary>
-    internal HashSet<string> GetAggregateFunctionNames() {
-        var set = new HashSet<string>(StringComparer.Ordinal);
-        CollectAggregateFunctions(set);
-        // 包含内置聚合函数，确保 IndexPushdownOptimizer 能正确跳过
-        foreach (var kvp in s_builtInFunctions) {
-            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
-                set.Add(kvp.Key);
-        }
-        return set;
-    }
-
-    private void CollectAggregateFunctions(HashSet<string> set) {
-        foreach (var kvp in _functions) {
-            if (kvp.Value.Flags.HasFlag(FunctionFlags.Aggregate))
-                set.Add(kvp.Key);
-        }
-        _parent?.CollectAggregateFunctions(set);
-    }
-
     public ExpressionContext CreateChild() {
         return new ExpressionContext(this);
     }
 
     public void RemoveSymbol(string name) {
-        _symbols.TryRemove(name, out _);
+        if (_symbols.TryRemove(name, out _)) _symbolVersion++;
     }
 
     public void RemoveFunction(string name) {
-        _functions.TryRemove(name, out _);
+        if (_functions.TryRemove(name, out _)) _symbolVersion++;
+    }
+
+    /// <summary>
+    /// 静态探测符号的 Kind（不触发延迟值求值）：
+    /// 直接值 → 按 <see cref="MathValue.TryKindOf"/> 探测；延迟值/未知类型 → null（无法静态确定）。
+    /// 找不到符号时返回 false（与 TryGetSymbol 的查找链一致）。供 KindInferencePass 使用
+    /// </summary>
+    internal bool TryGetSymbolKind(string name, out MathKind? kind) {
+        if (_symbols.TryGetValue(name, out var entry)) {
+            kind = entry.IsLazy ? null : MathValue.TryKindOf(entry.DirectValue);
+            return true;
+        }
+
+        if (_parent != null) return _parent.TryGetSymbolKind(name, out kind);
+
+        if (s_builtInSymbols.ContainsKey(name)) {
+            kind = MathKind.Number;
+            return true;
+        }
+
+        kind = null;
+        return false;
+    }
+
+    /// <summary>
+    /// .NET 类型 → Kind 签名：数值族映射 Number（可从 double 经 Convert 转换），
+    /// string/char → Text，一维数组 → 数组 Kind；
+    /// bool/object/自定义类型返回 null（不约束，运行时兜底检查）
+    /// </summary>
+    private static MathKind? KindOfParameter(Type type) {
+        if (type == typeof(double) || type == typeof(float) || type == typeof(long) || type == typeof(int)
+            || type == typeof(short) || type == typeof(sbyte) || type == typeof(byte) || type == typeof(ushort)
+            || type == typeof(uint) || type == typeof(ulong) || type == typeof(decimal))
+            return MathKind.Number;
+        if (type == typeof(string) || type == typeof(char)) return MathKind.Text;
+        if (type == typeof(double[])) return MathKind.NumberArray;
+        if (type == typeof(string[])) return MathKind.TextArray;
+        return null;
     }
 
     private class SymbolEntry {

@@ -55,6 +55,8 @@ public static class ConstantFolder {
                 return FoldArrayLiteral(arrExpr);
             case ArrayIndexExpression idxExpr:
                 return FoldArrayIndex(idxExpr);
+            case InterpolatedString interpolated:
+                return FoldInterpolatedString(interpolated);
             default:
                 return node;
         }
@@ -67,8 +69,9 @@ public static class ConstantFolder {
         // 如果两边都是常量值，直接计算
         if (left is ValueExpression leftVal && right is ValueExpression rightVal) {
             try {
-                var result = TypeHelper.EvaluateBinary(expr.Type, leftVal.Value, rightVal.Value);
-                return new ValueExpression(result);
+                var result = TypeHelper.EvaluateBinary(expr.Type,
+                    MathValue.FromObject(leftVal.Value), MathValue.FromObject(rightVal.Value));
+                return new ValueExpression(result.ToObject());
             } catch {
                 // 计算失败，保持原样
                 return new BinaryExpression(expr.Type, left, right);
@@ -84,8 +87,8 @@ public static class ConstantFolder {
         // 如果操作数是常量值，直接计算
         if (operand is ValueExpression valExpr) {
             try {
-                var result = TypeHelper.EvaluateUnary(expr.Type, valExpr.Value);
-                return new ValueExpression(result);
+                var result = TypeHelper.EvaluateUnary(expr.Type, MathValue.FromObject(valExpr.Value));
+                return new ValueExpression(result.ToObject());
             } catch {
                 // 计算失败，保持原样
                 return new UnaryExpression(expr.Type, operand);
@@ -153,5 +156,45 @@ public static class ConstantFolder {
         }
 
         return new ArrayIndexExpression(foldedArray, foldedIndex);
+    }
+
+    /// <summary>
+    /// 折叠插值字符串：先折叠各表达式段；
+    /// 若全部段均为常量（纯文本或常量表达式），整段预格式化为字符串常量
+    /// </summary>
+    private static LogicalExpression FoldInterpolatedString(InterpolatedString expr) {
+        var foldedSegments = new List<InterpolationSegment>(expr.Segments.Count);
+        bool allConstant = true;
+
+        foreach (var segment in expr.Segments) {
+            if (segment is TextSegment) {
+                foldedSegments.Add(segment);
+            } else if (segment is ExpressionSegment exprSeg) {
+                var folded = FoldNode(exprSeg.Expression);
+                foldedSegments.Add(new ExpressionSegment(folded, exprSeg.FormatSpec));
+                if (folded is not ValueExpression) allConstant = false;
+            }
+        }
+
+        if (!allConstant)
+            return new InterpolatedString(foldedSegments);
+
+        try {
+            var sb = new System.Text.StringBuilder();
+            foreach (var segment in foldedSegments) {
+                if (segment is TextSegment textSeg) {
+                    sb.Append(textSeg.Text);
+                } else if (segment is ExpressionSegment exprSeg) {
+                    var value = MathValue.FromObject(((ValueExpression)exprSeg.Expression).Value);
+                    sb.Append(exprSeg.FormatSpec != null
+                        ? TypeHelper.Format(value, exprSeg.FormatSpec)
+                        : TypeHelper.ToDisplayString(value));
+                }
+            }
+            return new ValueExpression(sb.ToString());
+        } catch {
+            // 预格式化失败（如格式说明符非法），保留段结构待运行时抛错
+            return new InterpolatedString(foldedSegments);
+        }
     }
 }
