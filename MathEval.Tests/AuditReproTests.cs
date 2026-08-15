@@ -79,4 +79,43 @@ public class AuditReproTests {
         Assert.Throws<Exceptions.TypeMismatchException>(() => Expression.Eval("round('a')"));
         Assert.Throws<Exceptions.TypeMismatchException>(() => Expression.Eval("log('a')"));
     }
+
+    [Fact]
+    public void TryKindOf_StringArray_IsTextArray() {
+        // 修复前：string[] 被 TryKindOf 误判为 number[]，StrictTypes 下
+        // 合法的 names[0]+'!' 被静态误报类型错误
+        var ctx = new ExpressionContext();
+        ctx.Set("names", new[] { "alice", "bob" });
+        Assert.Equal("alice!", Expression.Eval<string>("names[0] + '!'", ctx, ExpressionOptions.StrictTypes));
+    }
+
+    [Fact]
+    public void EmptyFormatSpec_TreatedAsNoFormat() {
+        // 修复前：空格式说明符使 Format 内 formatSpec[0] 抛 IndexOutOfRangeException（库外异常）
+        var ctx = new ExpressionContext();
+        ctx.Set("x", 3.14);
+        Assert.Equal("3.14", Expression.Eval<string>("$'{x:}'", ctx));
+        Assert.Equal("3.14", Expression.Eval<string>("$'{x:}'", ctx, ExpressionOptions.StrictTypes));
+    }
+
+    [Fact]
+    public void StrictTypeCache_FoldedAndUnfolded_DoNotPollute() {
+        // 修复前：StrictTypeCache 键不含折叠指纹，折叠版本编译的特化委托
+        // 被纯 StrictTypes 求值复用（用户覆盖的 sin 被无视，返回预计算值）
+        var ctx = new ExpressionContext();
+        ctx.SetFunction("sin", (Func<double, double>)(v => 999));
+
+        // 折叠模式：ConstantFolder 以内置纯函数表预计算 sin(0)=0
+        Assert.Equal(0.0, Expression.Eval<double>("sin(0)", ctx,
+            ExpressionOptions.StrictTypes | ExpressionOptions.ConstantFolding));
+        // 纯 StrictTypes：应调用用户函数返回 999
+        Assert.Equal(999.0, Expression.Eval<double>("sin(0)", ctx, ExpressionOptions.StrictTypes));
+    }
+
+    [Fact]
+    public void InvalidFormatSpec_ThrowsMathEvalException() {
+        // 修复前：精度数值溢出（如 f99999999999）触发 string.Format 抛 FormatException（库外异常泄漏）。
+        // 注：多数字符串（如 'f1x'）被 .NET 当作自定义格式原样输出，不抛异常
+        Assert.Throws<Exceptions.ParseException>(() => Expression.Eval("$'{5:f99999999999}'"));
+    }
 }
