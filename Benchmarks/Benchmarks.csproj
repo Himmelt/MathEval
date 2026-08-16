@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MathEval\MathEval.csproj" />
-    <ProjectReference Include="..\FastEval\FastEval.csproj" />
+    <ProjectReference Include="..\FastEval\FastEval\FastEval.csproj" />
+    <ProjectReference Include="..\MathEval\MathEval\MathEval.csproj" />
   </ItemGroup>
 
 </Project>

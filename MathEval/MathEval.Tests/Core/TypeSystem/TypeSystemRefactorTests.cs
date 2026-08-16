@@ -3,7 +3,7 @@ using MathEval.Exceptions;
 using MathEval.TypeSystem;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.TypeSystem;
 
 public class TypeSystemRefactorTests {
     #region 统一数值类型 - bool/long 统一为 double

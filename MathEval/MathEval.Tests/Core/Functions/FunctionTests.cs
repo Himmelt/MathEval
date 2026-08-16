@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Functions;
 
 public class FunctionTests {
     private readonly ExpressionContext _ctx = new();

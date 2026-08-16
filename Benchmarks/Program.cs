@@ -5,7 +5,6 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Exporters.Json;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Running;
-using FastEval;
 using MathEvaluation.Context;
 using MathEvaluation.Extensions;
 using NCalc;

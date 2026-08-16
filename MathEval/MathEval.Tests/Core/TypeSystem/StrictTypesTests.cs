@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.TypeSystem;
 
 /// <summary>
 /// P4 StrictTypes：静态 Kind 推断（求值前类型检查、含死分支）、

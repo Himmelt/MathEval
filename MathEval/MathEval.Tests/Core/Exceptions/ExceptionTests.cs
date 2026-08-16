@@ -3,7 +3,7 @@ using MathEval.Exceptions;
 using Xunit;
 using InvalidOperationException = MathEval.Exceptions.InvalidOperationException;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Exceptions;
 
 public class ExceptionTests {
     [Fact]

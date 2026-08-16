@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.TypeSystem;
 
 /// <summary>
 /// P2 文本数组：字面量 Kind 推断、TextArray 广播/聚合/索引

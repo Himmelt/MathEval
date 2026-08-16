@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Evaluation;
 
 /// <summary>
 /// Expression.Eval 补充测试，覆盖 PRD 中的遗漏场景

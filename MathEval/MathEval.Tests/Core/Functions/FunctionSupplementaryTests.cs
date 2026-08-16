@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Functions;
 
 /// <summary>
 /// 内置函数补充测试，覆盖 PRD 2.7 节中的遗漏场景
@@ -288,12 +288,12 @@ public class FunctionSupplementaryTests {
 
     [Fact]
     public void Constant_NaN_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<Exceptions.InvalidOperationException>(() => _ctx.Set("NaN", 1.0));
+        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("NaN", 1.0));
     }
 
     [Fact]
     public void Constant_INF_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<Exceptions.InvalidOperationException>(() => _ctx.Set("INF", 1.0));
+        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("INF", 1.0));
     }
 
     #endregion

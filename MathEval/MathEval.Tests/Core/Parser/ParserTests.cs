@@ -5,12 +5,12 @@ using Xunit;
 using BinaryExpressionType = MathEval.Parser.BinaryExpressionType;
 using UnaryExpressionType = MathEval.Parser.UnaryExpressionType;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Parser;
 
 public class ParserTests {
     private static LogicalExpression Parse(string text) {
-        var lexer = new Lexer.Lexer(text);
-        var parser = new Parser.Parser(lexer);
+        var lexer = new MathEval.Lexer.Lexer(text);
+        var parser = new MathEval.Parser.Parser(lexer);
         return parser.Parse();
     }
 

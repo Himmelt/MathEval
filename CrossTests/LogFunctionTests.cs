@@ -1,7 +1,6 @@
+using FastEval.Exceptions;
 using MathEval.Context;
 using MathEval.Exceptions;
-using FastEval;
-using FastEval.Exceptions;
 using Xunit;
 
 namespace MathEval.Tests.Integration;

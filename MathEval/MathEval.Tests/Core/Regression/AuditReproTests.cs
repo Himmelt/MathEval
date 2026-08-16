@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Regression;
 
 /// <summary>
 /// 整体审核修复的回归测试 + 索引下推移除后的语义确认
@@ -44,7 +44,7 @@ public class AuditReproTests {
         var ctxA = new ExpressionContext();
         ctxA.Set("a", a);
         ctxA.SetFunction("sum", (ExpressionFunction)(args =>
-            args.Sum(x => TypeSystem.TypeHelper.ToDouble(x!))), FunctionFlags.Aggregate);
+            args.Sum(x => MathEval.TypeSystem.TypeHelper.ToDouble(x!))), FunctionFlags.Aggregate);
         Assert.Equal(6.0, Expression.Eval("sum(a)", ctxA));
 
         // ctxB：同名函数为逐元素标量函数 → 广播 → [1,2,3] → [0]=1
@@ -57,7 +57,7 @@ public class AuditReproTests {
         var ctxD = new ExpressionContext();
         ctxD.Set("a", a);
         ctxD.SetFunction("sum2", (ExpressionFunction)(args =>
-            args.Sum(x => TypeSystem.TypeHelper.ToDouble(x!))), FunctionFlags.Aggregate);
+            args.Sum(x => MathEval.TypeSystem.TypeHelper.ToDouble(x!))), FunctionFlags.Aggregate);
         Assert.Throws<TypeMismatchException>(() => Expression.Eval("sum2(a)[0]", ctxD));
     }
 
@@ -75,9 +75,9 @@ public class AuditReproTests {
     [Fact]
     public void BuiltinFunctions_ThrowMathEvalException_OnTextArgument() {
         // 修复前：max('a') 经 Convert.ToDouble 抛 FormatException（泄漏库外异常类型）
-        Assert.Throws<Exceptions.TypeMismatchException>(() => Expression.Eval("max('a', 1)"));
-        Assert.Throws<Exceptions.TypeMismatchException>(() => Expression.Eval("round('a')"));
-        Assert.Throws<Exceptions.TypeMismatchException>(() => Expression.Eval("log('a')"));
+        Assert.Throws<MathEval.Exceptions.TypeMismatchException>(() => Expression.Eval("max('a', 1)"));
+        Assert.Throws<MathEval.Exceptions.TypeMismatchException>(() => Expression.Eval("round('a')"));
+        Assert.Throws<MathEval.Exceptions.TypeMismatchException>(() => Expression.Eval("log('a')"));
     }
 
     [Fact]
@@ -116,6 +116,6 @@ public class AuditReproTests {
     public void InvalidFormatSpec_ThrowsMathEvalException() {
         // 修复前：精度数值溢出（如 f99999999999）触发 string.Format 抛 FormatException（库外异常泄漏）。
         // 注：多数字符串（如 'f1x'）被 .NET 当作自定义格式原样输出，不抛异常
-        Assert.Throws<Exceptions.ParseException>(() => Expression.Eval("$'{5:f99999999999}'"));
+        Assert.Throws<MathEval.Exceptions.ParseException>(() => Expression.Eval("$'{5:f99999999999}'"));
     }
 }

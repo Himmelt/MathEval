@@ -5,14 +5,14 @@ using Xunit;
 using Token = MathEval.Lexer.Token;
 using TokenType = MathEval.Lexer.TokenType;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.TypeSystem;
 
 /// <summary>
 /// P1 文本标量：字符串字面量、拼接、比较与自定义函数字符串参数
 /// </summary>
 public class TextScalarTests {
     private static Token GetSingleToken(string text) {
-        var lexer = new Lexer.Lexer(text);
+        var lexer = new MathEval.Lexer.Lexer(text);
         lexer.MoveNext();
         return lexer.CurrentToken;
     }
@@ -70,7 +70,7 @@ public class TextScalarTests {
 
     [Fact]
     public void Lexer_StringInsideExpression() {
-        var lexer = new Lexer.Lexer("'a' + 1");
+        var lexer = new MathEval.Lexer.Lexer("'a' + 1");
         lexer.MoveNext();
         Assert.Equal(TokenType.String, lexer.CurrentToken.Type);
         lexer.MoveNext();

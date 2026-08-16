@@ -1,8 +1,12 @@
 <Solution>
-  <Project Path="MathEval/MathEval.csproj" />
-  <Project Path="MathEval.Tests/MathEval.Tests.csproj" />
-  <Project Path="FastEval/FastEval.csproj" />
-  <Project Path="FastEval.Tests/FastEval.Tests.csproj" />
-  <Project Path="CrossTests/CrossTests.csproj" />
+  <Folder Name="/MathEval/">
+      <Project Path="MathEval/MathEval/MathEval.csproj" />
+      <Project Path="MathEval/MathEval.Tests/MathEval.Tests.csproj" />
+  </Folder>
+  <Folder Name="/FastEval/">
+    <Project Path="FastEval/FastEval/FastEval.csproj" />
+    <Project Path="FastEval/FastEval.Tests/FastEval.Tests.csproj" />
+  </Folder>
   <Project Path="Benchmarks/Benchmarks.csproj" />
+  <Project Path="CrossTests/CrossTests.csproj" />
 </Solution>

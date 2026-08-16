@@ -5,7 +5,7 @@ using Xunit;
 using Lexer = MathEval.Lexer.Lexer;
 using TokenType = MathEval.Lexer.TokenType;
 
-namespace MathEval.Tests.Core;
+namespace MathEval.Tests.Evaluation;
 
 /// <summary>
 /// P3 插值字符串：词法、解析、求值、格式化与编译模式
@@ -15,7 +15,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Lexer_InterpolatedToken_KeepsRawText() {
-        var lexer = new Lexer.Lexer("$'a {1} b'");
+        var lexer = new MathEval.Lexer.Lexer("$'a {1} b'");
         lexer.MoveNext();
         Assert.Equal(TokenType.InterpolatedString, lexer.CurrentToken.Type);
         Assert.Equal("$'a {1} b'", lexer.CurrentToken.Text);
@@ -23,7 +23,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Lexer_DoubleQuotedInterpolated() {
-        var lexer = new Lexer.Lexer("$\"x={x}\"");
+        var lexer = new MathEval.Lexer.Lexer("$\"x={x}\"");
         lexer.MoveNext();
         Assert.Equal(TokenType.InterpolatedString, lexer.CurrentToken.Type);
     }
@@ -31,7 +31,7 @@ public class StringInterpolationTests {
     [Fact]
     public void Lexer_UnterminatedInterpolated_Throws() {
         Assert.Throws<ParseException>(() => {
-            var lexer = new Lexer.Lexer("$'abc {1");
+            var lexer = new MathEval.Lexer.Lexer("$'abc {1");
             lexer.MoveNext();
         });
     }
@@ -39,7 +39,7 @@ public class StringInterpolationTests {
     [Fact]
     public void Lexer_UnmatchedCloseBrace_Throws() {
         Assert.Throws<ParseException>(() => {
-            var lexer = new Lexer.Lexer("$'a } b'");
+            var lexer = new MathEval.Lexer.Lexer("$'a } b'");
             lexer.MoveNext();
         });
     }
@@ -47,7 +47,7 @@ public class StringInterpolationTests {
     [Fact]
     public void Lexer_EscapedBraces_AreLiteral() {
         // {{ }} 转义不视为插值边界，Token 原文保留转义
-        var lexer = new Lexer.Lexer("$'{{not-interp}}'");
+        var lexer = new MathEval.Lexer.Lexer("$'{{not-interp}}'");
         lexer.MoveNext();
         Assert.Equal(TokenType.InterpolatedString, lexer.CurrentToken.Type);
         Assert.Equal("$'{{not-interp}}'", lexer.CurrentToken.Text);
@@ -55,7 +55,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Lexer_NestedStringInsideInterpolation() {
-        var lexer = new Lexer.Lexer("$'{'a'} b'");
+        var lexer = new MathEval.Lexer.Lexer("$'{'a'} b'");
         lexer.MoveNext();
         Assert.Equal(TokenType.InterpolatedString, lexer.CurrentToken.Type);
         Assert.Equal("$'{'a'} b'", lexer.CurrentToken.Text);
