@@ -16,11 +16,6 @@ public sealed class Identifier(string name) : LogicalExpression {
     public string Name { get; } = name;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

@@ -27,11 +27,6 @@ public sealed class ArrayIndexExpression : LogicalExpression {
     public LogicalExpression Index { get; }
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

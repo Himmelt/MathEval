@@ -11,12 +11,6 @@ namespace MathEval.AST;
 /// </summary>
 public abstract class LogicalExpression {
     /// <summary>
-    /// 接受访问者访问
-    /// </summary>
-    /// <param name="visitor">访问者</param>
-    public abstract void Accept(IExpressionVisitor visitor);
-
-    /// <summary>
     /// 接受访问者访问并返回结果
     /// </summary>
     /// <typeparam name="T">返回类型</typeparam>

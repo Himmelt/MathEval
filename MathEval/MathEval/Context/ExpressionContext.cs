@@ -4,7 +4,6 @@ using MathEval.TypeSystem;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reflection;
-using System.Threading;
 using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Context;

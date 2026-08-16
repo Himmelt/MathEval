@@ -28,11 +28,6 @@ public sealed class ConditionalExpression(LogicalExpression condition, LogicalEx
     public LogicalExpression FalseExpression { get; } = falseExpression;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

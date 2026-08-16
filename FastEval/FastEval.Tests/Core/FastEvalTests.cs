@@ -1,4 +1,3 @@
-using FastEval;
 using FastEval.Exceptions;
 using Xunit;
 

@@ -75,25 +75,25 @@ public readonly struct MathValue {
     /// 数值类型统一归 double；bool 数值化为 1.0/0.0；未知类型抛 TypeMismatch。
     /// </summary>
     public static MathValue FromObject(object? value) => value switch {
-        null        => Text(""),                       // 沿用 v0 ToString(null)="" 语义
-        double d    => Number(d),
-        float f     => Number(f),
-        long l      => Number(l),                      // >2^53 精度损失为已知代价（ADR-D4）
-        int i       => Number(i),
-        short s     => Number(s),
-        sbyte sb    => Number(sb),
-        byte b      => Number(b),
-        ushort us   => Number(us),
-        uint ui     => Number(ui),
-        ulong ul    => Number(ul),
-        bool bl     => Number(bl ? 1.0 : 0.0),         // bool 数值化（ADR-D13）
+        null => Text(""),                       // 沿用 v0 ToString(null)="" 语义
+        double d => Number(d),
+        float f => Number(f),
+        long l => Number(l),                      // >2^53 精度损失为已知代价（ADR-D4）
+        int i => Number(i),
+        short s => Number(s),
+        sbyte sb => Number(sb),
+        byte b => Number(b),
+        ushort us => Number(us),
+        uint ui => Number(ui),
+        ulong ul => Number(ul),
+        bool bl => Number(bl ? 1.0 : 0.0),         // bool 数值化（ADR-D13）
         decimal dec => Number((double)dec),
-        string s    => Text(s),
-        char c      => Text(c.ToString()),
-        double[] a  => Array(a),
-        string[] a  => Array(a),
-        int[] a     => Array(System.Array.ConvertAll(a, x => (double)x)),
-        long[] a    => Array(System.Array.ConvertAll(a, x => (double)x)),
+        string s => Text(s),
+        char c => Text(c.ToString()),
+        double[] a => Array(a),
+        string[] a => Array(a),
+        int[] a => Array(System.Array.ConvertAll(a, x => (double)x)),
+        long[] a => Array(System.Array.ConvertAll(a, x => (double)x)),
         _ => throw new TypeMismatchException($"不支持的符号类型：{value.GetType().Name}",
             "number|text|array", value.GetType().Name),
     };

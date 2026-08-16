@@ -29,11 +29,6 @@ public sealed class BinaryExpression(BinaryExpressionType type, LogicalExpressio
     public LogicalExpression Right { get; } = right;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

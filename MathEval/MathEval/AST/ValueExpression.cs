@@ -16,11 +16,6 @@ public sealed class ValueExpression(object value) : LogicalExpression {
     public object Value { get; } = value;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

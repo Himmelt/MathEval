@@ -22,11 +22,6 @@ public sealed class FunctionCall(string name, List<LogicalExpression> arguments)
     public IReadOnlyList<LogicalExpression> Arguments { get; } = arguments;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

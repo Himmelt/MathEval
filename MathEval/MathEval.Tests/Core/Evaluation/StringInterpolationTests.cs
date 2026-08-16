@@ -1,8 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
-
-using Lexer = MathEval.Lexer.Lexer;
 using TokenType = MathEval.Lexer.TokenType;
 
 namespace MathEval.Tests.Evaluation;

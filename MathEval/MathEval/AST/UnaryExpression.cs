@@ -23,11 +23,6 @@ public sealed class UnaryExpression(UnaryExpressionType type, LogicalExpression 
     public LogicalExpression Operand { get; } = operand;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

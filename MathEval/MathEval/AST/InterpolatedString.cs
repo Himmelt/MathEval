@@ -16,11 +16,6 @@ public class InterpolatedString(List<InterpolationSegment> segments) : LogicalEx
     public List<InterpolationSegment> Segments { get; } = segments;
 
     /// <inheritdoc />
-    public override void Accept(IExpressionVisitor visitor) {
-        visitor.Visit(this);
-    }
-
-    /// <inheritdoc />
     public override T Accept<T>(IExpressionVisitor<T> visitor) {
         return visitor.Visit(this);
     }

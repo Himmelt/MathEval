@@ -3,51 +3,52 @@ using MathEval.AST;
 namespace MathEval.Visitors;
 
 /// <summary>
-/// 表示访问抽象语法树节点的访问者接口
+/// 表示访问抽象语法树节点并返回结果的泛型访问者接口
 /// </summary>
-public interface IExpressionVisitor {
+/// <typeparam name="T">返回类型</typeparam>
+public interface IExpressionVisitor<out T> {
     /// <summary>
     /// 访问值表达式节点
     /// </summary>
-    void Visit(ValueExpression expr);
+    T Visit(ValueExpression expr);
 
     /// <summary>
     /// 访问标识符节点
     /// </summary>
-    void Visit(Identifier expr);
+    T Visit(Identifier expr);
 
     /// <summary>
     /// 访问二元表达式节点
     /// </summary>
-    void Visit(BinaryExpression expr);
+    T Visit(BinaryExpression expr);
 
     /// <summary>
     /// 访问一元表达式节点
     /// </summary>
-    void Visit(UnaryExpression expr);
+    T Visit(UnaryExpression expr);
 
     /// <summary>
     /// 访问函数调用节点
     /// </summary>
-    void Visit(FunctionCall expr);
+    T Visit(FunctionCall expr);
 
     /// <summary>
     /// 访问条件表达式节点
     /// </summary>
-    void Visit(ConditionalExpression expr);
+    T Visit(ConditionalExpression expr);
 
     /// <summary>
     /// 访问数组常量表达式节点
     /// </summary>
-    void Visit(ArrayLiteralExpression expr);
+    T Visit(ArrayLiteralExpression expr);
 
     /// <summary>
     /// 访问数组索引表达式节点
     /// </summary>
-    void Visit(ArrayIndexExpression expr);
+    T Visit(ArrayIndexExpression expr);
 
     /// <summary>
     /// 访问插值字符串节点
     /// </summary>
-    void Visit(InterpolatedString expr);
+    T Visit(InterpolatedString expr);
 }
