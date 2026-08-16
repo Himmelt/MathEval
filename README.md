@@ -49,6 +49,20 @@ var area = calc.Eval<double>();  // 28.274...
 dotnet add package MathEval
 ```
 
+## 专项目录
+
+仓库包含三个独立库/测试模块，根目录 `MathEval.slnx` 统一管理全部 6 个项目：
+
+```
+MathEval.slnx
+├── MathEval/            # 主库：全类型表达式求值器
+├── MathEval.Tests/      # 主库单元测试
+├── FastEval/            # 高性能 double 求值器（double-only VM / Bytecode / JIT）
+├── FastEval.Tests/      # FastEval 单元测试
+├── CrossTests/          # 主库 vs FastEval 交叉一致性测试
+└── Benchmarks/          # 性能基准（BenchmarkDotNet，无单元测试）
+```
+
 ## 许可证
 
 MIT

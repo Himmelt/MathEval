@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="MathEval/MathEval.csproj" />
-  <Project Path="MathEval.Fast/MathEval.Fast.csproj" />
   <Project Path="MathEval.Tests/MathEval.Tests.csproj" />
-  <Project Path="MathEval.Benchmarks/MathEval.Benchmarks.csproj" />
+  <Project Path="FastEval/FastEval.csproj" />
+  <Project Path="FastEval.Tests/FastEval.Tests.csproj" />
+  <Project Path="CrossTests/CrossTests.csproj" />
+  <Project Path="Benchmarks/Benchmarks.csproj" />
 </Solution>

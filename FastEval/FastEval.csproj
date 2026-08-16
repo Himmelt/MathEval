@@ -7,19 +7,14 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.0.0</Version>
     <Authors>Himmelt</Authors>
-    <Description>A lightweight expression evaluation library for .NET 10+</Description>
+    <Description>Fast zero-AST expression evaluator for pure numeric scenarios</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/Himmelt/MathEval</RepositoryUrl>
-    <PackageTags>expression;evaluator;calculator</PackageTags>
-    <PackageReleaseNotes>Initial 1.0.0 release of MathEval expression evaluation library.</PackageReleaseNotes>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <DebugType>portable</DebugType>
+    <PackageTags>expression;evaluator;calculator;fast</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="" />
+    <InternalsVisibleTo Include="FastEval.Tests" />
   </ItemGroup>
 
   <ItemGroup>

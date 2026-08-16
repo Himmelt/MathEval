@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <RootNamespace>MathEval.Tests.Integration</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MathEval\MathEval.csproj" />
+    <ProjectReference Include="..\FastEval\FastEval.csproj" />
   </ItemGroup>
 
 </Project>
