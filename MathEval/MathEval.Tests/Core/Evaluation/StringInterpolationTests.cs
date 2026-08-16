@@ -1,5 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.Options;
 using Xunit;
 using TokenType = MathEval.Lexer.TokenType;
 
@@ -205,7 +206,7 @@ public class StringInterpolationTests {
     [Fact]
     public void ConstantFolding_FoldsAllConstantInterpolation() {
         Assert.Equal("v=3", Expression.Eval<string>("$'v={1+2}'", null,
-            MathEval.ExpressionOptions.ConstantFolding));
+            ExpressionOptions.ConstantFolding));
     }
 
     [Fact]
@@ -213,7 +214,7 @@ public class StringInterpolationTests {
         var context = new ExpressionContext();
         context.Set("x", 10.0);
         Assert.Equal("1+2=3,x=10", Expression.Eval<string>("$'{1}+{2}={1+2},x={x}'", context,
-            MathEval.ExpressionOptions.ConstantFolding));
+            ExpressionOptions.ConstantFolding));
     }
 
     #endregion

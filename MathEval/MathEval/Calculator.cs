@@ -2,6 +2,7 @@ using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Optimization;
+using MathEval.Options;
 using MathEval.Visitors;
 
 namespace MathEval;

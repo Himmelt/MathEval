@@ -211,37 +211,37 @@ public partial class CrossBenchmarks {
     [Benchmark(Description = "MathEval: Interpret/简单算术")]
     [BenchmarkCategory("MathEval", "Interpret", "SimpleArithmetic")]
     public object? MathEval_Interpret_SimpleArithmetic()
-        => MathEval.Expression.Eval(MakeUnique(SimpleArithmetic), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(SimpleArithmetic), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/复杂算术")]
     [BenchmarkCategory("MathEval", "Interpret", "ComplexArithmetic")]
     public object? MathEval_Interpret_ComplexArithmetic()
-        => MathEval.Expression.Eval(MakeUnique(ComplexArithmetic), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(ComplexArithmetic), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/函数调用")]
     [BenchmarkCategory("MathEval", "Interpret", "FunctionCall")]
     public object? MathEval_Interpret_FunctionCall()
-        => MathEval.Expression.Eval(MakeUnique(FunctionCall), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(FunctionCall), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/嵌套函数")]
     [BenchmarkCategory("MathEval", "Interpret", "NestedFunction")]
     public object? MathEval_Interpret_NestedFunction()
-        => MathEval.Expression.Eval(MakeUnique(NestedFunction), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(NestedFunction), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/三元运算")]
     [BenchmarkCategory("MathEval", "Interpret", "Conditional")]
     public object? MathEval_Interpret_Conditional()
-        => MathEval.Expression.Eval(MakeUnique(Conditional), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(Conditional), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/逻辑运算")]
     [BenchmarkCategory("MathEval", "Interpret", "Logical")]
     public object? MathEval_Interpret_Logical()
-        => MathEval.Expression.Eval(MakeUnique(Logical), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(Logical), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     [Benchmark(Description = "MathEval: Interpret/对数")]
     [BenchmarkCategory("MathEval", "Interpret", "Log")]
     public object? MathEval_Interpret_Log()
-        => MathEval.Expression.Eval(MakeUnique(LogExpression), _mathEvalCtx, MathEval.ExpressionOptions.NoCache);
+        => MathEval.Expression.Eval(MakeUnique(LogExpression), _mathEvalCtx, MathEval.Options.ExpressionOptions.NoCache);
 
     // ============================================================
     // MathEval — Cached

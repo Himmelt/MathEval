@@ -1,4 +1,5 @@
 using MathEval.Context;
+using MathEval.Options;
 
 namespace MathEval;
 

@@ -1,5 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.Options;
 using Xunit;
 
 namespace MathEval.Tests.Regression;

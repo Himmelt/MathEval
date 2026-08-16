@@ -1,5 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
+using MathEval.Options;
 using Xunit;
 
 using Token = MathEval.Lexer.Token;
@@ -228,7 +229,7 @@ public class TextScalarTests {
     public void ConstantFolding_FoldsTextConcat() {
         // 常量折叠在编译期完成 'a'+'b' → 'ab'
         Assert.Equal("ab", Expression.Eval<string>("'a' + 'b'", null,
-            MathEval.ExpressionOptions.ConstantFolding));
+            ExpressionOptions.ConstantFolding));
     }
 
     #endregion

@@ -1,4 +1,4 @@
-namespace MathEval;
+namespace MathEval.Options;
 
 /// <summary>
 /// 表示表达式计算选项
