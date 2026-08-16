@@ -7,7 +7,7 @@ using MathEval.Visitors;
 
 namespace MathEval;
 
-public class Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None) : ICalculator {
+public class Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None) {
 
     private LogicalExpression? _ast;
     private CompiledExpression? _compiledExpression;
@@ -92,14 +92,6 @@ public class Calculator(string expression, ExpressionContext context, Expression
             $"无法将 {result?.GetType().Name ?? "null"} 转换为 {typeof(T).Name}",
             typeof(T).Name, result?.GetType().Name ?? "null");
     }
-
-    public void Set(string name, object value) => _context.Set(name, value);
-
-    public void Set(string name, Func<object> value) => _context.Set(name, value);
-
-    public void RemoveSymbol(string name) => _context.RemoveSymbol(name);
-
-    public void RemoveFunction(string name) => _context.RemoveFunction(name);
 
     private void EnsureParsed() {
         if (_ast != null) return;

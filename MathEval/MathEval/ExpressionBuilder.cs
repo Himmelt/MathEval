@@ -106,7 +106,7 @@ public class ExpressionBuilder {
         return this;
     }
 
-    public ICalculator Build(string expression) {
+    public Calculator Build(string expression) {
         return new Calculator(expression, _context, _options);
     }
 }
