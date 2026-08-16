@@ -1,9 +1,9 @@
 using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
-using MathEval.Internal;
 using MathEval.Parser;
 using MathEval.TypeSystem;
+using MathEval.Visitors;
 using System.Linq.Expressions;
 using LinqExpression = System.Linq.Expressions.Expression;
 

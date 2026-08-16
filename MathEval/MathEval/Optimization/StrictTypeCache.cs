@@ -1,6 +1,5 @@
 using MathEval.AST;
 using MathEval.Context;
-using MathEval.Internal;
 using MathEval.TypeSystem;
 
 namespace MathEval.Optimization;

@@ -1,5 +1,4 @@
 using MathEval.AST;
-using MathEval.Internal;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MathEval.Optimization;

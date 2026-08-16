@@ -1,9 +1,7 @@
-using MathEval.Context;
 using MathEval.Exceptions;
-using MathEval.Internal;
 using MathEval.TypeSystem;
 
-namespace MathEval.Functions;
+namespace MathEval.Context;
 
 /// <summary>
 /// 内置数学函数及常量注册器
@@ -19,7 +17,7 @@ namespace MathEval.Functions;
 /// 所有内置条目均携带 Kind 签名（参数 Number 约束 + 返回 Number），
 /// 供 StrictTypes 静态推断使用：如 <c>sin("abc")</c> 可在求值前报出
 /// </summary>
-internal static class BuiltInFunctions {
+internal static class BuiltInEntries {
     /// <summary>
     /// 将内置常量与函数填入给定字典
     /// </summary>

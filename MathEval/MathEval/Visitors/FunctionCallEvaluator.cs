@@ -2,7 +2,7 @@ using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.TypeSystem;
 
-namespace MathEval.Internal;
+namespace MathEval.Visitors;
 
 /// <summary>
 /// 共享的函数调用求值逻辑，供解释模式（EvaluationVisitor）和编译模式（CompiledExpression）复用。

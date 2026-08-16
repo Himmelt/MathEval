@@ -1,5 +1,4 @@
 using MathEval.Exceptions;
-using MathEval.Functions;
 using MathEval.TypeSystem;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
@@ -36,7 +35,7 @@ public class ExpressionContext {
     static ExpressionContext() {
         var symbols = new Dictionary<string, double>(StringComparer.Ordinal);
         var functions = new Dictionary<string, FunctionEntry>(StringComparer.Ordinal);
-        BuiltInFunctions.Populate(symbols, functions);
+        BuiltInEntries.Populate(symbols, functions);
         s_builtInSymbols = symbols.ToFrozenDictionary(StringComparer.Ordinal);
         s_builtInFunctions = functions.ToFrozenDictionary(StringComparer.Ordinal);
     }
@@ -150,48 +149,48 @@ public class ExpressionContext {
     // 强类型重载：Wrap 提供编译期类型安全的调用委托（ARCH-10），
     // 同时按泛型参数捕获 Kind 签名，供 StrictTypes 静态检查（如 greet(1) 求值前报出）
     public void SetFunction<T1, TResult>(string name, Func<T1, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1))], resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, TResult>(string name, Func<T1, T2, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, TResult>(string name, Func<T1, T2, T3, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, TResult>(string name, Func<T1, T2, T3, T4, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, TResult>(string name, Func<T1, T2, T3, T4, T5, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6)), KindOfParameter(typeof(T7))],
             resultKind: KindOfParameter(typeof(TResult)));
     }
 
     public void SetFunction<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(string name, Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> func) {
-        SetFunction(name, Internal.FunctionWrapper.Wrap(name, func),
+        SetFunction(name, FunctionWrapper.Wrap(name, func),
             paramKinds: [KindOfParameter(typeof(T1)), KindOfParameter(typeof(T2)), KindOfParameter(typeof(T3)), KindOfParameter(typeof(T4)), KindOfParameter(typeof(T5)), KindOfParameter(typeof(T6)), KindOfParameter(typeof(T7)), KindOfParameter(typeof(T8))],
             resultKind: KindOfParameter(typeof(TResult)));
     }

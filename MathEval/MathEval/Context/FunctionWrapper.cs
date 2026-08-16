@@ -1,7 +1,6 @@
-using MathEval.Context;
 using MathEval.Exceptions;
 
-namespace MathEval.Internal;
+namespace MathEval.Context;
 
 /// <summary>
 /// 函数包装器，将强类型 Func 转换为 ExpressionFunction

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace MathEval.Internal;
+namespace MathEval.Optimization;
 
 /// <summary>
 /// 线程安全的 LRU 缓存，容量固定，超过容量时淘汰最久未使用的条目

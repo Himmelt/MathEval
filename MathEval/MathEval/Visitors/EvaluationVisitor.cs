@@ -1,7 +1,6 @@
 using MathEval.AST;
 using MathEval.Context;
 using MathEval.Exceptions;
-using MathEval.Internal;
 using MathEval.Parser;
 using MathEval.TypeSystem;
 
