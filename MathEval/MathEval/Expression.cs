@@ -44,5 +44,5 @@ public static class Expression {
     /// <summary>
     /// 获取计算器构建器
     /// </summary>
-    public static CalculatorBuilder Builder => new();
+    public static Calculator.Builder Builder => new();
 }

@@ -6,7 +6,7 @@ using MathEval.Visitors;
 
 namespace MathEval;
 
-public class Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None) {
+public partial class Calculator(string expression, ExpressionContext context, ExpressionOptions options = ExpressionOptions.None) {
 
     private LogicalExpression? _ast;
     private CompiledExpression? _compiledExpression;
