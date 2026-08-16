@@ -42,7 +42,7 @@ public static class Expression {
     }
 
     /// <summary>
-    /// 获取表达式构建器
+    /// 获取计算器构建器
     /// </summary>
-    public static ExpressionBuilder Builder => new();
+    public static CalculatorBuilder Builder => new();
 }
