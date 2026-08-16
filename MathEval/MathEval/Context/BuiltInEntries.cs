@@ -38,6 +38,38 @@ internal static class BuiltInEntries {
         functions["atan"] = Num1(FunctionWrapper.Wrap("atan", (Func<double, double>)Math.Atan));
         functions["atan2"] = Num2(FunctionWrapper.Wrap("atan2", (Func<double, double, double>)Math.Atan2));
 
+        // 角度制三角函数（输入/输出为度）
+        functions["sind"] = Num1(FunctionWrapper.Wrap("sind", (Func<double, double>)(x => Math.Sin(x * Math.PI / 180))));
+        functions["cosd"] = Num1(FunctionWrapper.Wrap("cosd", (Func<double, double>)(x => Math.Cos(x * Math.PI / 180))));
+        functions["tand"] = Num1(FunctionWrapper.Wrap("tand", (Func<double, double>)(x => Math.Tan(x * Math.PI / 180))));
+        functions["asind"] = Num1(FunctionWrapper.Wrap("asind", (Func<double, double>)(x => Math.Asin(x) * 180 / Math.PI)));
+        functions["acosd"] = Num1(FunctionWrapper.Wrap("acosd", (Func<double, double>)(x => Math.Acos(x) * 180 / Math.PI)));
+        functions["atand"] = Num1(FunctionWrapper.Wrap("atand", (Func<double, double>)(x => Math.Atan(x) * 180 / Math.PI)));
+        functions["atan2d"] = Num2(FunctionWrapper.Wrap("atan2d", (Func<double, double, double>)((y, x) => Math.Atan2(y, x) * 180 / Math.PI)));
+
+        // 双曲三角函数
+        functions["sinh"] = Num1(FunctionWrapper.Wrap("sinh", (Func<double, double>)Math.Sinh));
+        functions["cosh"] = Num1(FunctionWrapper.Wrap("cosh", (Func<double, double>)Math.Cosh));
+        functions["tanh"] = Num1(FunctionWrapper.Wrap("tanh", (Func<double, double>)Math.Tanh));
+        functions["asinh"] = Num1(FunctionWrapper.Wrap("asinh", (Func<double, double>)Math.Asinh));
+        functions["acosh"] = Num1(FunctionWrapper.Wrap("acosh", (Func<double, double>)Math.Acosh));
+        functions["atanh"] = Num1(FunctionWrapper.Wrap("atanh", (Func<double, double>)Math.Atanh));
+
+        // 余割/正割/余切及反函数
+        functions["csc"] = Num1(FunctionWrapper.Wrap("csc", (Func<double, double>)(x => 1.0 / Math.Sin(x))));
+        functions["sec"] = Num1(FunctionWrapper.Wrap("sec", (Func<double, double>)(x => 1.0 / Math.Cos(x))));
+        functions["cot"] = Num1(FunctionWrapper.Wrap("cot", (Func<double, double>)(x => 1.0 / Math.Tan(x))));
+        functions["acsc"] = Num1(FunctionWrapper.Wrap("acsc", (Func<double, double>)(x => Math.Asin(1.0 / x))));
+        functions["asec"] = Num1(FunctionWrapper.Wrap("asec", (Func<double, double>)(x => Math.Acos(1.0 / x))));
+        functions["acot"] = Num1(FunctionWrapper.Wrap("acot", (Func<double, double>)(x => Math.Atan(1.0 / x))));
+        // 角度制版本
+        functions["cscd"] = Num1(FunctionWrapper.Wrap("cscd", (Func<double, double>)(x => 1.0 / Math.Sin(x * Math.PI / 180))));
+        functions["secd"] = Num1(FunctionWrapper.Wrap("secd", (Func<double, double>)(x => 1.0 / Math.Cos(x * Math.PI / 180))));
+        functions["cotd"] = Num1(FunctionWrapper.Wrap("cotd", (Func<double, double>)(x => 1.0 / Math.Tan(x * Math.PI / 180))));
+        functions["acscd"] = Num1(FunctionWrapper.Wrap("acscd", (Func<double, double>)(x => Math.Asin(1.0 / x) * 180 / Math.PI)));
+        functions["asecd"] = Num1(FunctionWrapper.Wrap("asecd", (Func<double, double>)(x => Math.Acos(1.0 / x) * 180 / Math.PI)));
+        functions["acotd"] = Num1(FunctionWrapper.Wrap("acotd", (Func<double, double>)(x => Math.Atan(1.0 / x) * 180 / Math.PI)));
+
         // 指数幂函数
         functions["exp"] = Num1(FunctionWrapper.Wrap("exp", (Func<double, double>)Math.Exp));
         functions["pow"] = Num2(FunctionWrapper.Wrap("pow", (Func<double, double, double>)Math.Pow));
@@ -57,6 +89,8 @@ internal static class BuiltInEntries {
         functions["abs"] = Num1(FunctionWrapper.Wrap("abs", (Func<double, double>)Math.Abs));
         functions["sqrt"] = Num1(FunctionWrapper.Wrap("sqrt", (Func<double, double>)Math.Sqrt));
         functions["sign"] = Num1(FunctionWrapper.Wrap("sign", (Func<double, int>)Math.Sign));
+        functions["clamp"] = Num3(FunctionWrapper.Wrap("clamp", (Func<double, double, double, double>)((x, lo, hi) => Math.Clamp(x, lo, hi))));
+        functions["lerp"] = Num3(FunctionWrapper.Wrap("lerp", (Func<double, double, double, double>)((a, b, t) => a + (b - a) * t)));
 
         // 取整函数
         functions["ceil"] = Num1(FunctionWrapper.Wrap("ceil", (Func<double, double>)Math.Ceiling));
@@ -72,6 +106,25 @@ internal static class BuiltInEntries {
             FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
         functions["min"] = new(Func("min", 1, int.MaxValue, args => args.Min(a => TypeHelper.ToDouble(a!))),
             FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
+
+        functions["count"] = new(Func("count", 1, int.MaxValue, args => (double)args.Length),
+            FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
+
+        functions["sum"] = new(Func("sum", 1, int.MaxValue, args => args.Sum(a => TypeHelper.ToDouble(a!))),
+            FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
+
+        // avg 与 mean 互为别名：均值 = 总和 / 个数
+        ExpressionContext.FunctionEntry average = new(Func("avg", 1, int.MaxValue, args => args.Average(a => TypeHelper.ToDouble(a!))),
+            FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
+        functions["avg"] = average;
+        functions["mean"] = average;
+
+        // 总体标准差（除以 n，与常见计算器一致）
+        functions["std"] = new(Func("std", 1, int.MaxValue, args => {
+            var values = args.Select(a => TypeHelper.ToDouble(a!)).ToArray();
+            var mean = values.Average();
+            return Math.Sqrt(values.Average(v => (v - mean) * (v - mean)));
+        }), FunctionFlags.Aggregate, ParamKinds: null, ResultKind: MathKind.Number);
     }
 
     /// <summary>单参数 double→double 函数条目：(Number)→Number</summary>
@@ -81,6 +134,10 @@ internal static class BuiltInEntries {
     /// <summary>双参数 double 函数条目：(Number, Number)→Number</summary>
     private static ExpressionContext.FunctionEntry Num2(ExpressionFunction func)
         => new(func, FunctionFlags.ElementWise, [MathKind.Number, MathKind.Number], MathKind.Number);
+
+    /// <summary>三参数 double 函数条目：(Number, Number, Number)→Number</summary>
+    private static ExpressionContext.FunctionEntry Num3(ExpressionFunction func)
+        => new(func, FunctionFlags.ElementWise, [MathKind.Number, MathKind.Number, MathKind.Number], MathKind.Number);
 
     /// <summary>变参函数条目：参数不约束（个数可变），返回 Number</summary>
     private static ExpressionContext.FunctionEntry NumResult(ExpressionFunction func)
