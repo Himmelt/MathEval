@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
@@ -63,7 +63,7 @@ public class TextArrayTests {
 
     [Fact]
     public void TextArrayIndex_OutOfRange_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("['a'][5]"));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("['a'][5]"));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class TextArrayTests {
 
     [Fact]
     public void TextArrayConcat_LengthMismatch_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("['a', 'b'] + ['c']"));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("['a', 'b'] + ['c']"));
     }
 
     [Fact]

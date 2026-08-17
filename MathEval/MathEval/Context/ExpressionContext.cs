@@ -3,7 +3,6 @@ using MathEval.TypeSystem;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reflection;
-using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Context;
 
@@ -63,7 +62,7 @@ public class ExpressionContext {
     /// 注册直接值符号
     /// </summary>
     public void Set(string name, object value) {
-        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
+        if (ReservedKeywords.Contains(name)) throw new ArgumentException($"无法使用保留关键字注册符号：{name}", nameof(name));
 
         _symbols[name] = new SymbolEntry { DirectValue = value };
         _symbolVersion++;
@@ -74,7 +73,7 @@ public class ExpressionContext {
     /// 注意：对于延迟值，由用户保证其 线程安全 和 异常处理！！！
     /// </summary>
     public void Set(string name, Func<object> value) {
-        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册符号：{name}");
+        if (ReservedKeywords.Contains(name)) throw new ArgumentException($"无法使用保留关键字注册符号：{name}", nameof(name));
 
         _symbols[name] = new SymbolEntry { LazyValue = value };
         _symbolVersion++;
@@ -90,7 +89,7 @@ public class ExpressionContext {
     /// <param name="resultKind">返回值 Kind 签名（可空），供 StrictTypes 静态检查</param>
     public void SetFunction(string name, ExpressionFunction func, FunctionFlags flags = FunctionFlags.ElementWise,
         MathKind?[]? paramKinds = null, MathKind? resultKind = null) {
-        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
+        if (ReservedKeywords.Contains(name)) throw new ArgumentException($"无法使用保留关键字注册函数：{name}", nameof(name));
 
         _functions[name] = new FunctionEntry(func, flags, paramKinds, resultKind);
         _symbolVersion++;
@@ -103,7 +102,7 @@ public class ExpressionContext {
     /// <param name="func">函数委托</param>
     /// <param name="flags">函数行为标记，默认为 ElementWise（逐元素操作）</param>
     public void SetFunction(string name, Delegate func, FunctionFlags flags = FunctionFlags.ElementWise) {
-        if (ReservedKeywords.Contains(name)) throw new InvalidOpException($"无法使用保留关键字注册函数：{name}");
+        if (ReservedKeywords.Contains(name)) throw new ArgumentException($"无法使用保留关键字注册函数：{name}", nameof(name));
 
         var method = func.Method;
         var parameters = method.GetParameters();
@@ -116,7 +115,7 @@ public class ExpressionContext {
 
         // 捕获的 Kind 签名随条目保存，供 KindInferencePass 做静态参数/返回类型检查
         SetFunction(name, args => {
-            if (args.Length != argCount) throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
+            if (args.Length != argCount) throw new FunctionArityException(name, argCount, args.Length);
 
             try {
                 var convertedArgs = new object?[argCount];
@@ -125,7 +124,7 @@ public class ExpressionContext {
                         convertedArgs[i] = Convert.ChangeType(args[i], parameters[i].ParameterType);
                     } catch (Exception ex) when (ex is not MathEvalException) {
                         // Convert.ChangeType 可抛 FormatException/OverflowException/InvalidCastException
-                        throw new FunctionTypeMismatchException($"函数 {name} 第 {i + 1} 个参数类型不匹配：{ex.Message}");
+                        throw new FunctionArgumentTypeException(name, i, $"函数 {name} 第 {i + 1} 个参数类型不匹配：{ex.Message}");
                     }
                 }
 
@@ -135,9 +134,9 @@ public class ExpressionContext {
                 } catch (TargetInvocationException ex) {
                     // 解包用户函数体内抛出的异常，重新包装为 MathEval 异常以保留异常契约
                     var inner = ex.InnerException ?? ex;
-                    throw new EvaluateException($"调用函数 {name} 时出错：{inner.Message}", inner);
+                    throw new FunctionInvocationException(name, $"调用函数 {name} 时出错：{inner.Message}", inner);
                 } catch (Exception ex) when (ex is not MathEvalException) {
-                    throw new EvaluateException($"调用函数 {name} 时出错：{ex.Message}", ex);
+                    throw new FunctionInvocationException(name, $"调用函数 {name} 时出错：{ex.Message}", ex);
                 }
             } catch (MathEvalException) {
                 // 已为 MathEval 异常，直接透传，避免重复包装

@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Options;
 using MathEval.TypeSystem;
@@ -154,14 +154,14 @@ public class TypeSystemRefactorTests {
     public void ArrayIndex_OutOfBounds_Throws() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3 });
-        Assert.Throws<EvaluateException>(() => Expression.Eval("arr[5]", context));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("arr[5]", context));
     }
 
     [Fact]
     public void ArrayIndex_NegativeIndex_Throws() {
         var context = new ExpressionContext();
         context.Set("arr", new double[] { 1, 2, 3 });
-        Assert.Throws<EvaluateException>(() => Expression.Eval("arr[-1]", context));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("arr[-1]", context));
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class TypeSystemRefactorTests {
         var context = new ExpressionContext();
         context.Set("a", new double[] { 1, 2, 3 });
         context.Set("b", new double[] { 4, 5 });
-        Assert.Throws<EvaluateException>(() => Expression.Eval("a + b", context));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("a + b", context));
     }
 
     [Fact]

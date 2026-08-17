@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Options;
 using Xunit;
@@ -61,12 +61,12 @@ public class TextScalarTests {
 
     [Fact]
     public void Lexer_UnterminatedString_Throws() {
-        Assert.Throws<ParseException>(() => GetSingleToken("'abc"));
+        Assert.Throws<SyntaxException>(() => GetSingleToken("'abc"));
     }
 
     [Fact]
     public void Lexer_InvalidEscape_Throws() {
-        Assert.Throws<ParseException>(() => GetSingleToken("'\\q'"));
+        Assert.Throws<SyntaxException>(() => GetSingleToken("'\\q'"));
     }
 
     [Fact]

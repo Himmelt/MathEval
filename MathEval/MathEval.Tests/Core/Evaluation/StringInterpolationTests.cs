@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Options;
 using Xunit;
@@ -29,7 +29,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Lexer_UnterminatedInterpolated_Throws() {
-        Assert.Throws<ParseException>(() => {
+        Assert.Throws<SyntaxException>(() => {
             var lexer = new MathEval.Lexer.Lexer("$'abc {1");
             lexer.MoveNext();
         });
@@ -37,7 +37,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Lexer_UnmatchedCloseBrace_Throws() {
-        Assert.Throws<ParseException>(() => {
+        Assert.Throws<SyntaxException>(() => {
             var lexer = new MathEval.Lexer.Lexer("$'a } b'");
             lexer.MoveNext();
         });
@@ -159,17 +159,17 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Interpolated_FormatOnText_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("$'{'a':f2}'"));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("$'{'a':f2}'"));
     }
 
     [Fact]
     public void Interpolated_IntegerFormatOnFraction_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("$'{1.5:d}'"));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("$'{1.5:d}'"));
     }
 
     [Fact]
     public void Interpolated_UnsupportedFormat_Throws() {
-        Assert.Throws<ParseException>(() => Expression.Eval("$'{1:q}'"));
+        Assert.Throws<SyntaxException>(() => Expression.Eval("$'{1:q}'"));
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public class StringInterpolationTests {
 
     [Fact]
     public void Compiled_InterpolatedFormatError_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.OptimizedEval("$'{'a':f2}'"));
+        Assert.Throws<EvaluationException>(() => Expression.OptimizedEval("$'{'a':f2}'"));
     }
 
     [Fact]

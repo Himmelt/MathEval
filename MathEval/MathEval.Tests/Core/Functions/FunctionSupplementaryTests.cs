@@ -287,13 +287,13 @@ public class FunctionSupplementaryTests {
     }
 
     [Fact]
-    public void Constant_NaN_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("NaN", 1.0));
+    public void Constant_NaN_Override_ThrowsArgumentException() {
+        Assert.Throws<ArgumentException>(() => _ctx.Set("NaN", 1.0));
     }
 
     [Fact]
-    public void Constant_INF_Override_ThrowsInvalidOperationException() {
-        Assert.Throws<MathEval.Exceptions.InvalidOperationException>(() => _ctx.Set("INF", 1.0));
+    public void Constant_INF_Override_ThrowsArgumentException() {
+        Assert.Throws<ArgumentException>(() => _ctx.Set("INF", 1.0));
     }
 
     #endregion
@@ -335,7 +335,7 @@ public class FunctionSupplementaryTests {
     public void CustomFunction_ArgCountMismatch_Throws() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("add", (Func<double, double, double>)((a, b) => a + b));
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("add(1, 2, 3)", ctx));
+        Assert.Throws<FunctionArityException>(() => Expression.Eval("add(1, 2, 3)", ctx));
     }
 
     #endregion

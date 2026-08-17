@@ -143,7 +143,7 @@ internal static class BuiltInEntries {
     private static ExpressionContext.FunctionEntry NumResult(ExpressionFunction func)
         => new(func, FunctionFlags.ElementWise, ParamKinds: null, ResultKind: MathKind.Number);
 
-    private static ExpressionFunction Func(string name, int argCount, Func<object?[], object?> fn) => args => args.Length == argCount ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
+    private static ExpressionFunction Func(string name, int argCount, Func<object?[], object?> fn) => args => args.Length == argCount ? fn(args)! : throw new FunctionArityException(name, argCount, args.Length);
 
-    private static ExpressionFunction Func(string name, int minArgs, int maxArgs, Func<object?[], object?> fn) => args => args.Length >= minArgs && args.Length <= maxArgs ? fn(args)! : throw new FunctionTypeMismatchException($"函数 {name} 需要 {minArgs}-{(maxArgs == int.MaxValue ? "∞" : maxArgs.ToString())} 个参数，但提供了 {args.Length} 个");
+    private static ExpressionFunction Func(string name, int minArgs, int maxArgs, Func<object?[], object?> fn) => args => args.Length >= minArgs && args.Length <= maxArgs ? fn(args)! : throw new FunctionArityException(name, minArgs, maxArgs, args.Length);
 }

@@ -37,7 +37,7 @@ public class StrictTypesTests {
 
     [Fact]
     public void BuiltinFunction_InvalidArgumentKind_Throws() {
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("sin('abc')", options: Strict));
+        Assert.Throws<FunctionArgumentTypeException>(() => Expression.Eval("sin('abc')", options: Strict));
     }
 
     [Fact]
@@ -82,14 +82,14 @@ public class StrictTypesTests {
 
     [Fact]
     public void FormatSpecOnText_Throws() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("$'{'a':f2}'", options: Strict));
+        Assert.Throws<EvaluationException>(() => Expression.Eval("$'{'a':f2}'", options: Strict));
     }
 
     [Fact]
     public void CustomFunction_InvalidArgumentKind_Throws() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("greet", (Func<string, string>)(s => s + "!"));
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("greet(1)", ctx, Strict));
+        Assert.Throws<FunctionArgumentTypeException>(() => Expression.Eval("greet(1)", ctx, Strict));
     }
 
     #endregion

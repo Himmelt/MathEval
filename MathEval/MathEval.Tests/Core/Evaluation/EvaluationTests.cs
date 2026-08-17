@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
 
@@ -217,8 +217,8 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Bitwise_LeftShiftNegative_ThrowsEvaluateException() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("1 << -1"));
+    public void Bitwise_LeftShiftNegative_ThrowsEvaluationException() {
+        Assert.Throws<EvaluationException>(() => Expression.Eval("1 << -1"));
     }
 
     [Fact]
@@ -343,13 +343,13 @@ public class EvaluationTests {
     }
 
     [Fact]
-    public void Error_EmptyExpression_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval(""));
+    public void Error_EmptyExpression_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Expression.Eval(""));
     }
 
     [Fact]
-    public void Error_InvalidSyntax_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("2 + * 3"));
+    public void Error_InvalidSyntax_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Expression.Eval("2 + * 3"));
     }
 
     [Fact]

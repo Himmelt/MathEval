@@ -96,7 +96,7 @@ public partial class Calculator(string expression, ExpressionContext context, Ex
     private void EnsureParsed() {
         if (_ast != null) return;
 
-        if (string.IsNullOrWhiteSpace(_expressionText)) throw new ParseException("表达式不能为空或仅包含空白字符", 1, 1);
+        if (string.IsNullOrWhiteSpace(_expressionText)) throw new SyntaxException(MathEvalErrorCode.EmptyExpression, "表达式不能为空或仅包含空白字符", 0);
 
         // OPT-7: 使用 GetOrAdd 代替 TryGet + Set，避免并发首跑时重复解析同一表达式。
         // BUG-审核：缓存键必须包含解析指纹（折叠选项位），否则

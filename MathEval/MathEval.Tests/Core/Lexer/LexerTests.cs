@@ -1,4 +1,4 @@
-using MathEval.Exceptions;
+﻿using MathEval.Exceptions;
 using Xunit;
 
 using Token = MathEval.Lexer.Token;
@@ -200,18 +200,18 @@ public class LexerTests {
 
     [Fact]
     public void Error_ExponentWithoutDigits() {
-        Assert.Throws<ParseException>(() => GetSingleToken("2e"));
+        Assert.Throws<SyntaxException>(() => GetSingleToken("2e"));
     }
 
     [Fact]
     public void Error_HexWithoutDigits() {
-        Assert.Throws<ParseException>(() => GetSingleToken("0x"));
+        Assert.Throws<SyntaxException>(() => GetSingleToken("0x"));
     }
 
     [Fact]
     public void Error_ExpressionExceedsMaxLength() {
         var longText = new string('1', 4097);
-        Assert.Throws<ParseException>(() => new MathEval.Lexer.Lexer(longText));
+        Assert.Throws<SyntaxException>(() => new MathEval.Lexer.Lexer(longText));
     }
 
     [Fact]

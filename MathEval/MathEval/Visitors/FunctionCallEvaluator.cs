@@ -29,7 +29,7 @@ internal static class FunctionCallEvaluator {
                 var len = GetArrayLength(arg);
                 if (broadcastLength == -1) broadcastLength = len;
                 else if (broadcastLength != len)
-                    throw new EvaluateException(
+                    throw new EvaluationException(MathEvalErrorCode.BroadcastLengthMismatch,
                         $"数组广播时所有数组参数长度必须一致，但遇到长度 {broadcastLength} 和 {len}");
             }
         }

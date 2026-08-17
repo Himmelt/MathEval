@@ -16,7 +16,7 @@ public class LogFunctionTests {
     [Fact]
     public void MathEval_Log_ZeroArgs_ThrowsException() {
         // 0个参数 - 应该抛出异常
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("log()", _ctx));
+        Assert.Throws<FunctionArityException>(() => Expression.Eval("log()", _ctx));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class LogFunctionTests {
     [Fact]
     public void MathEval_Log_ThreeArgs_ThrowsException() {
         // 3个参数 - 应该抛出异常
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("log(100, 10, 1)", _ctx));
+        Assert.Throws<FunctionArityException>(() => Expression.Eval("log(100, 10, 1)", _ctx));
     }
 
     #endregion

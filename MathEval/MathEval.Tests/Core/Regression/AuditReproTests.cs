@@ -1,4 +1,4 @@
-using MathEval.Context;
+﻿using MathEval.Context;
 using MathEval.Exceptions;
 using MathEval.Options;
 using Xunit;
@@ -117,6 +117,6 @@ public class AuditReproTests {
     public void InvalidFormatSpec_ThrowsMathEvalException() {
         // 修复前：精度数值溢出（如 f99999999999）触发 string.Format 抛 FormatException（库外异常泄漏）。
         // 注：多数字符串（如 'f1x'）被 .NET 当作自定义格式原样输出，不抛异常
-        Assert.Throws<MathEval.Exceptions.ParseException>(() => Expression.Eval("$'{5:f99999999999}'"));
+        Assert.Throws<MathEval.Exceptions.SyntaxException>(() => Expression.Eval("$'{5:f99999999999}'"));
     }
 }

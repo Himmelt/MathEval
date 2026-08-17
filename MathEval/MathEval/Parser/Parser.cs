@@ -31,7 +31,7 @@ public class Parser {
 
     private void Expect(Lexer.TokenType type) {
         if (CurrentToken.Type != type)
-            throw new ParseException($"期望 '{type}'，但得到 '{CurrentToken.Type}'", CurrentToken.Line, CurrentToken.Column);
+            throw new SyntaxException(MathEvalErrorCode.ExpectedToken, $"期望 '{type}'，但得到 '{CurrentToken.Type}'", CurrentToken.Position);
         MoveNext();
     }
 
@@ -39,11 +39,11 @@ public class Parser {
         _depth = 0;
 
         if (CurrentToken.Type == Lexer.TokenType.EOF)
-            throw new ParseException("表达式不能为空", 1, 1);
+            throw new SyntaxException(MathEvalErrorCode.EmptyExpression, "表达式不能为空", 0);
 
         var expr = ParseExpression();
         if (CurrentToken.Type != Lexer.TokenType.EOF)
-            throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
+            throw new SyntaxException(MathEvalErrorCode.UnexpectedToken, $"意外的标记 '{CurrentToken.Text}'", CurrentToken.Position);
         return expr;
     }
 
@@ -107,7 +107,7 @@ public class Parser {
                 Lexer.TokenType.Greater => BinaryExpressionType.GreaterThan,
                 Lexer.TokenType.LessOrEqual => BinaryExpressionType.LessThanOrEqual,
                 Lexer.TokenType.GreaterOrEqual => BinaryExpressionType.GreaterThanOrEqual,
-                _ => throw new Exceptions.InvalidOperationException($"未知的关系运算符：{op}")
+                _ => throw new System.InvalidOperationException($"未知的关系运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);
         }
@@ -154,7 +154,7 @@ public class Parser {
                 Lexer.TokenType.LeftShift => BinaryExpressionType.LeftShift,
                 Lexer.TokenType.RightShift => BinaryExpressionType.RightShift,
                 Lexer.TokenType.UnsignedRightShift => BinaryExpressionType.UnsignedRightShift,
-                _ => throw new Exceptions.InvalidOperationException($"未知的移位运算符：{op}")
+                _ => throw new System.InvalidOperationException($"未知的移位运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);
         }
@@ -187,7 +187,7 @@ public class Parser {
                 Lexer.TokenType.DoubleSlash => BinaryExpressionType.IntegerDivide,
                 Lexer.TokenType.Percent => BinaryExpressionType.Remainder,
                 Lexer.TokenType.ModKeyword => BinaryExpressionType.Modulo,
-                _ => throw new Exceptions.InvalidOperationException($"未知的乘法运算符：{op}")
+                _ => throw new System.InvalidOperationException($"未知的乘法运算符：{op}")
             };
             left = new BinaryExpression(type, left, right);
         }
@@ -289,7 +289,7 @@ public class Parser {
                 break;
 
             default:
-                throw new ParseException($"意外的标记 '{CurrentToken.Text}'", CurrentToken.Line, CurrentToken.Column);
+                throw new SyntaxException(MathEvalErrorCode.UnexpectedToken, $"意外的标记 '{CurrentToken.Text}'", CurrentToken.Position);
         }
 
         // 统一在 switch 后递减深度（匹配 CheckDepth 的 +1）
@@ -501,6 +501,6 @@ public class Parser {
     private void CheckDepth() {
         _depth++;
         if (_depth > _maxDepth)
-            throw new ParseException($"表达式嵌套深度超过最大限制 {_maxDepth}", CurrentToken.Line, CurrentToken.Column);
+            throw new SyntaxException(MathEvalErrorCode.NestingTooDeep, $"表达式嵌套深度超过最大限制 {_maxDepth}", CurrentToken.Position);
     }
 }

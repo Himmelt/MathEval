@@ -1,7 +1,6 @@
 using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
-using InvalidOpException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Tests.Context;
 
@@ -106,9 +105,9 @@ public class ContextTests {
     }
 
     [Fact]
-    public void Set_ReservedKeyword_ThrowsInvalidOperationException() {
+    public void Set_ReservedKeyword_ThrowsArgumentException() {
         var ctx = new ExpressionContext();
-        Assert.Throws<InvalidOpException>(() => ctx.Set("true", 1L));
+        Assert.Throws<ArgumentException>(() => ctx.Set("true", 1L));
     }
 
     [Fact]

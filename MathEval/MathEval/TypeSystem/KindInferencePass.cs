@@ -143,7 +143,7 @@ internal sealed class KindInferencePass(ExpressionContext context) : IExpression
             if (segment is not ExpressionSegment exprSeg) continue;
             var kind = exprSeg.Expression.Accept(this);
             if (exprSeg.FormatSpec != null && kind != null && kind != MathKind.Number)
-                throw new EvaluateException($"格式说明符 '{exprSeg.FormatSpec}' 只能用于数值类型");
+                throw new EvaluationException(MathEvalErrorCode.FormatSpecifierError, $"格式说明符 '{exprSeg.FormatSpec}' 只能用于数值类型");
         }
         return Track(MathKind.Text);
     }
@@ -220,8 +220,7 @@ internal sealed class KindInferencePass(ExpressionContext context) : IExpression
                 || (arg == MathKind.NumberArray && param == MathKind.Number)
                 || (arg == MathKind.TextArray && param == MathKind.Text);
             if (!compatible)
-                throw new FunctionTypeMismatchException(
-                    $"函数 {name} 第 {i + 1} 个参数期望 {KindName(param!)}，实际为 {KindName(arg!)}");
+                throw new FunctionArgumentTypeException(name, i, KindName(param!), KindName(arg!));
         }
     }
 

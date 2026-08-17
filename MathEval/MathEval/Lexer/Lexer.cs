@@ -35,7 +35,7 @@ public class Lexer {
         _text = text ?? throw new ArgumentNullException(nameof(text));
 
         if (_text.Length > 4096)
-            throw new ParseException("表达式长度超过最大限制 4096 个字符", 1, 1);
+            throw new SyntaxException(MathEvalErrorCode.ExpressionTooLong, "表达式长度超过最大限制 4096 个字符", 0);
     }
 
     public Token CurrentToken { get; private set; } = null!;
@@ -134,7 +134,7 @@ public class Lexer {
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("无效的十六进制数：'0x' 后缺少数字", _startLine, _startColumn);
+            throw new SyntaxException(MathEvalErrorCode.InvalidNumberLiteral, "无效的十六进制数：'0x' 后缺少数字", _startPosition);
 
         CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -145,7 +145,7 @@ public class Lexer {
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("无效的八进制数：'0o' 后缺少数字", _startLine, _startColumn);
+            throw new SyntaxException(MathEvalErrorCode.InvalidNumberLiteral, "无效的八进制数：'0o' 后缺少数字", _startPosition);
 
         CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -156,7 +156,7 @@ public class Lexer {
             sb.Append(Read());
         }
         if (sb.Length == 2)
-            throw new ParseException("无效的二进制数：'0b' 后缺少数字", _startLine, _startColumn);
+            throw new SyntaxException(MathEvalErrorCode.InvalidNumberLiteral, "无效的二进制数：'0b' 后缺少数字", _startPosition);
 
         CurrentToken = new Token(TokenType.Number, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -182,7 +182,7 @@ public class Lexer {
                 while (!IsAtEnd() && char.IsDigit(Peek()))
                     sb.Append(Read());
             } else {
-                throw new ParseException("无效的数字：指数后缺少数字", _startLine, _startColumn);
+                throw new SyntaxException(MathEvalErrorCode.InvalidNumberLiteral, "无效的数字：指数后缺少数字", _startPosition);
             }
         }
 
@@ -219,7 +219,7 @@ public class Lexer {
             if (Peek() == '\\') {
                 Read();
                 if (IsAtEnd())
-                    throw new ParseException("字符串意外结束", _line, _column);
+                    throw new SyntaxException(MathEvalErrorCode.UnexpectedEndOfString, "字符串意外结束", _position);
                 char escaped = Read();
                 switch (escaped) {
                     case 'n': sb.Append('\n'); break;
@@ -233,18 +233,18 @@ public class Lexer {
                     case '"': sb.Append('"'); break;
                     case 'x':
                         if (_position + 2 > _text.Length)
-                            throw new ParseException("无效的十六进制转义序列", _line, _column);
+                            throw new SyntaxException(MathEvalErrorCode.InvalidEscapeSequence, "无效的十六进制转义序列", _position);
                         var hex = new string([Read(), Read()]);
                         sb.Append((char)Convert.ToInt32(hex, 16));
                         break;
                     case 'u':
                         if (_position + 4 > _text.Length)
-                            throw new ParseException("无效的 Unicode 转义序列", _line, _column);
+                            throw new SyntaxException(MathEvalErrorCode.InvalidEscapeSequence, "无效的 Unicode 转义序列", _position);
                         var uni = new string([Read(), Read(), Read(), Read()]);
                         sb.Append((char)Convert.ToInt32(uni, 16));
                         break;
                     default:
-                        throw new ParseException($"无效的转义序列 '\\{escaped}'", _line, _column);
+                        throw new SyntaxException(MathEvalErrorCode.InvalidEscapeSequence, $"无效的转义序列 '\\{escaped}'", _position);
                 }
             } else {
                 sb.Append(Read());
@@ -252,7 +252,7 @@ public class Lexer {
         }
 
         if (IsAtEnd())
-            throw new ParseException("未终止的字符串字面量", _line, _column);
+            throw new SyntaxException(MathEvalErrorCode.UnterminatedString, "未终止的字符串字面量", _position);
 
         Read();
         CurrentToken = new Token(TokenType.String, sb.ToString(), _startPosition, _startLine, _startColumn);
@@ -299,7 +299,7 @@ public class Lexer {
                     sb.Append(Read());
                 } else {
                     // 在顶层遇到未匹配的 }，报错
-                    throw new ParseException("插值字符串中存在未匹配的 '}'", _line, _column);
+                    throw new SyntaxException(MathEvalErrorCode.UnmatchedInterpolationDelimiter, "插值字符串中存在未匹配的 '}'", _position);
                 }
             } else if (ch == '\'' || ch == '"') {
                 // 插值表达式内的嵌套字符串，需要完整跳过
@@ -311,13 +311,13 @@ public class Lexer {
         }
 
         if (IsAtEnd())
-            throw new ParseException("未终止的插值字符串", _line, _column);
+            throw new SyntaxException(MathEvalErrorCode.UnterminatedString, "未终止的插值字符串", _position);
 
         // 读取闭引号
         sb.Append(Read());
 
         if (depthStack.Count > 0)
-            throw new ParseException("插值字符串中存在未匹配的 '{'", _startLine, _startColumn);
+            throw new SyntaxException(MathEvalErrorCode.UnmatchedInterpolationDelimiter, "插值字符串中存在未匹配的 '{'", _startPosition);
 
         CurrentToken = new Token(TokenType.InterpolatedString, sb.ToString(), _startPosition, _startLine, _startColumn);
     }
@@ -330,7 +330,7 @@ public class Lexer {
             if (Peek() == '\\') {
                 sb.Append(Read());
                 if (IsAtEnd())
-                    throw new ParseException("插值表达式中字符串意外结束", _line, _column);
+                    throw new SyntaxException(MathEvalErrorCode.UnexpectedEndOfString, "插值表达式中字符串意外结束", _position);
                 sb.Append(Read());
             } else {
                 sb.Append(Read());
@@ -338,7 +338,7 @@ public class Lexer {
         }
 
         if (IsAtEnd())
-            throw new ParseException("插值表达式中存在未终止的字符串", _line, _column);
+            throw new SyntaxException(MathEvalErrorCode.UnterminatedString, "插值表达式中存在未终止的字符串", _position);
 
         // 读取闭引号
         sb.Append(Read());
@@ -399,7 +399,7 @@ public class Lexer {
                     Read();
                     CurrentToken = new Token(TokenType.Equal, "==", _startPosition, _startLine, _startColumn);
                 } else {
-                    throw new ParseException("'=' 后应为 '='", _line, _column);
+                    throw new SyntaxException(MathEvalErrorCode.UnexpectedCharacter, "'=' 后应为 '='", _position);
                 }
                 break;
             case '<':
@@ -459,7 +459,7 @@ public class Lexer {
                 }
                 break;
             default:
-                throw new ParseException($"意外的字符 '{ch}'", _line, _column);
+                throw new SyntaxException(MathEvalErrorCode.UnexpectedCharacter, $"意外的字符 '{ch}'", _position);
         }
     }
 }

@@ -13,11 +13,11 @@ internal static class FunctionWrapper {
     private static ExpressionFunction WrapCore(string name, int argCount, Func<object[], object?> invoke) {
         return args => {
             if (args.Length != argCount)
-                throw new FunctionTypeMismatchException($"函数 {name} 需要 {argCount} 个参数，但提供了 {args.Length} 个");
+                throw new FunctionArityException(name, argCount, args.Length);
             try {
                 return invoke(args)!;
             } catch (InvalidCastException) {
-                throw new FunctionTypeMismatchException($"函数 {name} 参数类型不匹配");
+                throw new FunctionArgumentTypeException(name, -1, $"函数 {name} 参数类型不匹配");
             }
         };
     }

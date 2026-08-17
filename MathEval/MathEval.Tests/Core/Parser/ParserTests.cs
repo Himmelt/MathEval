@@ -1,4 +1,4 @@
-using MathEval.AST;
+﻿using MathEval.AST;
 using MathEval.Exceptions;
 using Xunit;
 
@@ -90,21 +90,21 @@ public class ParserTests {
     }
 
     [Fact]
-    public void EmptyExpression_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Parse(""));
+    public void EmptyExpression_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Parse(""));
     }
 
     [Fact]
-    public void InvalidSyntax_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Parse("+ +"));
+    public void InvalidSyntax_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Parse("+ +"));
     }
 
     [Fact]
-    public void DepthLimit_ThrowsParseException() {
+    public void DepthLimit_ThrowsSyntaxException() {
         var parts = new string[1025];
         for (int i = 0; i < 1025; i++) parts[i] = "2";
         var expr = string.Join("^", parts);
-        Assert.Throws<ParseException>(() => Parse(expr));
+        Assert.Throws<SyntaxException>(() => Parse(expr));
     }
 
     [Fact]

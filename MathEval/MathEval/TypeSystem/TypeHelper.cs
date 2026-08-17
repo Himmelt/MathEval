@@ -92,14 +92,14 @@ public static class TypeHelper {
         if (array.Kind == MathKind.NumberArray) {
             var arr = array.AsNumberArray;
             if (intIndex < 0 || intIndex >= arr.Length)
-                throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
+                throw new EvaluationException(MathEvalErrorCode.IndexOutOfRange, $"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
             return MathValue.Number(arr[intIndex]);
         }
 
         if (array.Kind == MathKind.TextArray) {
             var arr = array.AsTextArray;
             if (intIndex < 0 || intIndex >= arr.Length)
-                throw new EvaluateException($"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
+                throw new EvaluationException(MathEvalErrorCode.IndexOutOfRange, $"索引 {intIndex} 超出数组范围 [0, {arr.Length})");
             return MathValue.Text(arr[intIndex]);
         }
 
@@ -163,25 +163,25 @@ public static class TypeHelper {
 
     /// <summary>
     /// 插值段格式化：仅数值支持 d/e/f/g/x 说明符；d/x 要求整数值。
-    /// Text/数组使用格式说明符抛 EvaluateException。
+    /// Text/数组使用格式说明符抛 EvaluationException。
     /// </summary>
     public static string Format(MathValue value, string formatSpec) {
         if (value.Kind != MathKind.Number)
-            throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于数值类型");
+            throw new EvaluationException(MathEvalErrorCode.FormatSpecifierError, $"格式说明符 '{formatSpec}' 只能用于数值类型");
 
         double d = value.AsNumber;
         if (formatSpec.Length == 0)
-            throw new ParseException("格式说明符不能为空", 1, 1);
+            throw new SyntaxException(MathEvalErrorCode.InvalidFormatSpecifier, "格式说明符不能为空", -1);
 
         var firstChar = char.ToLowerInvariant(formatSpec[0]);
         var supportedFormats = new[] { 'd', 'e', 'f', 'g', 'x' };
         if (!supportedFormats.Contains(firstChar))
-            throw new ParseException($"不支持的格式说明符：{formatSpec}", 1, 1);
+            throw new SyntaxException(MathEvalErrorCode.InvalidFormatSpecifier, $"不支持的格式说明符：{formatSpec}", -1);
 
         // D/X 格式只适用于整数：double 为数学整数时转换后格式化
         if (firstChar == 'd' || firstChar == 'x') {
             if (double.IsNaN(d) || double.IsInfinity(d) || d != Math.Truncate(d))
-                throw new EvaluateException($"格式说明符 '{formatSpec}' 只能用于整数，但值为 {FormatNumberG(d)}");
+                throw new EvaluationException(MathEvalErrorCode.FormatSpecifierError, $"格式说明符 '{formatSpec}' 只能用于整数，但值为 {FormatNumberG(d)}");
             return FormatWithCatch(formatSpec, (long)d);
         }
 
@@ -193,7 +193,7 @@ public static class TypeHelper {
         try {
             return string.Format(CultureInfo.InvariantCulture, $"{{0:{formatSpec}}}", arg);
         } catch (FormatException ex) {
-            throw new ParseException($"无效的格式说明符：{formatSpec}", 1, 1, ex.InnerException ?? ex);
+            throw new SyntaxException(MathEvalErrorCode.InvalidFormatSpecifier, $"无效的格式说明符：{formatSpec}", -1, ex.InnerException ?? ex);
         }
     }
 
@@ -292,7 +292,7 @@ public static class TypeHelper {
             a = left.AsTextArray;
             b = right.AsTextArray;
             if (a.Length != b.Length)
-                throw new EvaluateException($"数组长度不匹配：{a.Length} vs {b.Length}");
+                throw new EvaluationException(MathEvalErrorCode.ArrayLengthMismatch, $"数组长度不匹配：{a.Length} vs {b.Length}");
         } else if (left.Kind == MathKind.TextArray) {
             a = left.AsTextArray;
             b = new string[a.Length];
@@ -329,7 +329,7 @@ public static class TypeHelper {
         if (left.Kind == MathKind.NumberArray && right.Kind == MathKind.NumberArray) {
             var a = left.AsNumberArray;
             var b = right.AsNumberArray;
-            if (a.Length != b.Length) throw new EvaluateException($"数组长度不匹配：{a.Length} vs {b.Length}");
+            if (a.Length != b.Length) throw new EvaluationException(MathEvalErrorCode.ArrayLengthMismatch, $"数组长度不匹配：{a.Length} vs {b.Length}");
             var result = new double[a.Length];
             for (int i = 0; i < a.Length; i++) result[i] = EvaluateNumberOp(type, a[i], b[i]);
             return result;
@@ -373,7 +373,7 @@ public static class TypeHelper {
     }
 
     private static int EvaluateShiftAmount(long amount) {
-        if (amount < 0) throw new EvaluateException("移位量不能为负数");
+        if (amount < 0) throw new EvaluationException(MathEvalErrorCode.InvalidShiftAmount, "移位量不能为负数");
         return (int)(amount & 0x3F);
     }
 

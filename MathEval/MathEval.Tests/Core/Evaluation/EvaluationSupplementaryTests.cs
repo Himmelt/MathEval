@@ -43,8 +43,8 @@ public class EvaluationSupplementaryTests {
     }
 
     [Fact]
-    public void Bitwise_RightShiftNegative_ThrowsEvaluateException() {
-        Assert.Throws<EvaluateException>(() => Expression.Eval("16 >> -1"));
+    public void Bitwise_RightShiftNegative_ThrowsEvaluationException() {
+        Assert.Throws<EvaluationException>(() => Expression.Eval("16 >> -1"));
     }
 
     [Fact]
@@ -279,18 +279,18 @@ public class EvaluationSupplementaryTests {
     #region 错误处理补充
 
     [Fact]
-    public void Error_WhitespaceOnly_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("   "));
+    public void Error_WhitespaceOnly_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Expression.Eval("   "));
     }
 
     [Fact]
-    public void Error_UnclosedParenthesis_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("(1 + 2"));
+    public void Error_UnclosedParenthesis_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Expression.Eval("(1 + 2"));
     }
 
     [Fact]
-    public void Error_ExtraClosingParen_ThrowsParseException() {
-        Assert.Throws<ParseException>(() => Expression.Eval("1 + 2)"));
+    public void Error_ExtraClosingParen_ThrowsSyntaxException() {
+        Assert.Throws<SyntaxException>(() => Expression.Eval("1 + 2)"));
     }
 
     [Fact]
@@ -299,10 +299,10 @@ public class EvaluationSupplementaryTests {
     }
 
     [Fact]
-    public void Error_FunctionArgCountMismatch_ThrowsFunctionTypeMismatch() {
+    public void Error_FunctionArgCountMismatch_ThrowsFunctionArityException() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("add", (Func<double, double, double>)((a, b) => a + b));
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("add(1)", ctx));
+        Assert.Throws<FunctionArityException>(() => Expression.Eval("add(1)", ctx));
     }
 
     #endregion

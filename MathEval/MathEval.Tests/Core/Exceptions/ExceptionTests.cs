@@ -1,140 +1,133 @@
 using MathEval.Context;
 using MathEval.Exceptions;
 using Xunit;
-using InvalidOperationException = MathEval.Exceptions.InvalidOperationException;
 
 namespace MathEval.Tests.Exceptions;
 
 public class ExceptionTests {
+    // ---- 层次结构（L0 表达式契约层） ----
+
     [Fact]
-    public void ParseException_Inherits_MathEvalException() {
-        Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(ParseException)));
+    public void SyntaxException_Inherits_MathEvalException() {
+        Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(SyntaxException)));
     }
 
     [Fact]
-    public void EvaluateException_Inherits_MathEvalException() {
-        Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(EvaluateException)));
+    public void EvaluationException_Inherits_MathEvalException() {
+        Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(EvaluationException)));
     }
 
     [Fact]
-    public void InvalidOperationException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(InvalidOperationException)));
+    public void ResolutionException_Inherits_MathEvalException() {
+        Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(ResolutionException)));
     }
 
     [Fact]
-    public void TypeMismatchException_Inherits_MathEvalException_NotEvaluateException() {
+    public void SymbolNotFoundException_Inherits_ResolutionException() {
+        Assert.True(typeof(ResolutionException).IsAssignableFrom(typeof(SymbolNotFoundException)));
+    }
+
+    [Fact]
+    public void FunctionNotFoundException_Inherits_ResolutionException() {
+        Assert.True(typeof(ResolutionException).IsAssignableFrom(typeof(FunctionNotFoundException)));
+    }
+
+    [Fact]
+    public void TypeMismatchException_Inherits_MathEvalException_NotEvaluationException() {
         Assert.True(typeof(MathEvalException).IsAssignableFrom(typeof(TypeMismatchException)));
-        Assert.False(typeof(EvaluateException).IsAssignableFrom(typeof(TypeMismatchException)));
+        Assert.False(typeof(EvaluationException).IsAssignableFrom(typeof(TypeMismatchException)));
     }
 
     [Fact]
-    public void FunctionNotFoundException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(FunctionNotFoundException)));
+    public void FunctionArgumentTypeException_Inherits_TypeMismatchException() {
+        // 函数参数类型错误可被 catch (TypeMismatchException) 统一捕获
+        Assert.True(typeof(TypeMismatchException).IsAssignableFrom(typeof(FunctionArgumentTypeException)));
     }
 
     [Fact]
-    public void SymbolNotFoundException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(SymbolNotFoundException)));
+    public void FunctionArityException_Inherits_EvaluationException() {
+        Assert.True(typeof(EvaluationException).IsAssignableFrom(typeof(FunctionArityException)));
     }
 
     [Fact]
-    public void FunctionTypeMismatchException_Inherits_EvaluateException() {
-        Assert.True(typeof(EvaluateException).IsAssignableFrom(typeof(FunctionTypeMismatchException)));
+    public void FunctionInvocationException_Inherits_EvaluationException() {
+        Assert.True(typeof(EvaluationException).IsAssignableFrom(typeof(FunctionInvocationException)));
     }
 
+    // ---- 行为：异常类型与捕获层级 ----
+
     [Fact]
-    public void ParseException_CaughtAs_MathEvalException() {
+    public void SyntaxError_Throws_SyntaxException() {
         var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("2 + * 3"));
-        Assert.IsType<ParseException>(ex);
+        Assert.IsType<SyntaxException>(ex);
     }
 
     [Fact]
-    public void EvaluateException_CaughtAs_MathEvalException() {
+    public void UndefinedSymbol_Throws_SymbolNotFoundException() {
         var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("undefinedVar"));
         Assert.IsType<SymbolNotFoundException>(ex);
     }
 
     [Fact]
-    public void OverflowException_NoLongerThrown() {
-        // 现在使用 double 计算，不再有整数溢出
-        var result = Expression.Eval("9223372036854775807 + 1");
-        Assert.IsType<double>(result);
-    }
-
-    [Fact]
-    public void InvalidOperationException_CaughtAs_EvaluateException() {
-        var context = new ExpressionContext();
-        var ex = Assert.ThrowsAny<EvaluateException>(() => context.Set("true", 1));
-        Assert.IsType<InvalidOperationException>(ex);
-    }
-
-    [Fact]
-    public void TypeMismatchException_CaughtAs_MathEvalException() {
-        // Bitwise op with non-integer operand throws TypeMismatchException
-        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("3.5 & 2"));
-        Assert.IsType<TypeMismatchException>(ex);
-    }
-
-    [Fact]
-    public void FunctionNotFoundException_CaughtAs_EvaluateException() {
-        var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("unknownFunc(1)"));
+    public void UnknownFunction_Throws_FunctionNotFoundException() {
+        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("unknownFunc(1)"));
         Assert.IsType<FunctionNotFoundException>(ex);
     }
 
     [Fact]
-    public void SymbolNotFoundException_CaughtAs_EvaluateException() {
-        var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("undefinedVar"));
-        Assert.IsType<SymbolNotFoundException>(ex);
-    }
-
-    [Fact]
-    public void FunctionTypeMismatchException_CaughtAs_EvaluateException() {
-        var context = new ExpressionContext();
-        context.SetFunction("testAdd", (double a, double b) => a + b);
-        var ex = Assert.ThrowsAny<EvaluateException>(() => Expression.Eval("testAdd(1)", context));
-        Assert.IsType<FunctionTypeMismatchException>(ex);
-    }
-
-    [Fact]
-    public void DivisionByZero_ReturnsInfinity() {
-        var result = Expression.Eval<double>("1 / 0");
-        Assert.True(double.IsPositiveInfinity(result));
-    }
-
-    [Fact]
     public void BitwiseNonInteger_Throws_TypeMismatchException() {
-        // Bitwise op with non-integer operand throws TypeMismatchException
         Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 & 2"));
     }
 
     [Fact]
-    public void UnknownFunction_Throws_FunctionNotFoundException() {
-        Assert.Throws<FunctionNotFoundException>(() => Expression.Eval("unknownFunc(1)"));
+    public void FunctionArgCountMismatch_Throws_FunctionArityException() {
+        var ctx = new ExpressionContext();
+        ctx.SetFunction("doubleIt", (Func<double, double>)(x => x * 2));
+        var ex = Assert.ThrowsAny<EvaluationException>(() => Expression.Eval("doubleIt(1, 2)", ctx));
+        Assert.IsType<FunctionArityException>(ex);
     }
 
     [Fact]
-    public void UndefinedVariable_Throws_SymbolNotFoundException() {
-        Assert.Throws<SymbolNotFoundException>(() => Expression.Eval("undefinedVar"));
+    public void FunctionArgTypeMismatch_CaughtAs_TypeMismatchException() {
+        var ctx = new ExpressionContext();
+        ctx.SetFunction<Guid, string>("badFunc", x => x.ToString());
+        // 函数参数类型错误现在属于 TypeMismatchException 家族
+        var ex = Assert.ThrowsAny<TypeMismatchException>(() => Expression.Eval("badFunc(1)", ctx));
+        Assert.IsType<FunctionArgumentTypeException>(ex);
     }
 
     [Fact]
-    public void LongOverflow_NoLongerThrows() {
-        // 现在使用 double 计算，不再有整数溢出
-        var result = Expression.Eval("9223372036854775807 + 1");
-        Assert.IsType<double>(result);
+    public void UserFunctionThrowing_Throws_FunctionInvocationException() {
+        var ctx = new ExpressionContext();
+        ctx.SetFunction("boom", (Delegate)(Func<double, double>)(_ => throw new InvalidOperationException("boom")));
+        var ex = Assert.ThrowsAny<MathEvalException>(() => Expression.Eval("boom(1)", ctx));
+        Assert.IsType<FunctionInvocationException>(ex);
+        Assert.NotNull(ex.InnerException);
+    }
+
+    // ---- L1 API 误用：不继承 MathEvalException ----
+
+    [Fact]
+    public void ReservedKeyword_Throws_ArgumentException_Not_MathEvalException() {
+        var ctx = new ExpressionContext();
+        Exception ex = Assert.Throws<ArgumentException>(() => ctx.Set("true", 1));
+        Assert.False(ex is MathEvalException);
+    }
+
+    // ---- 元数据：Position 与 Code ----
+
+    [Fact]
+    public void SyntaxException_Carries_CharOffsetPosition() {
+        var ex = Assert.Throws<SyntaxException>(() => Expression.Eval("2 + * 3"));
+        Assert.True(ex.Position >= 0);
+        Assert.Equal(MathEvalErrorCode.UnexpectedToken, ex.Code);
     }
 
     [Fact]
-    public void AndWithNonBool_NoLongerThrows() {
-        // true and 1 is now valid (non-zero is truthy)
-        // Use bitwise with non-integer to test TypeMismatchException
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 & 2"));
-    }
-
-    [Fact]
-    public void TernaryWithNonBoolCondition_NoLongerThrows() {
-        // 1 ? 2 : 3 is now valid (non-zero is truthy)
-        // Use bitwise with non-integer to test TypeMismatchException
-        Assert.Throws<TypeMismatchException>(() => Expression.Eval("3.5 | 2"));
+    public void ResolutionException_Carries_UnknownPosition() {
+        var ex = Assert.Throws<SymbolNotFoundException>(() => Expression.Eval("undefinedVar"));
+        Assert.Equal(-1, ex.Position);
+        Assert.Equal(MathEvalErrorCode.SymbolNotFound, ex.Code);
+        Assert.Equal("undefinedVar", ex.Name);
     }
 }

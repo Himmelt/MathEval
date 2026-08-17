@@ -196,16 +196,16 @@ public class FunctionTests {
     }
 
     [Fact]
-    public void Function_ArgumentCountMismatch_ThrowsFunctionTypeMismatchException() {
+    public void Function_ArgumentCountMismatch_ThrowsFunctionArityException() {
         var ctx = new ExpressionContext();
         ctx.SetFunction("doubleIt", (Func<double, double>)(x => x * 2));
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("doubleIt(1, 2)", ctx));
+        Assert.Throws<FunctionArityException>(() => Expression.Eval("doubleIt(1, 2)", ctx));
     }
 
     [Fact]
-    public void Function_ArgumentTypeMismatch_ThrowsFunctionTypeMismatchException() {
+    public void Function_ArgumentTypeMismatch_ThrowsFunctionArgumentTypeException() {
         var ctx = new ExpressionContext();
         ctx.SetFunction<Guid, string>("badFunc", x => x.ToString());
-        Assert.Throws<FunctionTypeMismatchException>(() => Expression.Eval("badFunc(1)", ctx));
+        Assert.Throws<FunctionArgumentTypeException>(() => Expression.Eval("badFunc(1)", ctx));
     }
 }
